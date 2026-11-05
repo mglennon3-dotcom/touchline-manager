@@ -87,7 +87,8 @@ function makeSide(c, opp, home, auto) {
   if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = S.mentality; }
   else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
   const sl = slotsOf(f);
-  const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], fit: P(id).fit, from: 0 }).filter(Boolean);
+  // si is the formation slot a player stands in; the on list itself shrinks with red cards, so it can't be the index.
+  const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], si: i, fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));
   return { club: c.id, form: f, ment, base: ment, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
@@ -111,8 +112,28 @@ function benchAvail(M, i) { const s = i ? M.a : M.h; return s.bench.map(P).filte
 function doSub(M, i, idx, newId, why) {
   const s = i ? M.a : M.h, o = s.on[idx], p = P(newId);
   M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from;
-  s.on[idx] = { p, slot: o.slot, fit: p.fit, from: M.min }; s.used.push(newId); s.subs++; s.rt = null;
+  s.on[idx] = { p, slot: o.slot, si: o.si, fit: p.fit, from: M.min }; s.used.push(newId); s.subs++; s.rt = null;
   lg(M, "sub", i, `${why || "Change"}: ${p.name} replaces ${o.p.name}.`);
+}
+// Swap two players' positions on the pitch.
+function swapSlots(M, i, a, b) {
+  const s = i ? M.a : M.h, x = s.on[a], y = s.on[b];
+  [x.slot, y.slot] = [y.slot, x.slot]; [x.si, y.si] = [y.si, x.si]; s.rt = null; s.fitK = null;
+  lg(M, "tac", i, `${x.p.name} and ${y.p.name} swap positions.`);
+}
+// Change formation mid-match: put the players on the pitch into the new shape, best fits first.
+function changeForm(M, i, form) {
+  const s = i ? M.a : M.h, sl = slotsOf(form), pairs = [];
+  s.on.forEach((o, a) => sl.forEach((role, si) => pairs.push([eff(o.p, role, o.fit), a, si])));
+  pairs.sort((x, y) => y[0] - x[0]);
+  const doneP = new Set(), doneS = new Set();
+  // Whoever is in goal stays in goal. A weak keeper otherwise "fits" an outfield slot better (a keeper
+  // outfield rates 4, an outfielder in goal 2) and the shape change took him out of it.
+  const gk = s.on.findIndex(o => o.slot === "GK"), gs = sl.indexOf("GK");
+  if (gk >= 0 && gs >= 0) { s.on[gk].si = gs; s.on[gk].slot = "GK"; doneP.add(gk); doneS.add(gs); }
+  for (const [, a, si] of pairs) { if (doneP.has(a) || doneS.has(si)) continue; doneP.add(a); doneS.add(si); s.on[a].si = si; s.on[a].slot = sl[si]; }
+  s.form = form; s.rt = null; s.fitK = null;
+  lg(M, "tac", i, `${C(s.club).name} switch to a ${form}.`);
 }
 function bestBench(M, i, slot) { const b = benchAvail(M, i); if (!b.length) return null; return b.reduce((x, y) => eff(y, slot) > eff(x, slot) ? y : x); }
 function sendOff(M, i, o, why, games) {

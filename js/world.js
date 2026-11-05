@@ -10,6 +10,8 @@ const leagueKey = c => c.lg;
 const leagueName = key => LG[key] ? LG[key].name : key;
 const isForeign = c => !!LG[c.lg].foreign;
 const sur = p => { const parts = p.name.split(" "); return parts.slice(1).join(" ") || parts[0]; };
+// Pitch labels: the surname, with an initial when another player in the same XI shares it.
+const pitchName = (p, xi) => xi.some(q => q && q !== p && sur(q) === sur(p)) ? p.name[0] + ". " + sur(p) : sur(p);
 const activeClubs = () => S.clubs.filter(c => !c.gone);
 
 function newStats() { return { app: 0, min: 0, g: 0, lg: 0, a: 0, yc: 0, rc: 0, rt: 0, cs: 0 }; }

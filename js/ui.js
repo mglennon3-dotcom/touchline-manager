@@ -408,6 +408,7 @@ function viewSquad() {
 }
 
 /* ---------- tactics ---------- */
+const PITCH_LINES = `<svg class="lines" viewBox="0 0 68 96" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="var(--chalk)" stroke-width=".4"><rect x="2" y="2" width="64" height="92"/><line x1="2" y1="48" x2="66" y2="48"/><circle cx="34" cy="48" r="7"/><rect x="16" y="2" width="36" height="14"/><rect x="26" y="2" width="16" height="5"/><rect x="16" y="80" width="36" height="14"/><rect x="26" y="89" width="16" height="5"/></svg>`;
 function viewTactics() {
   const c = me(); fixUserLineup();
   const F = FORMATIONS[S.formation];
@@ -415,9 +416,9 @@ function viewTactics() {
     const p = S.players[S.lineup[i]], sel = UI.sel && UI.sel.slot === i;
     if (!p) return `<button class="slot empty ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}"><span class="disc">${role}</span><span class="nm">Empty</span></button>`;
     const f = FAM[p.pos][role];
-    return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(slotRating(p, role))}</span><span class="nm">${esc(sur(p))}</span><span class="fb"><i style="width:${p.fit}%;background:${fitColor(p.fit)}"></i></span></button>`;
+    return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(slotRating(p, role))}</span><span class="nm">${esc(pitchName(p, S.lineup.map(id => S.players[id])))}</span><span class="fb"><i style="width:${p.fit}%;background:${fitColor(p.fit)}"></i></span></button>`;
   }).join("");
-  const lines = `<svg class="lines" viewBox="0 0 68 96" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="var(--chalk)" stroke-width=".4"><rect x="2" y="2" width="64" height="92"/><line x1="2" y1="48" x2="66" y2="48"/><circle cx="34" cy="48" r="7"/><rect x="16" y="2" width="36" height="14"/><rect x="26" y="2" width="16" height="5"/><rect x="16" y="80" width="36" height="14"/><rect x="26" y="89" width="16" height="5"/></svg>`;
+  const lines = PITCH_LINES;
   const ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
   return `<div class="squad" style="--club:${c.color}"><div class="stack" style="gap:10px">
     <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${formOpts(S.formation)}</select></label><button class="btn sm" data-a="autopick">Pick best XI</button></div>
@@ -733,6 +734,24 @@ function modalBid(p) {
 }
 
 /* ---------- live match ---------- */
+/* Your side during a live match: the formation on a pitch with each player's rating in his position right
+   now (fitness included), fitness bars and bookings, and the bench. Tap a player and then a substitute to
+   bring him on, or two players to swap their positions; either pauses the match. */
+function liveTeam(M, k) {
+  const s = k ? M.a : M.h, F = FORMATIONS[s.form], sel = UI.lsel || {}, done = M.done, left = RULES.subs - s.subs;
+  const bench = benchAvail(M, k), canSub = !done && left > 0;
+  const slots = s.on.map((o, idx) => { const [role, x, y] = F[o.si] || [o.slot, 50, 50], f = FAM[o.p.pos][o.slot], on = sel.on === idx;
+    return `<button class="slot ${f < .9 ? "oop" : ""} ${on ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="livetap" data-v="${idx}" ${done ? "disabled" : ""} title="${esc(o.p.name)}, ${o.p.pos} playing ${o.slot}, fitness ${Math.round(o.fit)}">
+      <span class="disc">${Math.round(r20(eff(o.p, o.slot, o.fit)))}</span>${s.yel[o.p.id] ? '<span class="yc" aria-label="Booked"></span>' : ""}<span class="nm">${esc(pitchName(o.p, s.on.map(x => x.p)))}</span><span class="fb"><i style="width:${o.fit}%;background:${o.fit < 60 ? "var(--loss)" : o.fit < 75 ? "var(--accent)" : "var(--win)"}"></i></span></button>`; }).join("");
+  const hint = done ? "" : sel.on != null ? (canSub ? `Now tap a substitute to bring on for ${esc(s.on[sel.on].p.name)}, or another player to swap positions.` : "Tap another player to swap positions.") : sel.bench != null ? `Now tap the player to take off for ${esc(P(sel.bench).name)}.` : `Tap a player, then a substitute to bring him on, or two players to swap positions.`;
+  return `<div class="card live-team lv-team" style="--club:${C(s.club).color}"><div class="card-h"><h2>Your team</h2><span class="eyebrow">${left} sub${left === 1 ? "" : "s"} left</span></div>
+    <div class="row between small" style="margin-bottom:8px"><label class="row">Formation <select data-c="liveform" ${done ? "disabled" : ""}>${Object.keys(FORMATIONS).map(f => `<option ${f === s.form ? "selected" : ""}>${f}</option>`).join("")}</select></label><span class="muted">${MENT[s.ment].l}</span></div>
+    <div class="pitch live">${PITCH_LINES}${slots}</div>
+    <p class="small muted" style="margin:8px 0">${hint}</p>
+    <h3 style="margin:4px 0 6px">Bench</h3>
+    ${bench.length ? `<div class="bench">${bench.map(p => `<button class="bench-p ${sel.bench === p.id ? "sel" : ""}" data-a="livebench" data-v="${p.id}" ${canSub ? "" : "disabled"}><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`).join("")}</div>` : '<p class="small muted">No substitutes available.</p>'}
+  </div>`;
+}
 function viewLive() {
   const M = LIVE.M, H = C(M.h.club), A = C(M.a.club), tp = (M.h.poss + M.a.poss) || 1, hp = Math.round(M.h.poss / tp * 100);
   const k = LIVE.k, mine = k ? M.a : M.h;
@@ -746,17 +765,14 @@ function viewLive() {
     <label>Speed<span class="seg" role="group">${[["Normal", 300], ["Fast", 80]].map(([l, v]) => `<button data-a="livespeed" data-v="${v}" aria-pressed="${LIVE.speed === v}">${l}</button>`).join("")}</span></label>
     <label>Style<span class="seg" role="group">${Object.entries(MENT).map(([x, v]) => `<button data-a="liveme" data-v="${x}" aria-pressed="${mine.ment === x}" title="${esc(v.d)}">${v.l}</button>`).join("")}</span></label>
     <p class="small muted">${esc(C((k ? M.h : M.a).club).short)} are playing ${MENT[(k ? M.h : M.a).ment].l.toLowerCase()}.</p>
-    ${LIVE.paused ? `<div class="ctrl" style="gap:8px;border-top:1px solid var(--line);padding-top:12px"><span class="eyebrow">Substitutions · ${RULES.subs - mine.subs} left</span>
-      ${mine.subs < RULES.subs && b.length ? `<label>Off<select id="sub-off">${mine.on.map((o, i) => `<option value="${i}">${o.slot} · ${esc(o.p.name)} · fit ${Math.round(o.fit)}</option>`).join("")}</select></label>
-      <label>On<select id="sub-on">${b.map(p => `<option value="${p.id}">${p.pos} · ${esc(p.name)} · ${Math.round(r20(p.ovr))} · fit ${Math.round(p.fit)}</option>`).join("")}</select></label>
-      <button class="btn" data-a="livesub">Make substitution</button>` : '<span class="small muted">No substitutions left.</span>'}</div>` : '<p class="small muted">Pause to make substitutions.</p>'}`;
+`;
   }
   return `<section style="--hc:${H.color};--ac:${A.color}"><div class="board"><span class="comp eyebrow">${esc(compLabel(M.fx))}${M.fx.ko ? ` · 1st leg ${M.fx.ko.aggA}–${M.fx.ko.aggH}` : ""}</span><div class="t">${crest(H, 40)}<b>${esc(H.name)}</b></div>
     <div class="score">${M.h.goals}–${M.a.goals}<span class="clock">${M.done ? (M.pens ? `pens ${M.pens[0]}–${M.pens[1]}` : M.et ? "AET" : "FT") : M.min === 45 && LIVE.paused ? "HT" : M.min + "′"}</span></div><div class="t away"><b>${esc(A.name)}</b>${crest(A, 40)}</div></div>
     <div class="poss"><span class="h" style="width:${hp}%"></span><span class="a" style="width:${100 - hp}%"></span></div>
     <div class="row small muted between"><span>Possession ${hp}%</span><span>${100 - hp}%</span></div>
-    <div class="live-grid"><div class="card"><div class="card-h"><h2>Commentary</h2></div><ul class="feed" aria-live="polite">${M.log.slice().reverse().map((e, i) => `<li class="${e.type === "goal" ? "goal" : ""} ${i === 0 && !M.done ? "new" : ""}"><span class="m">${e.m}′</span><span><span class="tag" style="background:${cl(e)}"></span>${esc(e.text)}</span></li>`).join("") || '<li><span class="m">0′</span><span>The teams are out. Press kick off when ready.</span></li>'}</ul></div>
-    <div class="stack"><div class="card"><table class="stats"><tbody>${stat("Shots", M.h.shots, M.a.shots)}${stat("On target", M.h.sot, M.a.sot)}${stat("Subs", M.h.subs, M.a.subs)}</tbody></table></div><div class="card ctrl">${ctrl}</div></div></div></section>`;
+    <div class="live-grid"><div class="card lv-feed"><div class="card-h"><h2>Commentary</h2></div><ul class="feed" aria-live="polite">${M.log.slice().reverse().map((e, i) => `<li class="${e.type === "goal" ? "goal" : ""} ${i === 0 && !M.done ? "new" : ""}"><span class="m">${e.m}′</span><span><span class="tag" style="background:${cl(e)}"></span>${esc(e.text)}</span></li>`).join("") || '<li><span class="m">0′</span><span>The teams are out. Press kick off when ready.</span></li>'}</ul></div>
+    <div class="card lv-stats"><table class="stats"><tbody>${stat("Shots", M.h.shots, M.a.shots)}${stat("On target", M.h.sot, M.a.sot)}${stat("Subs", M.h.subs, M.a.subs)}</tbody></table></div><div class="card ctrl lv-ctrl">${ctrl}</div>${liveTeam(M, k)}</div></section>`;
 }
 
 function viewManager() {

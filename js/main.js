@@ -101,7 +101,8 @@ async function playNewSeason() {
 }
 
 /* ---------- live matches ---------- */
-function startLive(fx) { LIVE = { M: makeMatch(fx, false), fx, k: fx.h === S.club ? 0 : 1, paused: true, speed: 300, t: 0 }; }
+function livePause() { clearTimeout(LIVE.t); LIVE.paused = true; }
+function startLive(fx) { UI.lsel = null; LIVE = { M: makeMatch(fx, false), fx, k: fx.h === S.club ? 0 : 1, paused: true, speed: 300, t: 0 }; }
 function tick() {
   if (!LIVE || LIVE.paused || LIVE.M.done) return;
   const before = LIVE.M.end;
@@ -197,12 +198,28 @@ const ACT = {
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   livespeed: v => { LIVE.speed = +v; render(); },
+  // Tapping your team pauses the match: pick a player, then a substitute (or the other way round), or two
+  // players to swap their positions.
+  livetap: v => {
+    const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, idx = +v, sel = UI.lsel || {}; livePause();
+    if (sel.bench != null && s.subs < RULES.subs) { doSub(M, k, idx, sel.bench); UI.lsel = null; }
+    else if (sel.on != null && sel.on !== idx) { swapSlots(M, k, sel.on, idx); UI.lsel = null; }
+    else UI.lsel = sel.on === idx ? null : { on: idx };
+    render();
+  },
+  livebench: v => {
+    const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, id = +v, sel = UI.lsel || {}; livePause();
+    if (sel.on != null && s.subs < RULES.subs) { doSub(M, k, sel.on, id); UI.lsel = null; }
+    else UI.lsel = sel.bench === id ? null : { bench: id };
+    render();
+  },
   liveme: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.ment = v; s.rt = null; S.mentality = v; render(); },
   livesub: () => { const off = +document.getElementById("sub-off").value, on = +document.getElementById("sub-on").value; doSub(LIVE.M, LIVE.k, off, on); render(); },
   liveskip: () => { clearTimeout(LIVE.t); const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.auto = true; runToEnd(LIVE.M); render(); },
   livecont: () => finishLive(),
 };
 const CHG = {
+  liveform: v => { livePause(); changeForm(LIVE.M, LIVE.k, v); UI.lsel = null; render(); },
   startsort: v => { const cur = UI.sort.start; UI.sort.start = { k: v, d: cur && cur.k === v ? cur.d : (v === "n" || v === "reg" || v === "co" ? 1 : -1) }; render(); },
   style: v => { S.mentality = v; save(); render(); },
   autostyle: (v, el) => { S.set.autoStyle = el.checked; save(); },

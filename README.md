@@ -68,6 +68,11 @@ worst choice on the board. The Tactics page and the match card show each style's
 squads: those without a strong leaning pick possession or counter-attacking when it suits, and none of them
 switch, before or during a match, to a style their players plainly can't play.
 
+**Live matches** show your team on a pitch in its formation: each player's rating in his position right now
+(fitness included), fitness bars and bookings, with the bench below. Tap a player and then a substitute to
+bring him on, or two players to swap their positions; change formation from the menu above the pitch. Any of
+these pauses the match until you resume.
+
 **Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development, and each has a preferred
 formation: teams play about 2% better in their coach's own system. Twelve modern shapes are available
 (4-3-3, 4-2-3-1, 4-4-2, 4-4-1-1, 4-1-4-1, 4-3-2-1, 4-1-2-1-2, 3-4-2-1, 3-4-3, 3-5-2, 5-3-2, 5-4-1), and AI
