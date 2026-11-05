@@ -557,6 +557,7 @@ function summerStep() {
   aiTransferDay(.6);
   if (S.summerDay === 1) aiLoans();
   for (const p of me().squad.map(P)) p.fit = Math.min(100, p.fit + 10);  // preseason training gets everyone fit
+  S.rec.hours = recHours();  // scouting hours are weekly in preseason too; only the season's weekly() refilled them
   S.summerDay++;
   if (S.summerDay < CAL.summerDays) return;
   if (S.firstPre) {  // a new career: the season was drawn when you took the job, so just open it
