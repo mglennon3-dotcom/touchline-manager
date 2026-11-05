@@ -214,16 +214,42 @@ function newManager(name, arch, form) {
 }
 const coachOf = c => isUser(c) ? S.me : c.coach;
 
-function autoPick(ids, f, fixed) {
-  const sl = slotsOf(f), pool = ids.map(P).filter(avail);
-  const out = fixed ? fixed.slice() : Array(11).fill(null), used = new Set(out.filter(x => x != null));
-  const fill = minFam => sl.forEach((role, i) => {
-    if (out[i] != null) return; let best = null, bs = -1;
-    for (const p of pool) { if (used.has(p.id) || FAM[p.pos][role] < minFam) continue; const s = eff(p, role); if (s > bs) { bs = s; best = p; } }
-    if (best) { out[i] = best.id; used.add(best.id); }
-  });
-  fill(1); fill(.85); fill(0);
+/* Picking an XI maximises the side's total rating, with each player scored by eff() in the slot he'd play:
+   slotRating() already prices in playing out of position, so a midfielder whose tackling and heading make
+   him a better centre-back than the club's actual centre-backs gets picked there. The old picker filled
+   natural positions first and never moved anyone, so a strong squad player sat out while a weak specialist
+   started. Greedy on the best player-slot pairs, then swaps and bench replacements until nothing improves.
+   Keepers stay in goal and outfielders out of it unless there is no other way to fill the slot. */
+function optimisePick(pool, sl, out, score) {
+  const fixedI = new Set(out.map((x, i) => x != null ? i : -1).filter(i => i >= 0)), used = new Set(out.filter(x => x != null));
+  const sc = (p, role) => score(p, role) - ((role === "GK") !== (p.pos === "GK") ? 1000 : 0);
+  const pairs = [];
+  for (const p of pool) if (!used.has(p.id)) sl.forEach((role, i) => { if (!fixedI.has(i)) pairs.push([sc(p, role), p, i]); });
+  pairs.sort((a, b) => b[0] - a[0]);
+  for (const [, p, i] of pairs) if (out[i] == null && !used.has(p.id)) { out[i] = p.id; used.add(p.id); }
+  const free = sl.map((_, i) => i).filter(i => !fixedI.has(i) && out[i] != null);
+  for (let pass = 0, better = true; better && pass < 6; pass++) {
+    better = false;
+    for (const a of free) for (const b of free) {
+      if (b <= a) continue; const pa = P(out[a]), pb = P(out[b]);
+      if (sc(pa, sl[b]) + sc(pb, sl[a]) > sc(pa, sl[a]) + sc(pb, sl[b]) + 1e-9) { out[a] = pb.id; out[b] = pa.id; better = true; }
+    }
+    for (const a of free) for (const q of pool) {
+      if (used.has(q.id)) continue; const pa = P(out[a]);
+      if (sc(q, sl[a]) > sc(pa, sl[a]) + 1e-9) { used.delete(pa.id); used.add(q.id); out[a] = q.id; better = true; }
+    }
+  }
   return out;
+}
+function autoPick(ids, f, fixed) {
+  return optimisePick(ids.map(P).filter(avail), slotsOf(f), fixed ? fixed.slice() : Array(11).fill(null), eff);
+}
+/* A fresh XI: the same optimiser, but anyone under 80% fitness counts only once every fresher option is used
+   (including moving a fresh player out of position). "Pick best XI" weighs fitness lightly: a player at 60%
+   keeps 84% of his strength, so tired regulars kept being picked. */
+const FRESH_FIT = 80;
+function freshPick(ids, f) {
+  return optimisePick(ids.map(P).filter(avail), slotsOf(f), Array(11).fill(null), (p, role) => eff(p, role) - (p.fit < FRESH_FIT ? 500 : 0));
 }
 /* The nine substitutes. Yours are the ones you picked on the Tactics page (S.bench), still eligible,
    available and not in the XI; any spots left are filled as for AI clubs: a keeper, then the best and

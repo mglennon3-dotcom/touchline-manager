@@ -68,6 +68,13 @@ worst choice on the board. The Tactics page and the match card show each style's
 squads: those without a strong leaning pick possession or counter-attacking when it suits, and none of them
 switch, before or during a match, to a style their players plainly can't play.
 
+Picking a side: "Pick best XI" (Tactics page) asks your assistant for the strongest side, and it will move a
+player out of his usual position when his attributes make him better there than the specialist, say a
+tough-tackling midfielder at centre-back. AI clubs pick the same way. "Pick fresh XI" (Tactics page and the
+match card) picks the best side from players at 80%+ fitness, using tired players only where nobody fresh can
+fill a spot. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
+the morning of each match day, so any change you make after that stands.
+
 **Team needs** has its own tab. Each role in your formation is ranked by priority: your weakest starter
 there against the best at that role in your division's four strongest squads and the division average, the
 cover behind them, warnings (ageing, contract ending, on loan, wants to leave, out of position), and upgrades

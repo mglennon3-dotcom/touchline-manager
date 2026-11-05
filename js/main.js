@@ -78,6 +78,8 @@ async function play(mode) {
         continue;
       }
       const day = S.days[S.di], fxs = dayFixtures(day), ufx = userFixture(fxs);
+      // Rotation: on match day the assistant picks a fresh XI, once, so any changes you then make stick.
+      if (ufx && S.set.rotate && S.rotDi !== S.year * 1000 + S.di) { S.lineup = freshPick(eligibleIds(me()), S.formation); S.rotDi = S.year * 1000 + S.di; }
       // "To my next match day" stops at the start of your match day without playing it, so you can set the
       // team first; Play match then plays it (live if you watch live).
       if (mode === "match" && ufx) { UI.page = "home"; stopMsg = steps ? `Match day: ${compLabel(ufx)}. Set your team, then press Play match.` : "Your match is today. Set your team, then press Play match."; break; }
@@ -188,6 +190,7 @@ const ACT = {
   friask: () => { const f = UI.fri || {}; if (f.opp == null) return toast("Choose an opponent first."); const r = bookFriendly(f.wk ?? S.summerDay, f.opp, f.home !== false); UI.fri = { home: f.home }; save(); render(); toast(r); },
   fricancel: v => { const r = cancelFriendly(+v); save(); render(); toast(r); },
   benchauto: () => { S.bench = null; S.benchNo = []; save(); render(); toast("Bench back to automatic: your best available players."); },
+  freshpick: () => { const c = me(); S.lineup = freshPick(eligibleIds(c), S.formation); UI.sel = null; save(); render(); const tired = S.lineup.filter(id => id != null && P(id).fit < FRESH_FIT).length; toast(tired ? `Fresh XI picked. ${tired} position${tired > 1 ? "s" : ""} had no one at ${FRESH_FIT}%+ fitness.` : `Fresh XI picked: everyone at ${FRESH_FIT}%+ fitness.`); },
   autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render(); },
   "pick-p": v => { const id = +v; if (UI.sel && UI.sel.slot != null) return assignSlot(UI.sel.slot, id); UI.sel = UI.sel && UI.sel.pid === id ? null : { pid: id }; render(); },
@@ -255,6 +258,7 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  rotate: (v, el) => { S.set.rotate = el.checked; save(); render(); toast(el.checked ? "Your assistant will pick a fresh XI before every match." : "Rotation off: your XI stays as you set it."); },
   "fri-wk": v => { (UI.fri ||= {}).wk = +v; render(); }, "fri-home": v => { (UI.fri ||= {}).home = v === "H"; render(); }, "fri-opp": v => { (UI.fri ||= {}).opp = +v; render(); },
   benchgk: (v, el) => { S.set.benchGK = el.checked; save(); render(); toast(el.checked ? "A substitute goalkeeper will always be named." : "No automatic substitute goalkeeper. If your keeper goes off, an outfielder goes in goal."); },
   benchadd: v => { if (v) ACT.benchtoggle(v); },
