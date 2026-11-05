@@ -10,8 +10,32 @@ const DB = {
   put(k, v) { return new Promise(res => { try { const t = DB.db.transaction("s", "readwrite"); t.objectStore("s").put(v, k); t.oncomplete = () => res(true); t.onerror = () => res(false); } catch (e) { res(false); } }); },
   del(k) { return new Promise(res => { try { const t = DB.db.transaction("s", "readwrite"); t.objectStore("s").delete(k); t.oncomplete = () => res(true); t.onerror = () => res(false); } catch (e) { res(false); } }); },
 };
+/* Several careers can be kept. Each is stored under "save:<id>", and "saves" holds a small index (club,
+   manager, season, last played) so the landing screen can list them without loading every world.
+   Before 5.13 there was one career under "career"; boot moves it across. */
 let saveWarned = false;
-async function save() { if (!S || !DB.db) return; const ok = await DB.put("career", S); if (!ok && !saveWarned) { saveWarned = true; toast("Progress couldn't be saved in this browser."); } }
+const SAVES = { list: [] };
+const newSaveId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+function saveMeta() {
+  const c = me();
+  return { id: S.saveId, club: c.name, short: c.short, color: c.color, manager: S.me ? S.me.name : "", lg: c.lg, year: S.year, phase: S.phase, week: S.week,
+    sacked: !!S.sacked, created: S.created || Date.now(), updated: Date.now() };
+}
+async function save() {
+  if (!S || S.club == null || !DB.db) return;
+  if (!S.saveId) S.saveId = newSaveId();
+  const ok = await DB.put("save:" + S.saveId, S);
+  if (ok) { const m = saveMeta(); SAVES.list = [m, ...SAVES.list.filter(x => x.id !== m.id)]; await DB.put("saves", SAVES.list); }
+  else if (!saveWarned) { saveWarned = true; toast("Progress couldn't be saved in this browser."); }
+}
+// Load a stored career and bring it up to date. Returns false if it can't be used.
+function adoptSave(d) {
+  if (!d) return false;
+  if (d.v === 4) migrate4(d);
+  if (d.v !== 5 || d.club == null) return false;
+  S = d; upgradeSave(); LIVE = null; UI.page = "home"; UI.modal = null; UI.screen = null; UI.delAsk = null;
+  return true;
+}
 
 function toast(t) { const el = document.getElementById("toast"); el.textContent = t; el.hidden = false; clearTimeout(UI.toastT); UI.toastT = setTimeout(() => el.hidden = true, 3200); }
 function busy(on, text) { const el = document.getElementById("busy"); el.hidden = !on; if (text) el.firstElementChild.textContent = text; }
@@ -19,6 +43,7 @@ function busy(on, text) { const el = document.getElementById("busy"); el.hidden 
 /* ---------- taking a club ---------- */
 function takeClub(id, name, arch, form) {
   S = DRAFT; DRAFT = null; S.club = id; S.me = newManager(name || "The Manager", arch || "bal", form || "4-3-3");
+  S.saveId = newSaveId(); S.created = Date.now(); UI.screen = null;
   const c = me(); S.formation = S.me.form; c.formation = S.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), S.formation);
   startSeason();
   news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}.`, true, "board");
@@ -153,7 +178,22 @@ const ACT = {
   scout: v => { S.rec.scoutLvl = clamp(S.rec.scoutLvl + +v, 1, 5); save(); render(); },
   academy: v => { const c = me(), cost = +v; if (c.cash < cost || c.academy >= 20) return; c.cash -= cost; c.academy++; news(`Youth development upgraded to ${c.academy}/20 at a cost of ${money(cost)}.`, false, "youth"); save(); render(); },
   takejob: v => { const c = C(+v); S.club = c.id; S.sacked = false; S.sackReason = null; S.board = 55; S.formation = c.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), c.formation); S.expPos = expectedPos(c); S.inbox.forEach(m => m.done = true); news(`You are the new manager of ${c.name}.`, true, "board"); UI.page = "home"; save(); render(); },
-  reset: async () => { await DB.del("career"); S = null; DRAFT = null; LIVE = null; UI.page = "home"; render(); toTop(); },
+  // From the sacked screen: the old career stays in your saves (delete it there if you like).
+  reset: async () => { await save(); S = null; DRAFT = null; LIVE = null; UI.page = "home"; UI.screen = "new"; render(); toTop(); },
+  landing: async () => {
+    if (!DB.db) return toast("Saves aren't available in this browser, so your career can't be put aside.");
+    await save(); S = null; LIVE = null; UI.modal = null; UI.screen = "landing"; UI.delAsk = null; UI.mastCompact = false; render(); toTop();
+  },
+  loadsave: async v => { if (!adoptSave(await DB.get("save:" + v))) return toast("That save couldn't be read."); render(); toTop(); },
+  newcareer: () => { UI.screen = "new"; UI.delAsk = null; render(); toTop(); },
+  tolanding: () => { UI.screen = "landing"; render(); toTop(); },
+  delask: v => { UI.delAsk = v; render(); },
+  delcancel: () => { UI.delAsk = null; render(); },
+  delsave: async v => {
+    const m = SAVES.list.find(x => x.id === v); await DB.del("save:" + v);
+    SAVES.list = SAVES.list.filter(x => x.id !== v); await DB.put("saves", SAVES.list);
+    UI.delAsk = null; toast(`${m ? m.club : "Save"} deleted.`); render();
+  },
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   livespeed: v => { LIVE.speed = +v; render(); },
@@ -177,7 +217,7 @@ const CHG = {
   ticket: v => { me().tkt = +v; save(); render(); },
   pref: v => { S.me.formPending = v; toast(`From next season you'll prefer the ${v}.`); save(); },
   cup: v => { UI.cupK = v; render(); },
-  import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); if (d.v === 4) migrate4(d); if (d.v !== 5 || d.club == null) throw new Error("not a save"); S = d; upgradeSave(); LIVE = null; UI.page = "home"; await save(); render(); toast("Save file loaded."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
+  import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); d.saveId = newSaveId(); if (!adoptSave(d)) throw new Error("not a save"); await save(); render(); toTop(); toast("Save file loaded as a new career."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
   "tf-pos": v => { UI.tf.pos = v; render(); }, "tf-age": v => { UI.tf.age = +v; render(); }, "tf-min": v => { UI.tf.min = +v; render(); }, "tf-fee": v => { UI.tf.fee = +v; render(); }, "tf-lg": v => { UI.tf.lg = v; render(); },
   "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); },
   "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); },
@@ -238,10 +278,15 @@ window.addEventListener("hashchange", () => { const h = location.hash.slice(1); 
 async function boot(data) {
   const h = location.hash.slice(1); if (VIEWS[h]) UI.page = h;
   try { await DB.open(); } catch (e) { /* storage unavailable: play in memory */ }
-  S = (data && data.S) || (DB.db ? await DB.get("career") : null);
-  if (S && S.v === 4) migrate4(S);
-  if (S && (S.v !== 5 || S.club == null)) S = null;
-  if (S) upgradeSave();
+  if (DB.db) {
+    SAVES.list = (await DB.get("saves")) || [];
+    // The single career from before multiple saves becomes the first entry.
+    const old = await DB.get("career");
+    if (old) { if (adoptSave(old)) { S.saveId = S.saveId || newSaveId(); await save(); } await DB.del("career"); S = null; }
+  }
+  S = null;
+  if (data && data.S && !adoptSave(data.S)) S = null;  // the Claude preview hands back the career it was showing
+  UI.screen = S ? null : "landing";
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }

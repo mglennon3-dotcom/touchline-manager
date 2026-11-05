@@ -64,7 +64,7 @@ function table(id, cols, rows, opt = {}) {
 function render() {
   const app = document.getElementById("app");
   if (S) bumpTick();
-  if (!S || S.club == null) { app.innerHTML = viewStart(); renderModal(); return; }
+  if (!S || S.club == null) { app.innerHTML = UI.screen === "landing" && SAVES.list.length ? viewLanding() : viewStart(); renderModal(); return; }
   if (S.sacked) { app.innerHTML = viewSacked(); renderModal(); return; }
   const c = me(), L = S.leagues[c.lg], pos = S.phase === "season" ? posIn(L, c.id) : S.lastPos[c.id];
   const when = S.phase === "summer" ? `Summer window · day ${S.summerDay + 1} of ${CAL.summerDays}` : `Week ${S.week + 1}${CAL.jan.includes(S.week) ? " · window open" : ""}`;
@@ -77,7 +77,7 @@ function render() {
       <div><dt>Fans</dt><dd class="${fanWord(c.fans)[1]}" title="Fan engagement: ${fanWord(c.fans)[0]}">${Math.round(c.fans)}</dd></div>
       <div><dt>Board${S.set.unsackable ? ' <span title="Unsackable mode is on">· safe</span>' : ""}</dt><dd>${S.board}<span class="meter ${S.board < 30 ? "low" : ""}"><i style="width:${S.board}%"></i></span></dd></div></dl>
       ${LIVE ? "" : playControl()}</div></div>
-    ${LIVE ? "" : `<nav class="tabs" aria-label="Sections">${PAGES.map(([k, l]) => `<button data-a="go" data-v="${k}" ${UI.page === k ? 'aria-current="page"' : ""}>${l}${k === "home" && dec ? `<span class="dot">${dec}</span>` : ""}</button>`).join("")}</nav>`}
+    ${LIVE ? "" : `<nav class="tabs" aria-label="Sections">${PAGES.map(([k, l]) => `<button data-a="go" data-v="${k}" ${UI.page === k ? 'aria-current="page"' : ""}>${l}${k === "home" && dec ? `<span class="dot">${dec}</span>` : ""}</button>`).join("")}${DB.db ? `<button data-a="landing" title="Your careers: switch, start a new one or delete">Saves</button>` : ""}</nav>`}
   </div></header><main class="wrap gut">${LIVE ? viewLive() : (VIEWS[UI.page] || viewHome)()}</main>`;
   renderModal();
 }
@@ -113,6 +113,25 @@ function peekUserFixture() {
 }
 
 /* ---------- start ---------- */
+/* The first screen when you open the app: your careers, newest first, to continue or delete, and the way
+   to start a new one. */
+function viewLanding() {
+  const list = SAVES.list.slice().sort((a, b) => b.updated - a.updated);
+  const when = t => { const d = new Date(t), days = Math.floor((Date.now() - t) / 864e5); return days < 1 ? "today" : days < 2 ? "yesterday" : days < 7 ? `${days} days ago` : d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); };
+  const row = m => {
+    const ask = UI.delAsk === m.id;
+    return `<div class="save-row${ask ? " asking" : ""}" style="--c:${m.color}">
+      <div class="save-id">${crest(m, 36)}<div><b>${esc(m.club)}</b><div class="small muted">${esc(m.manager)} · ${seasonLabel(m.year)} · ${leagueName(m.lg)} · ${m.sacked ? '<span class="bad">sacked</span>' : m.phase === "summer" ? "summer window" : `week ${m.week + 1}`}</div><div class="tiny muted">Last played ${when(m.updated)}</div></div></div>
+      ${ask ? `<div class="save-ask"><span class="small">Delete this career? This can't be undone.</span><div class="row"><button class="btn sm danger" data-a="delsave" data-v="${m.id}">Delete</button><button class="btn sm" data-a="delcancel">Keep it</button></div></div>`
+        : `<div class="row save-act"><button class="btn primary" data-a="loadsave" data-v="${m.id}">Continue</button><button class="btn sm" data-a="delask" data-v="${m.id}" aria-label="Delete ${esc(m.club)} career">Delete</button></div>`}
+    </div>`;
+  };
+  return `<div class="wrap gut"><section class="hero"><div class="eyebrow">Football management in the English pyramid</div><h1>Touchline <span>Manager</span></h1></section>
+    <div class="card"><div class="card-h"><h2>Your careers</h2><span class="small muted">${list.length} saved</span></div>
+      <div class="saves">${list.map(row).join("")}</div>
+      <div class="row" style="margin-top:14px"><button class="btn" data-a="newcareer">Start a new career</button><label class="btn" for="import-file" style="cursor:pointer">Import a save file</label><input type="file" id="import-file" accept=".json,application/json" data-c="import" hidden></div>
+      <p class="tiny muted" style="margin-top:10px">Careers save in this browser on this device. Export one from its History page to back it up or move it. Version ${APP_VERSION}.</p></div></div>`;
+}
 function viewStart() {
   if (!DRAFT) { newWorld(); DRAFT = S; S = null; }
   const keep = S; S = DRAFT; bumpTick();
@@ -149,6 +168,7 @@ function viewStart() {
     <h1>Touchline <span>Manager</span></h1>
     <p>Take any club in the English pyramid, from the Premier Division down to the National Division North and South. Win promotion, survive the cost rules, recruit fifteen-year-olds against academies across Europe, and keep the board on side for fifty seasons.</p></section>
     <div class="card"><div class="card-h"><h2>Choose your club</h2>
+      ${SAVES.list.length ? `<button class="lnk small" data-a="tolanding">← Your careers</button>` : ""}
       <label class="row small">Division <select id="start-lg" data-c="startl">${lgOpts(key, ENG_LGS)}</select></label></div>
       <p class="small muted" style="margin-bottom:10px">${leagueRules(key)}</p>
       ${sortBar}
@@ -574,7 +594,7 @@ function viewHistory() {
     ${S.history.length > UI.histN ? `<button class="btn" data-a="morehist">Show older seasons</button>` : ""}
     <section class="card"><div class="card-h"><h2>Hall of fame</h2><span class="small muted">Retired players with long or decorated careers</span></div>${hof.length ? table("hof", [{ k: "n", l: "Player", f: h => `<b>${esc(h.name)}</b> <span class="tiny muted">${h.nat}</span>` }, { k: "pos", l: "Pos", f: h => h.pos }, { k: "y", l: "Career", f: h => `${h.y0}–${h.y1}` }, { k: "a", l: "Apps", r: 1, f: h => h.apps }, { k: "g", l: "Goals", r: 1, f: h => h.goals }, { k: "pk", l: "Peak", r: 1, f: h => h.peak }, { k: "c", l: "Clubs", f: h => h.clubs.join(", "), cls: "hide-sm" }, { k: "aw", l: "Awards", r: 1, f: h => h.awards.length }], hof) : '<p class="muted">Nobody has retired with a hall-of-fame career yet.</p>'}</section>
     <section class="card"><div class="card-h"><h2>Save file</h2></div><p class="small" style="margin-bottom:8px">Your career saves automatically in this browser. Export a copy to back it up or move it to another device, then import it there.</p>
-    <div class="row"><button class="btn" data-a="export">Export save</button><label class="btn" for="import-file" style="cursor:pointer">Import save</label><input type="file" id="import-file" accept=".json,application/json" data-c="import" hidden></div><p class="tiny muted" style="margin-top:6px">Exporting doesn't work inside the Claude preview; use the installed or GitHub Pages version.</p></section></div>`;
+    <div class="row"><button class="btn" data-a="landing">Your careers</button><button class="btn" data-a="export">Export save</button><label class="btn" for="import-file" style="cursor:pointer">Import save</label><input type="file" id="import-file" accept=".json,application/json" data-c="import" hidden></div><p class="tiny muted" style="margin-top:6px">Exporting doesn't work inside the Claude preview; use the installed or GitHub Pages version.</p></section></div>`;
 }
 
 /* ---------- modals ---------- */

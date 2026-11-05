@@ -319,3 +319,12 @@ html{overflow-anchor:none}
    opened (scrolling hid the problem); the start screen's title went under the status bar instead. */
 body{padding-top:env(safe-area-inset-top,0px)}
 .tbl-wrap.tall{max-height:calc(100dvh - var(--mast-h,100px) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px)}
+/* landing: saved careers */
+.saves{display:grid;gap:10px}
+.save-row{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:12px;border:1px solid var(--line);border-left:4px solid var(--c);border-radius:10px;background:var(--surface-2)}
+.save-row.asking{border-color:var(--loss);border-left-color:var(--loss)}
+.save-id{display:flex;gap:12px;align-items:center;min-width:0}
+.save-id b{font-family:var(--f-display);font-size:19px;text-transform:uppercase;letter-spacing:.02em}
+.save-act,.save-ask{gap:8px}
+.save-ask{display:grid;gap:6px;justify-items:start}
+.save-ask .btn.danger{border-color:var(--loss)}

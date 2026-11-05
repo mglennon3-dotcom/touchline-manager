@@ -10,6 +10,7 @@ and try to keep the board happy for fifty seasons. All clubs and players are fic
 - **Offline:** open it once while online, then use your browser's *Install app* or *Add to Home Screen*.
   The game's files are cached by a service worker, so it opens with no connection after that.
   Google Fonts are cached the first time they load; until then the game uses system fonts.
+- **Careers:** keep as many as you like. The app opens on a list of them, newest first, to continue or delete (deleting asks first), with a button to start a new one. The **Saves** tab inside a career brings you back to the list.
 - **Saves** live in the browser's IndexedDB on that device. Export a save file from the History page
   to back it up or move a career to another device, and import it there.
 
