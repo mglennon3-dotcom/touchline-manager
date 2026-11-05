@@ -279,7 +279,7 @@ function weekly() {
     }
     c.wkMatches = 0;
   }
-  for (const c of activeClubs()) stadiumWeek(c);
+  for (const c of activeClubs()) { stadiumWeek(c); sponsorPay(c, 1 / 52); }
   for (const id of S.fa) { const p = P(id); p.fit = 100; if (p.inj) p.inj--; }
   weeklyMood();
   weeklyRecruiting();
@@ -370,7 +370,7 @@ function endSeason() {
   const move = (id, to, dir) => {
     const c = C(id), from = c.lg; S.leagues[from].clubs = S.leagues[from].clubs.filter(x => x !== id); S.leagues[to].clubs.push(id);
     c.lg = to; c.tier = LG[to].tier;
-    const ratio = Math.pow(S.revK[to] / S.revK[from], .7); c.revBase = Math.round(c.revBase * ratio); rescalePrice(c, ratio);
+    const ratio = Math.pow(S.revK[to] / S.revK[from], .7); c.revBase = Math.round(c.revBase * ratio); rescalePrice(c, ratio); sponsorClause(c, dir);
     // Relegation clauses: wages fall roughly in line with income.
     if (dir === "down") { c.rep = Math.max(8, c.rep - 4); for (const pid of c.squad) P(pid).wage = Math.round(P(pid).wage * clamp(ratio * 1.1, .55, .95)); if (isUser(c)) news("Relegation clauses cut the squad's wages.", true, "finance"); }
     else c.rep = Math.min(90, c.rep + 4);
@@ -386,7 +386,7 @@ function endSeason() {
     c.squad = [];
     const wasMine = isUser(c);
     if (wasMine && !S.set.unsackable) { S.sacked = true; S.sackReason = `${c.name} dropped out of the National Division.`; }
-    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n); initStadium(n);
+    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n); initStadium(n); initSponsors(n); n.newcomer = S.year;
     n.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
     // In unsackable mode you can't be left without a club: you take over one of the newcomers instead.
     if (wasMine && S.set.unsackable) { S.club = n.id; S.lineup = []; S.formation = S.me.form; n.formation = S.me.form; news(`${c.name} have dropped out of the National Division. You take charge of newcomers ${n.name}.`, true, "board"); }
@@ -411,7 +411,16 @@ function endSeason() {
   for (const c of activeClubs()) {
     const k = 10 / 52, wages = sum(c.squad, id => P(id).wage) * k, amort = sum(c.squad, id => P(id).am ? P(id).am.per : 0) * k, rev = c.revSeason * k;
     c.fin.rev += rev; c.fin.wages += wages; c.fin.amort += amort; c.fin.ops += rev * .2; c.cash += rev - wages - rev * .2;
+    sponsorPay(c, k);
   }
+  // sponsor bonuses for what each club achieved, then renewals at today's market value
+  for (const c of activeClubs()) sponsorSeason(c, {
+    title: false,  // title bonuses are paid just below, to each league's champions
+    up: moves.some(m => m[0] === c.id && m[1] === "up"),
+    europe: [...q.CC, ...q.CS, ...q.CT].includes(c.id),
+    cup: c.trophies.some(t => t.y === S.year && !LG[t.t]),
+  });
+  for (const key of Object.keys(rec.L)) { const ch = C(rec.L[key].champ); if (ch.deals && !ch.gone) { const paid = sum(ch.deals, d => d.bonus.title); ch.cash += paid; ch.fin.rev += paid; ch.fin.spons = (ch.fin.spons || 0) + paid; if (isUser(ch)) news(`Sponsors pay a ${money(paid)} title bonus.`, true, "finance"); } }
   assessSCR();
   for (const c of activeClubs()) if (c.cash > c.revBase) { const inv = Math.round((c.cash - c.revBase) * .5); c.cash -= inv; if (isUser(c)) news(`The board invests ${money(inv)} of surplus cash in the stadium and training ground.`, false, "finance"); }
 

@@ -83,6 +83,12 @@ owners. You set your own ticket prices: dearer seats earn more each but sell few
 outgrows the ground you can expand it; work takes months and is paid weekly out of cash, which squeezes the
 transfer budget until it's done. AI clubs build too when they keep selling out.
 
+**Sponsorship.** Every club has a shirt sponsor and a kit supplier, each with an annual fee and bonuses for
+the title, promotion, European qualification and cup wins. A deal is priced at what the club could command when
+it was signed, which grows with prestige, fan engagement, recent trophies and European football; promotion lifts
+current deals and relegation cuts them. When one of your deals ends you choose between a long secure deal, a
+short one at a higher rate, or a performance deal with a lower base and big bonuses.
+
 **Injuries** range from knocks of a week or two, through tears that take months, to rare season-ending
 injuries and very rare career-ending ones. **Retirements** start from age 30: some players announce at the
 start of the season that it will be their last, others surprise you at the end.

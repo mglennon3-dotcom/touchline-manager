@@ -149,6 +149,7 @@ function resolveDecision(m, choice) {
     let n = 0; for (const id of m.ids) { const q = S.players[id]; if (!q || q.club !== S.club) continue; const t = renewTerms(q); if (t.happy) { q.yrs = 4; q.wage = t.wage; n++; } }
     return `${n} player${n === 1 ? "" : "s"} signed new contracts.`;
   }
+  if (m.type === "sponsor") return takeSponsor(m, choice);
   if (m.type === "scheme") {
     if (choice === "accept") { const c = me(); c.schemes.push({ y: S.year, what: m.what.replace(/^sell/, "sale of").replace(/^sign/, "signing of"), amt: m.amt, risk: .45 }); c.fin.scheme += m.amt; c.cash += m.amt; return `Done. ${money(m.amt)} goes through the books this season.`; }
     S.board = clamp(S.board + 2, 0, 100); return "You decline. The board approves of your caution.";

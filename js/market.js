@@ -161,7 +161,7 @@ function renewTerms(p) {
 /* ---------- Squad Cost Ratio ---------- */
 function assessSCR() {
   for (const c of activeClubs()) {
-    if (!c.fin || c.fin.rev < 1) continue;  // clubs that joined this summer have no season to judge
+    if (!c.fin || c.fin.rev < 1 || c.newcomer === S.year) continue;  // clubs that joined this summer have no season to judge
     const f = c.fin, cost = f.wages + f.amort + f.agent, rev = f.rev + f.prize + f.merit + f.scheme + Math.max(0, f.sales);
     const ratio = cost / Math.max(1, rev); c.lastSCR = ratio;
     let schemeBad = false;
