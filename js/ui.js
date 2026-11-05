@@ -663,10 +663,9 @@ function viewTransfers() {
 /* ---------- youth recruitment ---------- */
 // The scouting assistant's controls, shown on both Scouted lists (the setting is shared).
 function scoutAssistHtml() {
-  const m = S.set.autoScout || "off", L = S.autoLast;
-  return `<div class="assist row small"><label class="row">Scouting assistant <select data-c="autoscout" aria-label="Scouting assistant">${[["off", "Off"], ["youth", "Youth prospects"], ["players", "Transfer targets"], ["both", "Both"]].map(([k, l]) => `<option value="${k}" ${m === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-    <label class="row"><input type="checkbox" data-c="autoabroad" ${S.set.autoAbroad ? "checked" : ""} ${m === "off" ? "disabled" : ""}> Allow trips abroad <span class="tiny muted">(travel costs money)</span></label>
-    <span class="tiny muted">${m === "off" ? "Off: only the scouting you do yourself." : `Uses whatever hours you leave each week${L ? ` · last time (${L.w}): ${L.y} youth, ${L.p} transfer` : ""}.`}</span></div>`;
+  const on = autoScoutOn(), L = S.autoLast;
+  return `<div class="assist row small"><label class="row"><input type="checkbox" data-c="autoscout" ${on ? "checked" : ""}> <b>Scouting assistant</b></label>
+    <span class="tiny muted">${on ? `On: your scouts use the hours you leave each week on youth prospects and transfer targets in England. It never travels abroad, so it never costs money.${L ? ` Last time (${L.w}): ${L.y} youth, ${L.p} transfer.` : ""}` : "Off: only the scouting you choose to do."}</span></div>`;
 }
 function viewYouth() {
   const c = me(), f = UI.yf;

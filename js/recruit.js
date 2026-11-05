@@ -158,14 +158,17 @@ function scoutPlayer(p) {
   (S.scoutT ||= {})[p.id] = { y: S.year, w: whenLabel(), n: ((S.scoutT[p.id] || {}).n || 0) + 1, t: Date.now() };
 }
 /* ---------- the scouting assistant ----------
-   Optional (S.set.autoScout: off, youth, players or both). At the end of each week it spends the hours you
-   left unused, so your own scouting always comes first. Youth: undecided prospects with the best potential
+   An on/off toggle (S.set.autoScout), off unless you switch it on. At the end of each week it spends the
+   hours you left unused, so your own scouting always comes first, on youth prospects and transfer targets
+   alike. It only scouts in England, where scouting is free: it never spends your money (an earlier
+   version could travel abroad, which charges travel costs). Youth: undecided prospects with the best potential
    estimates, favouring positions your formation uses and lads nearer home, taking each to a detailed
    report. Players: those at positions Team Needs flags who could improve on your weakest starter there and
-   whose price you could meet. Abroad only if S.set.autoAbroad, since trips cost money. */
+   whose price you could meet. */
+const autoScoutOn = () => { const v = (S.set || {}).autoScout; return v === true || (typeof v === "string" && v !== "off"); };  // 5.18 stored a mode name
 function autoScout() {
-  const mode = (S.set || {}).autoScout || "off"; if (mode === "off" || !S.me) return;
-  const c = me(), abroad = !!S.set.autoAbroad, ok = code => abroad || code === "ENG", uses = new Set(slotsOf(S.formation));
+  if (!autoScoutOn() || !S.me) return;
+  const mode = "both", c = me(), ok = code => code === "ENG" && travelCost(code) === 0, uses = new Set(slotsOf(S.formation));
   const youth = mode === "players" ? [] : S.prospects.filter(y => y.commit == null && !y.signed && y.sc < 2 && ok(prospectCountry(y)))
     .map(y => ({ k: "y", o: y, cost: scoutHours(REC_COST.scout, prospectCountry(y)), s: viewMid(prospectPot(y)) + (uses.has(y.pos) ? 1.5 : 0) - km(y, c) / 400 }));
   let players = [];

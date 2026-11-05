@@ -222,8 +222,7 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
-  autoscout: v => { S.set.autoScout = v; save(); render(); toast(v === "off" ? "Scouting assistant off." : "Your scouts will use the hours you leave each week."); },
-  autoabroad: (v, el) => { S.set.autoAbroad = el.checked; save(); },
+  autoscout: (v, el) => { S.set.autoScout = el.checked; delete S.set.autoAbroad; save(); render(); toast(el.checked ? "Scouting assistant on: spare hours, England only, no cost." : "Scouting assistant off."); },
   liveform: v => { livePause(); changeForm(LIVE.M, LIVE.k, v); UI.lsel = null; render(); },
   startsort: v => { const cur = UI.sort.start; UI.sort.start = { k: v, d: cur && cur.k === v ? cur.d : (v === "n" || v === "reg" || v === "co" ? 1 : -1) }; render(); },
   style: v => { S.mentality = v; save(); render(); },
