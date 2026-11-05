@@ -417,3 +417,8 @@ body{padding-top:env(safe-area-inset-top,0px)}
 .msq-p .x:hover{color:var(--loss)}
 .fri-book{gap:6px 12px;flex-wrap:wrap;align-items:end;margin-top:8px}
 .fri-book select{max-width:240px}
+/* live match: starters list, and ratings in a position someone isn't used to */
+.rt-pair{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.oop-r{font-family:var(--f-mono);font-size:12px;font-weight:600}
+.oop-r.warn{color:var(--loss)}
+.xi-p .mr{font-size:11px}
