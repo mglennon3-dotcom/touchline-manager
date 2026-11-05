@@ -876,12 +876,24 @@ function modalBid(p) {
 /* Your side during a live match: the formation on a pitch with each player's rating in his position right
    now (fitness included), fitness bars and bookings, and the bench. Tap a player and then a substitute to
    bring him on, or two players to swap their positions; either pauses the match. */
+const mrCls = r => r >= 8 ? "mr4" : r >= 7 ? "mr3" : r >= 6 ? "mr2" : "mr1";
+/* Match ratings for everyone who has played, both sides: still on, subbed off (and the minute) or sent off,
+   with goals, assists and bookings. Shown from kick-off. */
+function liveRatings(M) {
+  const side = i => { const s = i ? M.a : M.h, onIds = new Set(s.on.map(o => o.p.id)), rows = s.used.map(id => P(id)).filter(Boolean).map(p => {
+      const g = M.goals.filter(x => x.pid === p.id).length, a = M.goals.filter(x => x.ast === p.id).length, red = M.reds.some(r => r[0] === p.id), sub = !onIds.has(p.id) && !red;
+      const came = (s.on.find(o => o.p.id === p.id) || {}).from;
+      return { p, r: matchRating(M, i, p.id), g, a, y: M.cards.includes(p.id), red, sub, came: came > 0 ? came : null };
+    }).sort((x, y) => ROLE_ORDER[x.p.pos] - ROLE_ORDER[y.p.pos]);
+    return `<div><h3 style="margin:0 0 6px">${esc(C(s.club).short)}${s.club === S.club ? " <span class=\"tiny muted\">you</span>" : ""}</h3>${rows.map(x => `<div class="mr-row${x.sub || x.red ? " off" : ""}"><span class="pos">${x.p.pos}</span><span class="nm">${s.club === S.club || M.fx.h === S.club || M.fx.a === S.club ? playerA(x.p) : esc(x.p.name)}${"⚽".repeat(x.g)}${x.a ? ` <span class="tiny muted">${x.a}A</span>` : ""}${x.y && !x.red ? ' <span class="yc-i" title="Booked"></span>' : ""}${x.red ? ' <span class="rc-i" title="Sent off"></span>' : ""}${x.came ? ` <span class="tiny muted">on ${x.came}′</span>` : ""}${x.sub ? ' <span class="tiny muted">off</span>' : ""}</span><b class="mr ${mrCls(x.r)}">${x.r.toFixed(1)}</b></div>`).join("")}</div>`; };
+  return `<div class="card lv-rat"><div class="card-h"><h2>Match ratings</h2><span class="tiny muted">out of 10${M.done ? " · final" : " · live"}</span></div>${M.min > 0 ? `<div class="mr-grid">${side(LIVE.k)}${side(1 - LIVE.k)}</div>` : '<p class="small muted">Ratings appear once the match kicks off.</p>'}</div>`;
+}
 function liveTeam(M, k) {
   const s = k ? M.a : M.h, F = FORMATIONS[s.form], sel = UI.lsel || {}, done = M.done, left = RULES.subs - s.subs;
   const bench = benchAvail(M, k), canSub = !done && left > 0;
   const slots = s.on.map((o, idx) => { const [role, x, y] = F[o.si] || [o.slot, 50, 50], f = FAM[o.p.pos][o.slot], on = sel.on === idx;
     return `<button class="slot ${f < .9 ? "oop" : ""} ${on ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="livetap" data-v="${idx}" ${done ? "disabled" : ""} title="${esc(o.p.name)}, ${o.p.pos} playing ${o.slot}, fitness ${Math.round(o.fit)}">
-      <span class="disc">${Math.round(r20(eff(o.p, o.slot, o.fit)))}</span>${s.yel[o.p.id] ? '<span class="yc" aria-label="Booked"></span>' : ""}<span class="nm">${esc(pitchName(o.p, s.on.map(x => x.p)))}</span><span class="fb"><i style="width:${o.fit}%;background:${o.fit < 60 ? "var(--loss)" : o.fit < 75 ? "var(--accent)" : "var(--win)"}"></i></span></button>`; }).join("");
+      <span class="disc">${Math.round(r20(eff(o.p, o.slot, o.fit)))}</span>${s.yel[o.p.id] ? '<span class="yc" aria-label="Booked"></span>' : ""}${M.min > 0 ? `<span class="mr ${mrCls(matchRating(M, k, o.p.id))}" title="Match rating">${matchRating(M, k, o.p.id).toFixed(1)}</span>` : ""}<span class="nm">${esc(pitchName(o.p, s.on.map(x => x.p)))}</span><span class="fb"><i style="width:${o.fit}%;background:${o.fit < 60 ? "var(--loss)" : o.fit < 75 ? "var(--accent)" : "var(--win)"}"></i></span></button>`; }).join("");
   const hint = done ? "" : sel.on != null ? (canSub ? `Now tap a substitute to bring on for ${esc(s.on[sel.on].p.name)}, or another player to swap positions.` : "Tap another player to swap positions.") : sel.bench != null ? `Now tap the player to take off for ${esc(P(sel.bench).name)}.` : `Tap a player, then a substitute to bring him on, or two players to swap positions.`;
   return `<div class="card live-team lv-team" style="--club:${C(s.club).color}"><div class="card-h"><h2>Your team</h2><span class="eyebrow">${left} sub${left === 1 ? "" : "s"} left</span></div>
     <div class="row between small" style="margin-bottom:8px"><label class="row">Formation <select data-c="liveform" ${done ? "disabled" : ""}>${Object.keys(FORMATIONS).map(f => `<option ${f === s.form ? "selected" : ""}>${f}</option>`).join("")}</select></label><span class="muted">${MENT[s.ment].l}</span></div>
@@ -911,7 +923,7 @@ function viewLive() {
     <div class="poss"><span class="h" style="width:${hp}%"></span><span class="a" style="width:${100 - hp}%"></span></div>
     <div class="row small muted between"><span>Possession ${hp}%</span><span>${100 - hp}%</span></div>
     <div class="live-grid"><div class="card lv-feed"><div class="card-h"><h2>Commentary</h2></div><ul class="feed" aria-live="polite">${M.log.slice().reverse().map((e, i) => `<li class="${e.type === "goal" ? "goal" : ""} ${i === 0 && !M.done ? "new" : ""}"><span class="m">${e.m}′</span><span><span class="tag" style="background:${cl(e)}"></span>${esc(e.text)}</span></li>`).join("") || '<li><span class="m">0′</span><span>The teams are out. Press kick off when ready.</span></li>'}</ul></div>
-    <div class="card lv-stats"><table class="stats"><tbody>${stat("Shots", M.h.shots, M.a.shots)}${stat("On target", M.h.sot, M.a.sot)}${stat("Subs", M.h.subs, M.a.subs)}</tbody></table></div><div class="card ctrl lv-ctrl">${ctrl}</div>${liveTeam(M, k)}</div></section>`;
+    <div class="card lv-stats"><table class="stats"><tbody>${stat("Shots", M.h.shots, M.a.shots)}${stat("On target", M.h.sot, M.a.sot)}${stat("Subs", M.h.subs, M.a.subs)}</tbody></table></div><div class="card ctrl lv-ctrl">${ctrl}</div>${liveTeam(M, k)}${liveRatings(M)}</div></section>`;
 }
 
 function viewManager() {

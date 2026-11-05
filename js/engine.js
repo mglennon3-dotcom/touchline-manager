@@ -235,23 +235,35 @@ function tieWinner(M) {
 const matchWinner = M => M.pens ? (M.pens[0] > M.pens[1] ? M.h.club : M.a.club) : M.h.goals > M.a.goals ? M.h.club : M.a.goals > M.h.goals ? M.a.club : null;
 
 /* Write a finished match back into players: fitness, stats, cards, injuries, ratings, minutes. */
+/* A player's rating for this match, out of 10, live or final: 6.4, plus or minus for the result (the score
+   as it stands, during the game), goals, assists, his quality against his team's, a clean sheet or goals
+   conceded for defenders and keepers, and bookings. The random part is drawn once per player per match,
+   so what you see at the final whistle is what goes on his record. */
+function matchRating(M, i, id) {
+  const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), c = C(s.club), on = s.on.find(o => o.p.id === id);
+  const mins = on ? M.min - on.from : (s.mins[id] ?? 0);
+  const win = M.done ? s.goals > o2.goals || (M.pens && matchWinner(M) === s.club) : s.goals > o2.goals;
+  const loss = M.done ? s.goals < o2.goals || (M.pens && matchWinner(M) !== s.club) : s.goals < o2.goals;
+  const g = M.goals.filter(x => x.pid === id).length, a = M.goals.filter(x => x.ast === id).length;
+  const form = (M.form ||= {})[id] ??= gauss() * .3;
+  let rt = 6.4 + (win ? .35 : loss ? -.35 : 0) + g * .95 + a * .5 + (p.ovr - clubLevel(c)) / 25 + form;
+  if (LINE[p.pos] === "DEF" || p.pos === "GK") { rt -= o2.goals * .14; if (o2.goals === 0 && mins >= 60) rt += .55; }
+  if (M.cards.includes(id)) rt -= .2;
+  if (M.reds.some(r => r[0] === id)) rt -= 1;
+  return clamp(rt, 3, 10);
+}
 function applyMatch(M) {
   const league = M.fx.comp === "L", frac = league ? (M.fx.round || 0) / roundsOf(M.fx.key) : 0;
   for (let i = 0; i < 2; i++) {
     const s = i ? M.a : M.h, o2 = i ? M.h : M.a, c = C(s.club);
     for (const id of s.susSnap) { const p = P(id); if (p && p.club === c.id && p.sus > 0) p.sus--; }
     for (const o of s.on) { M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.end - o.from; }
-    const win = s.goals > o2.goals || (M.pens && matchWinner(M) === s.club), loss = s.goals < o2.goals || (M.pens && matchWinner(M) !== s.club);
-    const lvl = clubLevel(c);
     for (const id of s.used) {
       const p = P(id), mins = s.mins[id] ?? 0;
       p.s.app++; p.s.min += mins; p.wm += mins;
       if (M.fit[id] != null) p.fit = Math.round(M.fit[id]);
-      const g = M.goals.filter(x => x.pid === id).length, a = M.goals.filter(x => x.ast === id).length;
-      const defLine = LINE[p.pos] === "DEF" || p.pos === "GK";
-      let rt = 6.4 + (win ? .35 : loss ? -.35 : 0) + g * .95 + a * .5 + (p.ovr - lvl) / 25 + gauss() * .3;
-      if (defLine) { rt -= o2.goals * .14; if (o2.goals === 0 && mins >= 60) { rt += .55; p.s.cs++; } }
-      p.s.rt += clamp(rt, 3, 10);
+      if ((LINE[p.pos] === "DEF" || p.pos === "GK") && o2.goals === 0 && mins >= 60) p.s.cs++;
+      p.s.rt += matchRating(M, i, id);
       if (!isSenior(p)) c.ym += mins; c.tm += mins;
     }
     c.wkMatches++;
