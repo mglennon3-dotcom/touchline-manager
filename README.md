@@ -109,7 +109,8 @@ unlimited under-21s; homegrown means three seasons at an English club before tur
 substitutes and five changes; yellow-card bans at 5, 10 and 15 bookings; three games for a straight red;
 ties split on goal difference, goals scored, then head-to-head. Finances use a Squad Cost Ratio:
 wages, amortised fees and agent fees against revenue plus player-sale profit, with a levy above 85%
-and points deductions above 115%.
+and points deductions above 115%. AI clubs heading for a charge sell players before the accounts close, as real
+clubs do, so charges are rare: one or two every few seasons across England.
 
 ## Code
 

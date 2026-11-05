@@ -159,11 +159,31 @@ function renewTerms(p) {
 }
 
 /* ---------- Squad Cost Ratio ---------- */
+/* Before the accounts close, an AI club heading for a charge sells whoever books the biggest profit,
+   as real clubs do, until it is back under the line or can't find a buyer. */
+function deadlineSales(c, ratio) {
+  const buyers = activeClubs().filter(b => b.id !== c.id && !isUser(b) && b.tier === 1 && b.squad.length < 30 && rivalry(b.id, c.id) < 2);
+  const book = p => p.am ? p.am.per * p.am.left : 0;
+  const list = c.squad.map(P).filter(p => !p.loan && p.age >= 18).sort((a, b) => (value(b) - book(b)) - (value(a) - book(a)));
+  let sold = 0;
+  if (R() < .06) { c.missedDeadline = S.year; return; }  // sometimes no deal gets done before the accounts close
+  for (const p of list.slice(0, 8)) {
+    if (ratio() <= RULES.scrSporting - .05 || sold >= 5) break;
+    if (R() < .12) continue;  // this deal falls through; try the next player
+    const buyer = pick(buyers.filter(b => b.cash > value(p))); if (!buyer) continue;
+    const fee = Math.round(value(p) * rf(.85, 1.05) / 1e4) * 1e4;
+    transfer(p, buyer, fee, contractDemand(p, buyer, .6), ri(2, 5)); sold++;
+    if (!isForeign(c) && (c.lg === me().lg || c.lg === "E1" || rivalry(c.id, S.club))) news(`${c.name} sell ${p.name} to ${buyer.name} for ${money(fee)} to stay inside the cost rules.`, false, "finance");
+  }
+}
 function assessSCR() {
   for (const c of activeClubs()) {
     if (!c.fin || c.fin.rev < 1 || c.newcomer === S.year) continue;  // clubs that joined this summer have no season to judge
-    const f = c.fin, cost = f.wages + f.amort + f.agent, rev = f.rev + f.prize + f.merit + f.scheme + Math.max(0, f.sales);
-    const ratio = cost / Math.max(1, rev); c.lastSCR = ratio;
+    const f = c.fin, costOf = () => f.wages + f.amort + f.agent, revOf = () => f.rev + f.prize + f.merit + f.scheme + Math.max(0, f.sales);
+    // Clubs plan as if any connected-party income might be struck out, since the review comes after the deadline.
+    const risky = sum(c.schemes.filter(s => s.y === S.year), s => s.amt), safeRatio = () => costOf() / Math.max(1, revOf() - risky);
+    if (!isUser(c) && safeRatio() > RULES.scrSporting - .03) deadlineSales(c, safeRatio);
+    const cost = costOf(), rev = revOf(), ratio = cost / Math.max(1, rev); c.lastSCR = ratio;
     let schemeBad = false;
     for (const s of c.schemes.filter(s => s.y === S.year)) {
       if (R() < s.risk) { schemeBad = true; s.found = true; news(`The league rules ${c.name}'s ${s.what} was not at fair market value. ${money(s.amt)} is struck from their accounts.`, isUser(c) || c.lg === me().lg || c.lg === "E1", "finance"); }
@@ -173,7 +193,7 @@ function assessSCR() {
     if (adj > RULES.scrSporting && !isForeign(c)) {
       const pts = Math.min(15, 6 + Math.floor((adj - RULES.scrSporting) / .05) + (schemeBad ? 2 : 0));
       S.cases.push({ club: c.id, ratio: adj, pts, hearing: ri(6, 20), status: "charged", y: S.year + 1 });
-      if (!isForeign(c)) news(`${c.name} charged with breaching the Squad Cost Ratio (${pct(adj)} against a ${pct(RULES.scrLimit)} limit). A hearing will follow next season.`, true, "finance");
+      if (!isForeign(c)) news(`${c.missedDeadline === S.year ? `${c.name} failed to sell in time. ` : ""}${c.name} charged with breaching the Squad Cost Ratio (${pct(adj)} against a ${pct(RULES.scrLimit)} limit). A hearing will follow next season.`, true, "finance");
     } else if (adj > RULES.scrLimit) {
       const levy = Math.round((adj - RULES.scrLimit) * rev * .5); c.cash -= levy; c.fin.levy += levy;
       if (isUser(c) || c.lg === "E1") news(`${c.name} pay a ${money(levy)} levy after a Squad Cost Ratio of ${pct(adj)}.`, isUser(c), "finance");
