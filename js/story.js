@@ -88,11 +88,15 @@ function weeklyStories() {
       body: `Your projected Squad Cost Ratio is ${pct(scr(me()))}. The owner wants to ${what} for ${money(amt)}, which would count as income this season. The league reviews deals between connected parties, and if it decides the price was inflated the income is struck out and a charge may follow.`,
       opts: [["accept", "Go ahead"], ["decline", "Decline: keep the books clean"]] });
   }
-  // takeovers
-  if (R() < .05) {
-    const c = pick(activeClubs().filter(x => !isUser(x) && x.rep < 75 && x.owner !== "reckless"));
-    if (c) { const war = Math.round(c.revBase * rf(1, 3)); c.owner = "reckless"; c.cash += war; c.rep = Math.min(85, c.rep + 4); news(`A consortium completes a takeover of ${c.name} (${leagueName(c.lg)}) and promises ${money(war)} for new players.`, c.lg === me().lg, "club"); }
+  // takeovers: one or two every few seasons across the game, more often at struggling or stretched clubs
+  if (R() < .012) {
+    const c = wpick(activeClubs().filter(x => !isUser(x)), x => {
+      const L = S.leagues[x.lg], pos = posIn(L, x.id) / L.clubs.length, strain = squadCost(x) / Math.max(1, x.revBase);
+      return (x.rep < 80 ? 1 : .3) * (1 + pos) * (strain > .9 ? 2 : 1);
+    });
+    if (c) takeover(c);
   }
+  if (R() < .00025) takeover(me());  // about a 1% chance a season for your own club
   // managerial changes bring new formations, which changes who wants to join
   if (S.week % 4 === 3) for (const L of Object.values(S.leagues)) {
     const t = standings(L);
@@ -150,4 +154,29 @@ function resolveDecision(m, choice) {
     S.board = clamp(S.board + 2, 0, 100); return "You decline. The board approves of your caution.";
   }
   return "";
+}
+
+/* A change of ownership. Investors put money in and want more; cost-cutters and leveraged buyers take money out. */
+function takeover(c, kind) {
+  kind = kind || (R() < .55 ? "invest" : "cut");
+  const before = c.owner, who = pick(kind === "invest" ? ["A consortium", "An overseas investment group", "A local billionaire", "A sports investment fund"] : ["A private equity firm", "A property developer", "A leveraged buyout group", "A cost-conscious local businessman"]);
+  let detail;
+  if (kind === "invest") {
+    const war = Math.round(c.revBase * rf(.8, 2.5));
+    c.owner = R() < .55 ? "ambitious" : "reckless"; c.cash += war; c.revBase = Math.round(c.revBase * 1.08); c.rep = Math.min(90, c.rep + 3);
+    const acad = R() < .5 ? ri(1, 3) : 0; c.academy = Math.min(20, c.academy + acad);
+    detail = `promises ${money(war)} for new players${acad ? ` and a bigger academy (youth development +${acad})` : ""}`;
+  } else {
+    const drain = Math.round(c.revBase * rf(.2, .6));
+    c.owner = "prudent"; c.cash -= drain;
+    const acad = R() < .4 ? ri(1, 2) : 0; c.academy = Math.max(1, c.academy - acad);
+    if (!isUser(c)) for (const p of c.squad.map(P).sort((a, b) => b.wage - a.wage).slice(0, 2)) p.listed = true;  // high earners up for sale
+    detail = `loads ${money(drain)} of costs onto the club and orders spending cuts${acad ? `, trimming the academy (youth development −${acad})` : ""}`;
+  }
+  (c.takeovers ||= []).push({ y: S.year, kind, who, from: before, to: c.owner });
+  if (isUser(c)) {
+    if (kind === "invest") { S.expPos = Math.max(1, S.expPos - ri(1, 3)); S.board = Math.max(S.board, 55); }
+    else S.expPos = Math.min(S.leagues[c.lg].clubs.length, S.expPos + 1);
+    news(`${who} has bought ${c.name} and ${detail}. ${kind === "invest" ? `They expect more: the new target is to ${expText(S.expPos, c.lg).toLowerCase()}.` : `Expectations ease a little: the target is now to ${expText(S.expPos, c.lg).toLowerCase()}.`}`, true, "club");
+  } else if (!isForeign(c) && (c.lg === me().lg || c.tier === 1 || rivalry(c.id, S.club))) news(`${who} completes a takeover of ${c.name} (${leagueName(c.lg)}) and ${detail}.`, c.lg === me().lg || rivalry(c.id, S.club) > 0, "club");
 }

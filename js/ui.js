@@ -127,15 +127,22 @@ function viewStart() {
         { k: "reg", l: "Region", f: r => r.c.region, cls: "hide-sm" },
         { k: "lvl", l: "Squad", r: 1, v: r => r.lvl, f: r => r20(r.lvl).toFixed(1) },
         { k: "co", l: "Coach", f: r => esc(ARCH[r.c.coach.arch].l), cls: "hide-sm" },
-        { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep },
-        { k: "cash", l: "Cash", r: 1, v: r => r.c.cash, f: r => money(r.c.cash), cls: "hide-sm" },
-        { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => r.c.academy + "/20", cls: "hide-sm" },
+        { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep, cls: "hide-sm" },
+        { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => `<b class="rt ${aCls(r.c.academy)}">${r.c.academy}</b>` },
+        { k: "fin", l: "Finances", v: r => finHealth(r.c).ratio, f: r => { const h = finHealth(r.c); return `<b class="${h.cls}">${h.label}</b><br><span class="tiny muted">${money(r.c.cash)} cash · ${money(r.c.revBase)} a year</span>`; } },
         { k: "own", l: "Owner", f: r => OWNER[r.c.owner].l, cls: "hide-sm" },
         { k: "exp", l: "Board target", f: r => expText(r.exp, key) },
         { k: "go", l: "", f: r => `<button class="btn sm" data-a="choose" data-v="${r.c.id}">Manage</button>` },
       ], rows)}
-      <p class="small muted" style="margin-top:10px">All clubs and players are fictional. Your career saves in this browser; export a save file from the History page to keep a backup.</p></div></div>`;
+      <p class="small muted" style="margin-top:10px"><b>Youth dev</b> is the academy's rating out of 20: it sets how good each summer's graduates can become and helps attract young prospects. <b>Finances</b> compare the wage bill and transfer costs with annual income: <span class="good">Healthy</span> under 75%, <span class="ok">Comfortable</span> under 85%, <span class="warn">Stretched</span> up to 100%, <span class="bad">Over the limit</span> above that, where the cost rules start to bite.</p>
+      <p class="small muted" style="margin-top:6px">All clubs and players are fictional. Your career saves in this browser; export a save file from the History page to keep a backup.</p></div></div>`;
   S = keep; return html;
+}
+/* A club's finances at a glance: squad costs (wages plus transfer amortisation) against annual income. */
+function finHealth(c) {
+  const ratio = squadCost(c) / Math.max(1, c.revBase);
+  const [label, cls] = ratio < .75 ? ["Healthy", "good"] : ratio < .85 ? ["Comfortable", "ok"] : ratio <= 1 ? ["Stretched", "warn"] : ["Over the limit", "bad"];
+  return { ratio, label, cls };
 }
 function leagueRules(key) {
   const L = LG[key];
@@ -545,6 +552,7 @@ function modalClub(c) {
       <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · prefers ${coachOf(c).form} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
       <div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
     ${c.hist.length ? `<p class="small">Recent finishes: ${c.hist.slice(-6).reverse().map(h => `${seasonLabel(h.y)} ${ord(h.pos)} in ${leagueName(h.lg)}`).join(" · ")}</p>` : ""}
+    ${(c.takeovers || []).length ? `<p class="small">Ownership: ${c.takeovers.slice(-4).map(t => `${seasonLabel(t.y)} ${esc(t.who.replace(/^An? /, "").toLowerCase())} (${t.kind === "invest" ? "investor" : "cost-cutter"})`).join(" · ")}</p>` : ""}
     ${Object.keys(c.rivals || {}).length ? `<p class="small">Rivals: ${Object.entries(c.rivals).filter(([id]) => !C(+id).gone).map(([id, n]) => `${clubA(+id, { crest: false })} (${RIVAL_WORD[n].toLowerCase()}, ${recStr(h2hOf(c, +id))})`).join(" · ")}</p>` : ""}
     ${c.trophies.length ? `<p class="small">Honours: ${c.trophies.slice(-12).reverse().map(t => `${trophyName(t.t)} ${seasonLabel(t.y)}`).join(", ")}</p>` : ""}
     ${table("club-" + c.id, [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], ps)}</div>`;

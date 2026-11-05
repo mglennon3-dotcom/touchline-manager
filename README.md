@@ -69,6 +69,12 @@ fit, squad dynamics and prestige), each prospect weighting them differently.
 **Unsackable mode** (chosen when you create your manager, or on the Manager page) keeps the board's reactions but
 stops it firing you. The test script uses it.
 
+**Takeovers** are rare: one or two every few seasons across the game, more often at struggling or overstretched
+clubs, and about a 1% chance a season for yours.
+Investors bring cash, a commercial boost, a bigger appetite for spending and often academy money, and expect more.
+Cost-cutters and leveraged buyers drain cash, cut spending tolerance and sometimes the academy, and push high earners
+out; the board's expectations ease a little.
+
 **Injuries** range from knocks of a week or two, through tears that take months, to rare season-ending
 injuries and very rare career-ending ones. **Retirements** start from age 30: some players announce at the
 start of the season that it will be their last, others surprise you at the end.
