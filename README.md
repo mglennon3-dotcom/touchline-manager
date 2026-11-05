@@ -51,7 +51,10 @@ formation: teams play about 2% better in their coach's own system. Twelve modern
 (4-3-3, 4-2-3-1, 4-4-2, 4-4-1-1, 4-1-4-1, 4-3-2-1, 4-1-2-1-2, 3-4-2-1, 3-4-3, 3-5-2, 5-3-2, 5-4-1), and AI
 coaches favour them roughly as often as the modern game does. A better Recruitment rating narrows your scouts'
 estimates. You pick an archetype (or balanced) and a preferred formation when you start, and earn points to
-spend every season. Every AI club has its own coach, and a
+spend every season. You also have league knowledge out of 20 for England, each foreign country and the rest
+of the world: high knowledge makes scouting there cheaper and sharper (from 15, one trip gives a full report),
+low knowledge the reverse. Scouting abroad costs more hours and travel money. Knowledge grows as you scout and
+can be raised with coaching points. Every AI club has its own coach, and a
 sacked coach is replaced by a new one with a different style.
 
 **Rivals:** every club's nearest neighbour is a rival, as is its nearest club in the same division, and some

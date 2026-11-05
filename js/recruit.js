@@ -67,7 +67,7 @@ const grade = v => v >= .8 ? "A" : v >= .62 ? "B" : v >= .45 ? "C" : v >= .3 ? "
 
 /* What you can see depends on how much you've scouted him: potential and injury proneness as ranges out of 20. */
 function prospectView(y, val, k) {
-  const rec = S.me ? S.me.rec : 10, w = [8, 5, 3, Math.max(1, 3 - rec * .1)][y.sc];
+  const rec = S.me ? S.me.rec : 10, w = [8, 5, 3, Math.max(1, 3 - rec * .1)][y.sc] * knowWidth(prospectCountry(y));
   let h = 0; for (const ch of y.id) h = (h * 31 + ch.charCodeAt(0)) % 9973;
   const c = val + (seedOf(h, k) - .5) * w * .8;
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
@@ -96,11 +96,11 @@ function recAct(y, act) {
     if (S.rec.offers >= offerCap()) return `Your academy can only offer ${offerCap()} places a year. Withdraw one first.`;
     y.offers.push(c.id); y.rel[c.id] = (y.rel[c.id] || 0) + .05; S.rec.offers++; return `Academy place offered to ${y.name}.`;
   }
-  const cost = REC_COST[act];
-  if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}).`;
-  if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc++; if (y.sc >= 2) y.known = true; }
+  const code = prospectCountry(y), cost = act === "call" ? REC_COST.call : scoutHours(REC_COST[act], code);
+  if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}); that needs ${cost}.`;
+  if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc = Math.min(3, y.sc + (knowOf(code) >= 15 ? 2 : 1)); if (y.sc >= 2) y.known = true; learnCountry(code); payTravel(code); }
   if (act === "call") { if (y.called === S.week + S.year * 100) return "You've already spoken to his family this week."; y.called = S.week + S.year * 100; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + (.045 + .03 * (y.pri.dyn + y.pri.acad)) * recMult(); }
-  if (act === "visit") { if (y.visit) return "He has already visited."; y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16 * recMult(); }
+  if (act === "visit") { if (y.visit) return "He has already visited."; payTravel(code); y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16 * recMult(); }
   S.rec.hours -= cost;
   return { scout: `Scouting report on ${y.name} updated.`, call: `You spoke with ${y.name}'s family.`, visit: `${y.name} visited your training ground.` }[act];
 }

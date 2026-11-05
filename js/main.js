@@ -118,7 +118,8 @@ const ACT = {
   arch: v => { const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; UI.modal.arch = v; renderModal(); },
   startcareer: () => { const el = document.getElementById("coach-name"), fe = document.getElementById("coach-form"), us = document.getElementById("coach-unsack"); const m = UI.modal; UI.modal = null; takeClub(m.club, (el && el.value.trim()) || "The Manager", m.arch, fe ? fe.value : "4-3-3"); S.set.unsackable = !!(us && us.checked); save(); render(); },
   coachpt: v => { if (S.me.pts <= 0 || S.me[v] >= 20) return; S.me[v]++; S.me.pts--; save(); render(); },
-  scoutp: v => { const p = P(+v); if (S.rec.hours < 2) return toast(`Not enough scouting hours left this week (${S.rec.hours}).`); S.rec.hours -= 2; S.scout[p.id] = Math.min(2, (S.scout[p.id] || 0) + 1); save(); renderModal(); render(); toast(S.scout[p.id] >= 2 ? `Full report on ${p.name} filed.` : `First look at ${p.name}: one more visit for a full report.`); },
+  knowpt: v => { if (S.me.pts <= 0 || knowOf(v) >= 20) return; S.me.know[v] = Math.min(20, Math.floor(knowOf(v)) + 1); S.me.pts--; save(); render(); },
+  scoutp: v => { const p = P(+v), code = playerCountry(p), h = scoutHours(2, code); if (S.rec.hours < h) return toast(`Not enough scouting hours left this week (${S.rec.hours}); scouting in ${KNOW_NAME(code)} takes ${h}.`); S.rec.hours -= h; payTravel(code); learnCountry(code); S.scout[p.id] = Math.min(2, (S.scout[p.id] || 0) + (knowOf(code) >= 15 ? 2 : 1)); save(); renderModal(); render(); toast(S.scout[p.id] >= 2 ? `Full report on ${p.name} filed.` : `First look at ${p.name}: one more visit for a full report.`); },
   sort: v => { const [id, k] = v.split("|"); const cur = UI.sort[id]; UI.sort[id] = { k, d: cur && cur.k === k ? -cur.d : (["n", "pos", "club", "from", "rank"].includes(k) ? 1 : -1) }; render(); },
   club: v => { UI.modal = { t: "club", id: +v }; UI.confirm = null; renderModal(); },
   player: v => { UI.modal = { t: "player", id: +v }; UI.confirm = null; renderModal(); },
@@ -194,6 +195,7 @@ async function boot(data) {
   if (S && !S.stadiums) ensureStadiums();
   if (S && !S.sponsors) ensureSponsors();
   if (S && !S.dem2) ensureDemandAnchor();
+  if (S && S.me && !S.me.know) S.me.know = newKnowledge("ENG");  // saves from before league knowledge
   if (S && !S.reg2) { for (const c of activeClubs()) autoRegister(c, false); S.reg2 = true; }
   if (S && !S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   render();

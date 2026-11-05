@@ -136,7 +136,7 @@ function scoutLevel(p) {
 function seedOf(id, k) { const x = Math.sin(id * 12.9898 + k * 78.233) * 43758.5453; return x - Math.floor(x); }
 function viewOf(p, v, k, wide) {
   const lvl = scoutLevel(p); if (lvl >= 2) return [Math.round(v), Math.round(v)];
-  const w = lvl === 1 ? 2 : wide, c = v + (seedOf(p.id, k) - .5) * w;
+  const w = lvl === 1 ? Math.max(1, 2 * knowWidth(playerCountry(p))) : wide, c = v + (seedOf(p.id, k) - .5) * w;
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
 const ratingView = p => viewOf(p, r20(p.ovr), 1, 5);
@@ -146,7 +146,8 @@ const ratingMid = p => { const [a, b] = ratingView(p); return (a + b) / 2; };
    a first look gives a wide range, a full report a narrow one, and a better recruiter narrows both. */
 function hiddenView(p, val, k) {
   const lvl = scoutLevel(p); if (lvl === 0) return null;
-  const rec = S.me ? S.me.rec : 10, w = lvl >= 2 ? Math.max(1, 5 - rec * .2) : Math.max(3, 9 - rec * .25);
+  const rec = S.me ? S.me.rec : 10, kw = (p.club >= 0 && C(p.club).lg === (S.club != null ? me().lg : "")) || p.club === S.club ? 1 : knowWidth(playerCountry(p));
+  const w = (lvl >= 2 ? Math.max(1, 5 - rec * .2) : Math.max(3, 9 - rec * .25)) * kw;
   const c = val + (seedOf(p.id, k) - .5) * w * .8;
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
@@ -167,7 +168,7 @@ function prefFormation(arch) {
   return wpick(FORM_KEYS, f => FORM_WEIGHT[f] * (tilt[f] || 1));
 }
 function newManager(name, arch, form) {
-  const co = { name, arch, nat: "ENG", pts: 0, seasons: 0, form: form || "4-3-3" };
+  const co = { name, arch, nat: "ENG", pts: 0, seasons: 0, form: form || "4-3-3", know: newKnowledge("ENG") };
   for (const [k] of COACH_KEYS) co[k] = arch === "bal" ? 10 : ARCH[arch].key === k ? 14 : 9;
   if (arch !== "bal") co[COACH_KEYS.find(([k]) => k !== ARCH[arch].key)[0]] = 8;  // archetypes trade a point for focus
   return co;
@@ -365,3 +366,22 @@ function planRetirements() {
     else if (p.retiring === 1 && c && !isForeign(c) && p.ovr >= 75) news(`${c.name}'s ${p.name} announces he will retire at the end of the season.`, false, "squad");
   }
 }
+
+/* ---------- your coach's knowledge of each country ---------- */
+// Out of 20. High knowledge makes scouting there cheaper in hours, sharper, and (from 15) a full report in one trip.
+// Scouting abroad also costs more hours and travel money.
+const KNOW_KEYS = ["ENG", "ESP", "GER", "ITA", "FRA", "POR", "NED", "BEL", "ROW"];
+const KNOW_NAME = code => code === "ROW" ? "Rest of the world" : COUNTRY[code].name;
+function newKnowledge(home) {
+  const k = {}; for (const c of KNOW_KEYS) k[c] = c === home ? ri(12, 15) : ri(3, 8);
+  k[pick(KNOW_KEYS.filter(c => c !== home))] = ri(10, 13);  // every coach has one foreign speciality
+  return k;
+}
+const knowOf = code => (S.me && S.me.know ? S.me.know[code] : 10) ?? 8;
+const playerCountry = p => p.club >= 0 ? C(p.club).country : (COUNTRY[p.nat] ? p.nat : "ROW");
+const prospectCountry = y => y.country || "ROW";
+const knowWidth = code => clamp(1.3 - knowOf(code) / 25, .5, 1.3);  // how much wider (or narrower) reports are
+function scoutHours(base, code) { return Math.max(1, Math.round(base * (code !== "ENG" ? 1.5 : 1) * (1.5 - knowOf(code) / 20))); }
+function travelCost(code) { return code === "ENG" ? 0 : Math.round([0, 6e4, 3e4, 1.5e4, 8e3, 5e3, 5e3][me().tier] * (code === "ROW" ? 2 : 1)); }
+function learnCountry(code, amt = .25) { if (S.me && S.me.know) S.me.know[code] = Math.min(20, Math.round((knowOf(code) + amt) * 100) / 100); }
+function payTravel(code) { const t = travelCost(code); if (t) { me().cash -= t; me().fin.scouting = (me().fin.scouting || 0) + t; } return t; }
