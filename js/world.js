@@ -200,7 +200,8 @@ function newClub(lgKey, rep) {
   const ownerType = wpick(["prudent", "balanced", "ambitious", "reckless"], o => ({ prudent: 3, balanced: 4, ambitious: 2, reckless: 1 })[o]);
   const c = { id: S.clubs.length, name: pick(K.fmt).replace("{t}", t), town: t, short, country: K.code, lg: lgKey, tier: L.tier, region: rname,
     lat: rlat + rf(-.6, .6), lon: rlon + rf(-.8, .8), color: CLUB_COLORS[S.clubs.length % CLUB_COLORS.length], rep, owner: ownerType,
-    academy: clamp(Math.round(rep / 12 + gauss() * 1.4), 1, 10), formation: null,
+    // Youth development, out of 20. Only loosely tied to stature: a lower-division club can run a great academy.
+    academy: clamp(Math.round(10 + gauss() * 3.5 + (rep - 50) * .04), 1, 20), formation: null,
     coach: genCoach(rep, K.code), squad: [], cash: 0, revBase: 0, revSeason: 0, fin: null, youthMin: rf(.03, .14), ym: 0, tm: 0, wkMatches: 0, trophies: [], hist: [], schemes: [], gone: false, founded: S.year };
   c.formation = c.coach.form;
   S.clubs.push(c);
@@ -223,7 +224,8 @@ function genSquad(c) {
 function academyPlayer(c, age) {
   const p = makePlayer({ pos: pick(["CB", "FB", "DM", "CM", "AM", "W", "ST", "CB", "GK"]), base: 50, age, nat: c.country, club: c.id, rep: c.rep });
   // Academy kids peak around the club's own level: a few exceed it, most fall short.
-  p.pot = clamp(Math.round(lvlForRep(c.rep) - 4 + (c.academy - 5) * .6 + gauss() * 4.5), 38, 92);
+  // The academy rating drives a graduate's ceiling far more than the club's division does.
+  p.pot = clamp(Math.round(o100(5 + c.academy * .55 + gauss() * 2.2) + (lvlForRep(c.rep) - 60) * .25), 38, 92);
   setRating(p, clamp(p.pot - ri(6, 14) - (18 - age) * 3, 33, p.pot));
   p.wage = Math.max(12000, Math.round(wageDemand(p, c.rep) * .6 / 1000) * 1000);
   p.yt[c.country] = Math.max(1, age - 15); p.yrs = ri(2, 3);
@@ -270,7 +272,7 @@ function setupFinances(c) {
 function newWorld() {
   S = { v: 5, year: 2026, phase: "season", week: 0, di: 0, days: [], summerDay: 0, club: null, nextPid: 1, players: {}, clubs: [], fa: [], towns: {},
     leagues: {}, ko: {}, cont: {}, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
-    history: [], career: [], hof: [], scout: {}, me: null, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
+    history: [], career: [], hof: [], scout: {}, me: null, acad20: true, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
     set: { live: true }, qual: null, lastPos: {}, sacked: false, _tick: 1 };
   for (const key of Object.keys(LG)) {
     const ids = [];

@@ -158,7 +158,10 @@ function drawKO(comp, r) {
     }
   }
   const mine = rd.ties.find(t => t.h === S.club || t.a === S.club);
-  if (mine && mine.a != null) { const o = C(mine.h === S.club ? mine.a : mine.h); news(`${comp.name} ${rd.name.toLowerCase()} draw: ${rd.legs === 2 ? "you face" : rd.neutral ? "you meet" : mine.h === S.club ? "home to" : "away at"} ${o.name}.`, comp.kind !== "cup" || r >= 3, comp.kind === "cont" ? "cont" : "cup"); }
+  if (mine && mine.a != null) {
+    const o = C(mine.h === S.club ? mine.a : mine.h), n = rivalry(S.club, o.id);
+    news(`${comp.name} ${rd.name.toLowerCase()} draw: ${rd.legs === 2 ? "you face" : rd.neutral ? "you meet" : mine.h === S.club ? "home to" : "away at"} ${o.name}.${n ? ` ${n >= 2 ? `It's ${rivalName(S.club, o.id)}` : `A tie against your rivals`}${o.lg !== me().lg ? `, a rare meeting across the divisions` : ""}.` : ""}`, n > 0 || comp.kind !== "cup" || r >= 3, comp.kind === "cont" ? "cont" : "cup");
+  }
   return rd.ties;
 }
 
@@ -257,7 +260,7 @@ function weekly() {
     const ops = rev * .2; c.fin.ops += ops;
     c.fin.rev += rev; c.fin.wages += wages; c.fin.amort += amort; c.cash += rev - wages - ops;
     if (isUser(c)) { const sc = S.rec.scoutLvl * scoutCost(); c.cash -= sc * wk; c.fin.scouting += sc * wk; }
-    const t = TRAIN[isUser(c) ? S.training : "bal"], acad = 1 + c.academy * .03, co = coachOf(c), coachDev = .6 + .04 * (co ? co.dev : 10);
+    const t = TRAIN[isUser(c) ? S.training : "bal"], acad = 1 + c.academy * .015, co = coachOf(c), coachDev = .6 + .04 * (co ? co.dev : 10);
     const possible = Math.max(1, c.wkMatches) * 90;
     for (const id of c.squad) {
       const p = P(id);
@@ -300,7 +303,7 @@ function afterUserMatch(fx, M) {
   news(`${word} ${fx.neutral ? "against" : home ? "at home to" : "away at"} ${opp.name}, ${mine.goals}–${them.goals}${M.pens ? ` (${M.pens[home ? 0 : 1]}–${M.pens[home ? 1 : 0]} pens)` : ""}. ${compLabel(fx)}.${delta ? ` Board ${delta > 0 ? "+" : ""}${delta}.` : ""}`, pts === 3, "result");
   for (const id of M.inj) if (P(id).club === S.club) news(`${P(id).name} is injured and will miss about ${P(id).inj} week${P(id).inj > 1 ? "s" : ""}.`, false, "squad");
   for (const [id, g] of M.reds) if (P(id).club === S.club) news(`${P(id).name} was sent off and is banned for ${g} match${g > 1 ? "es" : ""}.`, false, "squad");
-  if (S.board <= 0) S.sacked = true;
+  if (S.board <= 0 && !S.set.unsackable) S.sacked = true;  // unsackable mode: the board grumbles but can't fire you
 }
 
 /* ---------- end of season ---------- */
@@ -379,9 +382,12 @@ function endSeason() {
     const c = C(id); c.gone = true; c.goneYear = S.year; dropRivals(c); S.leagues[key].clubs = S.leagues[key].clubs.filter(x => x !== id);
     for (const pid of c.squad.slice()) { const p = P(pid); if (!p) continue; if (p.loan) { endLoan(p); continue; } if (p.age < 31 && R() < .6) toFreeAgent(p); else retirePlayer(p); }
     c.squad = [];
-    if (isUser(c)) { S.sacked = true; S.sackReason = `${c.name} dropped out of the National Division.`; }
+    const wasMine = isUser(c);
+    if (wasMine && !S.set.unsackable) { S.sacked = true; S.sackReason = `${c.name} dropped out of the National Division.`; }
     const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n);
     n.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
+    // In unsackable mode you can't be left without a club: you take over one of the newcomers instead.
+    if (wasMine && S.set.unsackable) { S.club = n.id; S.lineup = []; S.formation = S.me.form; n.formation = S.me.form; news(`${c.name} have dropped out of the National Division. You take charge of newcomers ${n.name}.`, true, "board"); }
     moves.push([n.id, "new", null, key]);
   }
   for (const c of Object.keys(FOREIGN_DEF)) {
@@ -424,7 +430,7 @@ function endSeason() {
   // AI coaches improve slowly too, and drift back if they're past it.
   for (const c of activeClubs()) if (!isUser(c) && c.coach && R() < .3) { const k = pick(COACH_KEYS)[0]; c.coach[k] = clamp(c.coach[k] + (R() < .7 ? 1 : -1), 1, 20); }
   S.seasonOver = { pos: myPos, exp, lg: myKey, board: d, earned, won: won.map(t => t.t), moved: myMove ? myMove[1] : null, to: myMove ? myMove[3] : null };
-  if (S.board <= 0) S.sacked = true;
+  if (S.board <= 0 && !S.set.unsackable) S.sacked = true;  // unsackable mode: the board grumbles but can't fire you
 
   // player records, then loans go home
   for (const p of Object.values(S.players)) {
@@ -507,10 +513,17 @@ function summerStep() {
   if (S.summerDay >= CAL.summerDays) newSeasonStart();
 }
 function newSeasonStart() {
-  for (const c of activeClubs()) { const n = isUser(c) ? 1 : ri(1, 2); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) news(`Local academy graduate ${p.name} (${p.pos}) joins the youth squad.`, false, "youth"); } if (!isUser(c)) trimSquad(c, false); }
+  for (const c of activeClubs()) { const n = (isUser(c) ? 1 : ri(1, 2)) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) news(`Local academy graduate ${p.name} (${p.pos}) joins the youth squad.`, false, "youth"); } if (!isUser(c)) trimSquad(c, false); }
   S.year++;
   S.seasonOver = null;
   startSeason();
   fixUserLineup();
+  // Promotion and relegation can bring a derby back into the fixture list, or take it away.
+  for (const id of Object.keys(me().rivals || {}).map(Number)) {
+    const o = C(id); if (o.gone) continue;
+    const was = (o.hist[o.hist.length - 1] || {}).lg, mineWas = (me().hist[me().hist.length - 1] || {}).lg;
+    if (o.lg === me().lg && was !== mineWas) news(rivalry(S.club, id) >= 2 ? `${rivalName(S.club, id).replace(/^the /, "The ")} is back: you and ${o.name} are in the same division again.` : `You and rivals ${o.name} are in the same division again.`, true, "league");
+    else if (o.lg !== me().lg && was === mineWas) news(`No league meetings with ${rivalry(S.club, id) >= 2 ? "derby rivals " : "rivals "}${o.name} this season: they're now in the ${leagueName(o.lg)}. Only a cup draw can bring you together.`, false, "league");
+  }
   news(`The ${seasonLabel(S.year)} season begins. The board's target: ${expText(S.expPos, me().lg).toLowerCase()}.`, true, "board");
 }

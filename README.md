@@ -61,6 +61,14 @@ mood and gate money. Rival clubs charge each other more and fierce rivals won't 
 players are reluctant to cross the divide; and signing from or selling to a rival costs you some goodwill.
 Head-to-head records are kept for every rivalry.
 
+**Youth development** is a club rating out of 20, only loosely tied to division, so a small club can run an
+excellent academy. It sets the potential of each summer's graduates, how fast under-21s improve, and how many
+places you can offer prospects. It is one of six factors prospects weigh (with distance, playing time, formation
+fit, squad dynamics and prestige), each prospect weighting them differently.
+
+**Unsackable mode** (chosen when you create your manager, or on the Manager page) keeps the board's reactions but
+stops it firing you. The test script uses it.
+
 **Injuries** range from knocks of a week or two, through tears that take months, to rare season-ending
 injuries and very rare career-ending ones. **Retirements** start from age 30: some players announce at the
 start of the season that it will be their last, others surprise you at the end.

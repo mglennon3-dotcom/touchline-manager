@@ -72,7 +72,7 @@ function render() {
     <div class="mast-r"><dl class="kpis"><div><dt>Cash</dt><dd class="${c.cash < 0 ? "bad" : ""}">${money(c.cash)}</dd></div>
       <div><dt>Cost ratio</dt><dd class="${ratio > RULES.scrSporting ? "bad" : ratio > RULES.scrLimit ? "warn" : ""}" title="Squad Cost Ratio, projected">${pct(ratio)}</dd></div>
       <div><dt>Position</dt><dd>${pos ? ord(pos) : "—"}</dd></div>
-      <div><dt>Board</dt><dd>${S.board}<span class="meter ${S.board < 30 ? "low" : ""}"><i style="width:${S.board}%"></i></span></dd></div></dl>
+      <div><dt>Board${S.set.unsackable ? ' <span title="Unsackable mode is on">· safe</span>' : ""}</dt><dd>${S.board}<span class="meter ${S.board < 30 ? "low" : ""}"><i style="width:${S.board}%"></i></span></dd></div></dl>
       ${LIVE ? "" : playControl()}</div></div>
     ${LIVE ? "" : `<nav class="tabs" aria-label="Sections">${PAGES.map(([k, l]) => `<button data-a="go" data-v="${k}" ${UI.page === k ? 'aria-current="page"' : ""}>${l}${k === "home" && dec ? `<span class="dot">${dec}</span>` : ""}</button>`).join("")}</nav>`}
   </div></header><main class="wrap gut">${LIVE ? viewLive() : (VIEWS[UI.page] || viewHome)()}</main>`;
@@ -129,7 +129,7 @@ function viewStart() {
         { k: "co", l: "Coach", f: r => esc(ARCH[r.c.coach.arch].l), cls: "hide-sm" },
         { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep },
         { k: "cash", l: "Cash", r: 1, v: r => r.c.cash, f: r => money(r.c.cash), cls: "hide-sm" },
-        { k: "acad", l: "Academy", r: 1, v: r => r.c.academy, f: r => r.c.academy + "/10", cls: "hide-sm" },
+        { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => r.c.academy + "/20", cls: "hide-sm" },
         { k: "own", l: "Owner", f: r => OWNER[r.c.owner].l, cls: "hide-sm" },
         { k: "exp", l: "Board target", f: r => expText(r.exp, key) },
         { k: "go", l: "", f: r => `<button class="btn sm" data-a="choose" data-v="${r.c.id}">Manage</button>` },
@@ -170,7 +170,7 @@ function viewHome() {
   const side = `<section class="card"><div class="card-h"><h2>${leagueName(L.key)}</h2><button class="lnk small" data-a="go" data-v="league">Full table</button></div>
       ${miniTable(L, t.slice(lo, lo + 7), lo)}</section>
     ${rivalsCard()}
-    <section class="card"><div class="card-h"><h2>Board</h2><span class="num">${S.board}/100</span></div><p>Target: <b>${expText(S.expPos, c.lg)}</b> (${ord(S.expPos)} or better).</p><p class="small muted" style="margin-top:6px">Each league result is judged against what the board expected from that fixture. Relegation, cost-rule breaches and early cup exits to weaker sides hurt. At zero you are dismissed.</p></section>
+    <section class="card"><div class="card-h"><h2>Board</h2><span class="num">${S.board}/100</span></div><p>Target: <b>${expText(S.expPos, c.lg)}</b> (${ord(S.expPos)} or better).</p><p class="small muted" style="margin-top:6px">Each league result is judged against what the board expected from that fixture. Relegation, cost-rule breaches and early cup exits to weaker sides hurt. ${S.set.unsackable ? "Unsackable mode is on, so you keep your job whatever happens." : "At zero you are dismissed."}</p></section>
     <section class="card"><div class="card-h"><h2>News</h2><button class="lnk small" data-a="go" data-v="news">All news</button></div><ul class="news">${S.news.slice(0, 10).map(newsItem).join("")}</ul></section>`;
   return `<div class="grid2"><div class="stack">${parts.join("")}</div><div class="stack">${side}</div></div>`;
 }
@@ -421,8 +421,8 @@ function viewYouth() {
   ];
   const regs = [["ENG", "England"], ...COUNTRIES.filter(K => K.code !== "ENG").map(K => [K.code, K.name]), ["ROW", "Brazil, Argentina, West Africa, Scandinavia"], ["ABR", "Everywhere outside England"], ["ALL", "Everywhere"]];
   return `<div class="stack"><section class="card"><div class="card-h"><h2>Youth recruitment · class of ${S.year + 1}</h2>
-    <span class="small">Hours this week <b class="num">${S.rec.hours}/${recHours()}</b> · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b> · Academy <b class="num">${c.academy}/10</b></span></div>
-    <div class="prose small" style="margin-bottom:12px"><p>Fifteen-year-olds from England and abroad choose an academy this season and join next summer. Each weighs six things differently: distance from home, a route to first-team minutes, whether your formation uses his position, squad dynamics, prestige and academy quality. Scouting narrows his rating and reveals what he cares about; calls and visits build the relationship. Commitments start from week 9 and aren't binding until signing day, so a better offer can still flip a prospect, yours included.</p></div>
+    <span class="small">Hours this week <b class="num">${S.rec.hours}/${recHours()}</b> · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b> · Youth development <b class="num">${c.academy}/20</b></span></div>
+    <div class="prose small" style="margin-bottom:12px"><p>Fifteen-year-olds from England and abroad choose an academy this season and join next summer. Each weighs six things differently, with two that matter most to him: distance from home, a route to first-team minutes, whether your formation uses his position, squad dynamics, prestige and your youth development rating. Scouting narrows his rating and reveals what he cares about; calls and visits build the relationship. Commitments start from week 9 and aren't binding until signing day, so a better offer can still flip a prospect, yours included.</p></div>
     <div class="filters"><label class="f">Region<select id="yf-reg" data-c="yf-reg">${regs.map(([k, l]) => `<option value="${k}" ${f.reg === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="f">Position<select id="yf-pos" data-c="yf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Show<select id="yf-st" data-c="yf-st">${[["OPEN", "Undecided"], ["MINE", "Your targets"], ["DONE", "Committed"], ["ALL", "Everyone"]].map(([k, l]) => `<option value="${k}" ${f.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
@@ -441,7 +441,7 @@ function viewFinances() {
   const c = me(), f = c.fin, ratio = scr(c);
   const mk = v => clamp(v / 1.5 * 100, 0, 100);
   const cases = S.cases.filter(k => !isForeign(C(k.club))).slice(-12).reverse();
-  const acadCost = Math.round((c.academy + 1) * 3e6 * [0, 1, .4, .2, .1, .06, .05][c.tier]);
+  const acadCost = Math.round((c.academy + 1) * 1.5e6 * [0, 1, .4, .2, .1, .06, .05][c.tier]);
   return `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2>Squad Cost Ratio</h2><span class="eyebrow">${seasonLabel(S.year)}</span></div>
     <div class="prose"><p>Wages, transfer amortisation and agent fees, as a share of football revenue plus profit on player sales. Above <b>${pct(RULES.scrLimit)}</b> you pay a levy at the end of the season; above <b>${pct(RULES.scrSporting)}</b> you are charged and face a points deduction the following season.</p></div>
     <div class="gauge" role="img" aria-label="Projected ratio ${pct(ratio)}"><span class="tick" style="left:${mk(.85)}%">85%</span><span class="tick" style="left:${mk(1.15)}%">115%</span><span class="mk" style="left:${mk(ratio)}%"><span>${pct(ratio)}</span></span></div>
@@ -454,8 +454,8 @@ function viewFinances() {
     <div class="stack"><section class="card"><div class="card-h"><h2>Scouting & academy</h2></div>
       <div class="prose"><p>Scouting network: <b>level ${S.rec.scoutLvl}</b> (${money(S.rec.scoutLvl * scoutCost())} a year) gives ${recHours()} recruiting hours a week.</p>
       <div class="row"><button class="btn sm" data-a="scout" data-v="-1" ${S.rec.scoutLvl <= 1 ? "disabled" : ""}>Reduce</button><button class="btn sm" data-a="scout" data-v="1" ${S.rec.scoutLvl >= 5 ? "disabled" : ""}>Expand</button></div>
-      <p>Academy rating: <b>${c.academy}/10</b>. A better academy attracts prospects, develops under-21s faster and lets you offer more places.</p>
-      <div class="row"><button class="btn sm" data-a="academy" data-v="${acadCost}" ${c.academy >= 10 || c.cash < acadCost ? "disabled" : ""}>Upgrade for ${money(acadCost)}</button></div></div></section>
+      <p>Youth development: <b>${c.academy}/20</b>. It sets the potential of each summer's academy graduates, attracts prospects, develops under-21s faster and lets you offer more places. A small club with a great academy can produce stars.</p>
+      <div class="row"><button class="btn sm" data-a="academy" data-v="${acadCost}" ${c.academy >= 20 || c.cash < acadCost ? "disabled" : ""}>Upgrade for ${money(acadCost)}</button></div></div></section>
     <section class="card"><div class="card-h"><h2>Owner</h2></div><p>${OWNER[c.owner].l}. ${c.schemes.length ? `Connected-party deals: ${c.schemes.map(s => `${esc(s.what)} (${money(s.amt)}, ${seasonLabel(s.y)}${s.found ? ", struck out" : ""})`).join("; ")}.` : "No connected-party deals on record."}</p></section>
     <section class="card"><div class="card-h"><h2>League cases</h2></div>${cases.length ? cases.map(k => `<div style="padding:6px 0;border-top:1px solid var(--line)">${clubA(k.club)} <span class="small muted">· ratio ${pct(k.ratio)} · ${k.status === "charged" ? `hearing in week ${k.hearing + 1} of ${seasonLabel(k.y)}` : k.status === "deducted" ? `${k.pts} points deducted, appeal pending` : `closed (${k.pts} pts)`}</span></div>`).join("") : '<p class="muted">No English clubs are currently charged.</p>'}</section></div></div>`;
 }
@@ -541,7 +541,7 @@ function modalClub(c) {
   const L = S.leagues[c.lg], ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr);
   return mHead(esc(c.name), `${leagueName(c.lg)} · ${esc(c.region)}, ${COUNTRY[c.country].name}${c.gone ? ` · dropped out ${seasonLabel(c.goneYear)}` : ""}`, c.color, crest(c, 40)) + `<div class="modal-b">
     <dl class="facts">${c.gone ? "" : `<div><dt>Position</dt><dd>${ord(posIn(L, c.id))}</dd></div>`}<div><dt>Squad level</dt><dd class="num">${r20(clubLevel(c)).toFixed(1)} / 20</dd></div><div><dt>Prestige</dt><dd class="num">${c.rep}</dd></div>
-      <div><dt>Formation</dt><dd>${c.formation}</dd></div><div><dt>Academy</dt><dd>${c.academy}/10</dd></div><div><dt>Owner</dt><dd>${OWNER[c.owner].l}</dd></div>
+      <div><dt>Formation</dt><dd>${c.formation}</dd></div><div><dt>Youth development</dt><dd>${c.academy}/20</dd></div><div><dt>Owner</dt><dd>${OWNER[c.owner].l}</dd></div>
       <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · prefers ${coachOf(c).form} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
       <div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
     ${c.hist.length ? `<p class="small">Recent finishes: ${c.hist.slice(-6).reverse().map(h => `${seasonLabel(h.y)} ${ord(h.pos)} in ${leagueName(h.lg)}`).join(" · ")}</p>` : ""}
@@ -572,6 +572,7 @@ function modalCoach(m) {
     <div class="attrs">${COACH_KEYS.map(([k, l]) => `<div class="attr"><span>${l}</span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b></div>`).join("")}</div>
     <label class="f">Preferred formation<select id="coach-form" data-c="cform">${FORM_KEYS.map(f => `<option ${f === form ? "selected" : ""}>${f}</option>`).join("")}</select><span class="tiny muted" style="font-weight:400">Your teams play about 2% better in it. ${esc(c.name)} currently play ${c.formation}.</span></label>
     <p class="small muted">You start as an average coach: 40 points across four ratings out of 20. A specialist puts 14 in one area and gives a point up elsewhere. You earn more points every season, and extra for beating the board's target, winning trophies and promotion.</p>
+    <label class="row small"><input type="checkbox" id="coach-unsack"> Unsackable mode: the board still judges you, but can never fire you. You can switch it off later.</label>
     <div class="row"><button class="btn primary" data-a="startcareer">Start the career</button><button class="btn" data-a="closemodal">Back</button></div></div>`;
 }
 function modalBid(p) {
@@ -622,6 +623,7 @@ function viewManager() {
   return `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2>${esc(co.name)}</h2><span class="eyebrow">${ARCH[co.arch].l} · prefers ${co.form} · ${co.seasons} season${co.seasons === 1 ? "" : "s"} · ${esc(c.name)}</span></div>
     <div class="attrs coach">${COACH_KEYS.map(row).join("")}</div>
     <label class="row small" style="margin-top:12px">Preferred formation <select id="mg-pref" data-c="pref">${FORM_KEYS.map(f => `<option ${f === co.form ? "selected" : ""}>${f}</option>`).join("")}</select><span class="tiny muted">Changing it takes a season to bed in: the bonus applies from next season.</span></label>
+    <label class="row small" style="margin-top:8px"><input type="checkbox" id="mg-unsack" data-c="unsack" ${S.set.unsackable ? "checked" : ""}> Unsackable mode (the board can't fire you)</label>
     <p class="small" style="margin-top:10px">${co.pts ? `<b>${co.pts} point${co.pts > 1 ? "s" : ""} to spend.</b> ` : ""}You earn a point every season, plus one for finishing above the board's target, up to two for trophies, and one for promotion. Ratings are out of 20.</p></section>
     <section class="card"><div class="card-h"><h2>Career</h2></div>${S.career.length ? table("career-m", [{ k: "y", l: "Season", f: r => seasonLabel(r.year) }, { k: "c", l: "Club", f: r => clubA(r.club) }, { k: "l", l: "League", f: r => leagueName(r.lg) }, { k: "p", l: "Finish", r: 1, f: r => ord(r.pos) }, { k: "e", l: "Target", r: 1, f: r => ord(r.exp) }, { k: "t", l: "Trophies", f: r => r.trophies.map(trophyName).join(", ") || "—" }], S.career) : '<p class="muted">Finish a season to start your record.</p>'}</section></div>
     <section class="card"><div class="card-h"><h2>Rival coaches</h2><span class="small muted">${leagueName(c.lg)}</span></div>${table("rivalco", [{ k: "c", l: "Club", f: x => clubA(x.id, { short: true }) }, { k: "n", l: "Coach", f: x => esc(x.coach.name) + `<br><span class="tiny muted">${ARCH[x.coach.arch].l}</span>` }, { k: "f", l: "System", f: x => x.coach.form }, ...COACH_KEYS.map(([k, l]) => ({ k, l: l.slice(0, 3), r: 1, f: x => x.coach[k] }))], rivals)}</section></div>`;

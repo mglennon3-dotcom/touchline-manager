@@ -8,13 +8,13 @@ const N = +process.argv[2] || 50;
 (async () => { const b = await chromium.launch(); const pg = await b.newPage();
   const errs=[]; pg.on('pageerror',e=>errs.push(e.message+' '+(e.stack||'').split('\n')[1]));
   await pg.goto((process.env.URL || 'http://localhost:8000/index.html')); await pg.waitForTimeout(1500);
-  await pg.evaluate(()=>{ takeClub(DRAFT.leagues.E3.clubs[8], 'Test Manager', 'dev'); });
+  await pg.evaluate(()=>{ takeClub(DRAFT.leagues.E3.clubs[8], 'Test Manager', 'dev'); S.set.unsackable = true; });
   for (let s=0; s<N; s++) {
     const r = await pg.evaluate(async ()=>{ S.set.live=false; const t=Date.now(); let g=0;
-      while(S.phase==='season'&&g++<600){ S.board=Math.max(S.board,40); if(S.sacked){ S.sacked=false; if(me().gone){ const c=activeClubs().find(c=>c.lg==='E5'); S.club=c.id; S.lineup=[]; } }
+      while(S.phase==='season'&&g++<600){ if(S.sacked) throw new Error('sacked despite unsackable mode');
         if(!regInfo(me()).ok) trimSquad(me(),false); while(me().squad.length<16){ const p=S.fa.map(P).sort((a,b)=>b.ovr-a.ovr)[0]; S.fa=S.fa.filter(x=>x!==p.id); p.club=S.club; p.yrs=2; me().squad.push(p.id);} 
         for(const m of openDecisions()) resolveDecision(m,m.opts[0][0]); await play('season'); }
-      let gg=0; while(S.phase==="summer"&&gg++<60){ if(S.sacked){S.sacked=false; if(me().gone){ const c=activeClubs().find(c=>c.lg==='E5'); S.club=c.id; S.lineup=[];}} for(const m of openDecisions()) resolveDecision(m,m.opts[1]?m.opts[1][0]:m.opts[0][0]); await playNewSeason(); }
+      let gg=0; while(S.phase==="summer"&&gg++<60){ if(S.sacked) throw new Error('sacked despite unsackable mode'); for(const m of openDecisions()) resolveDecision(m,m.opts[1]?m.opts[1][0]:m.opts[0][0]); await playNewSeason(); }
       const bad=[]; const seen={};
       for(const [k,L] of Object.entries(S.leagues)){ if(L.clubs.length!==LG[k].size) bad.push(k+':'+L.clubs.length); for(const id of L.clubs){ if(seen[id]) bad.push('dup'+id); seen[id]=1; if(C(id).lg!==k||C(id).gone) bad.push('mis'+id);} }
       for(const k of ['CC']) S.cont[k].groups.forEach((g,i)=>{ if(g.length!==4) bad.push(k+i+'len'); if(new Set(g.map(id=>C(id).country)).size!==4) bad.push(k+i+'ctry'); });

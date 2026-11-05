@@ -4,7 +4,7 @@
    who else is there, the club's standing, the academy itself, and the relationship you build. */
 const FACTORS = [
   ["loc", "Close to home"], ["time", "Playing time"], ["form", "Formation fit"],
-  ["dyn", "Squad dynamics"], ["prest", "Club prestige"], ["acad", "Academy quality"],
+  ["dyn", "Squad dynamics"], ["prest", "Club prestige"], ["acad", "Youth development"],
 ];
 const FACTOR_HELP = {
   loc: "Distance from his home town. Players abroad weigh this by how open they are to moving.",
@@ -12,7 +12,7 @@ const FACTOR_HELP = {
   form: "How many places your formation has for his position.",
   dyn: "Compatriots in the squad, other recruits you've signed at his position, and dressing-room mood.",
   prest: "Reputation, division, and Champions Cup football.",
-  acad: "Your academy rating.",
+  acad: "Your youth development rating, out of 20.",
 };
 const starsOf = pot => pot >= 86 ? 5 : pot >= 80 ? 4 : pot >= 73 ? 3 : pot >= 66 ? 2 : 1;
 
@@ -33,16 +33,17 @@ function newProspectClass() {
   // AI clubs pick their targets for the year
   for (const c of activeClubs()) {
     if (isUser(c) || c.tier >= 5 || (isForeign(c) && c.tier >= 2)) continue;
-    const k = 1 + Math.floor(c.academy / 3), reach = c.rep >= 80 ? 1 : 0;
+    const k = 1 + Math.floor(c.academy / 5), reach = c.rep >= 80 || c.academy >= 16 ? 1 : 0;
     const cands = S.prospects.filter(y => y.country === c.country || reach || (y.country == null && c.rep >= 70))
-      .map(y => ({ y, s: starsOf(y.pot) * (c.rep / 60) + factorScore(y, c) * 4 + R() * 2 })).sort((a, b) => b.s - a.s).slice(0, k + 3);
+      // Strong academies aim for the best prospects whatever division the club is in.
+      .map(y => ({ y, s: starsOf(y.pot) * (c.rep / 80 + c.academy / 10) + factorScore(y, c) * 4 + R() * 2 })).sort((a, b) => b.s - a.s).slice(0, k + 3);
     for (const { y } of shuffle(cands).slice(0, k)) y.rel[c.id] = rf(.02, .08);
   }
   S.rec.offers = 0; S.rec.hours = recHours();
 }
 const recHours = () => Math.max(4, 8 + 3 * S.rec.scoutLvl + Math.round((S.me.rec - 10) * .6));
 const recMult = () => .7 + .03 * S.me.rec;  // a good recruiter builds relationships faster
-const offerCap = () => 3 + Math.floor(me().academy / 2);
+const offerCap = () => 3 + Math.floor(me().academy / 4);
 
 function factors(y, c) {
   const d = km(y, c), domestic = y.country === c.country;
@@ -57,7 +58,7 @@ function factors(y, c) {
   const dyn = .45 * Math.min(1, compat / 5) + .35 * (1 - Math.min(1, sameRole / 2)) + .2 * (moodAvg / 100);
   const inCC = S.cont.CC && S.cont.CC.groups.some(g => g.includes(c.id));
   const prest = clamp(c.rep / 100 * [1, 1, .85, .75, .65, .55, .5][c.tier] + (inCC ? .1 : 0), 0, 1);
-  const acad = c.academy / 10;
+  const acad = c.academy / 20;
   return { loc, time, form, dyn, prest, acad, d, ahead, slots, compat, sameRole };
 }
 function factorScore(y, c) { const f = factors(y, c); return sum(FACTORS, ([k]) => y.pri[k] * f[k]); }
@@ -121,7 +122,7 @@ function weeklyRecruiting() {
     }
     for (const id of Object.keys(y.rel).map(Number)) {
       const c = C(id); if (isUser(c) || c.gone) continue;
-      y.rel[id] += rf(.008, .03) * (.6 + c.academy / 10) * (.7 + .03 * c.coach.rec);
+      y.rel[id] += rf(.008, .03) * (.6 + c.academy / 20) * (.7 + .03 * c.coach.rec);
       if (!y.offers.includes(id) && y.rel[id] > .22 && y.offers.length < 6) y.offers.push(id);
     }
     if (S.week >= 8 && y.offers.length) {
