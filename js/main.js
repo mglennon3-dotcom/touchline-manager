@@ -256,19 +256,31 @@ window.addEventListener("scroll", () => {
   if (!UI.mastCompact && downRun > 30 && y > 200) setCompact(true);  // 200: past the shrink (~150px on a phone) plus the 40px "at the top" zone, so it cannot bounce
   else if (UI.mastCompact && (upRun > 60 || y < 40)) setCompact(false);
 }, { passive: true });
-/* On a phone the squad table fills most of the screen, so a swipe usually lands on it and scrolls the
-   table, not the page: the masthead never shrank and the table sat half off the bottom of the screen.
-   Scrolling down inside a tall table shrinks the masthead and lines the table up under it. */
-const innerY = new WeakMap();
-document.addEventListener("scroll", e => {
-  const w = e.target; if (!(w instanceof Element) || !w.classList.contains("tall") || !phoneWidth() || UI.menu) return;
-  const prev = innerY.get(w) ?? 0, dy = w.scrollTop - prev; innerY.set(w, w.scrollTop);
-  if (dy > 0) {
-    if (!UI.mastCompact) setCompact(true);
-    const m = document.querySelector(".mast"), gap = w.getBoundingClientRect().top - m.getBoundingClientRect().bottom - 8;
-    if (gap > 4) { window.scrollBy(0, gap); lastY = scrollY; }
-  }  // scrolling back up past the table's top carries on to the page, which restores the masthead
-}, { capture: true, passive: true });
+/* Floating heading row for tall tables: a copy of the real one, pinned under the masthead while the table
+   passes beneath it, with the same column widths and the same sideways scroll. Its sort buttons are copies
+   too, so tapping one sorts as the real heading would. */
+let floatSrc = null;
+function floatHead() {
+  let f = document.getElementById("float-head");
+  if (!f) { f = document.createElement("div"); f.id = "float-head"; f.className = "tbl-wrap tall"; f.hidden = true; document.body.appendChild(f); }
+  const w = document.querySelector("#app .tbl-wrap.tall"), m = document.querySelector(".mast");
+  if (!w || !m) { f.hidden = true; floatSrc = null; return; }
+  const t = w.querySelector("table"), th = t.tHead;
+  if (floatSrc !== t) {  // the table was re-rendered: copy its heading again
+    floatSrc = t;
+    f.innerHTML = `<table><colgroup>${[...th.rows[0].cells].map(c => `<col style="width:${c.getBoundingClientRect().width}px">`).join("")}</colgroup>${th.outerHTML}</table>`;
+    f.firstChild.style.width = t.getBoundingClientRect().width + "px";
+  }
+  const top = m.getBoundingClientRect().bottom, hr = th.getBoundingClientRect(), wr = w.getBoundingClientRect();
+  const show = hr.top < top && wr.bottom > top + hr.height;
+  f.hidden = !show; if (!show) return;
+  f.style.top = top + "px"; f.style.left = wr.left + "px"; f.style.width = w.clientWidth + "px";
+  f.scrollLeft = w.scrollLeft;
+}
+window.addEventListener("scroll", floatHead, { passive: true });
+window.addEventListener("resize", () => { floatSrc = null; floatHead(); });
+document.addEventListener("scroll", e => { if (e.target instanceof Element && e.target.matches("#app .tbl-wrap.tall")) floatHead(); }, { capture: true, passive: true });
+new MutationObserver(() => { floatSrc = null; floatHead(); }).observe(document.getElementById("app"), { childList: true, subtree: true });
 new MutationObserver(syncMastHeight).observe(document.getElementById("app"), { childList: true });
 document.addEventListener("change", e => { const t = e.target.closest("[data-c]"); if (t) CHG[t.dataset.c]?.(t.value, t); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) { UI.modal = null; UI.bid = null; renderModal(); render(); } });
