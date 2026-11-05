@@ -197,10 +197,33 @@ function compLabel(fx) {
 /* ---------- recording results ---------- */
 const FA_PRIZE = [25e3, 50e3, 85e3, 150e3, 250e3, 400e3, 800e3, 1.5e6, 3e6], LC_PRIZE = [50e3, 75e3, 100e3, 200e3, 400e3, 800e3, 2e6];
 function pay(id, amt) { const c = C(id); c.cash += amt; c.fin.prize += amt; }
+/* Gate receipts for cup ties (only league matches sold tickets before 5.19.1). Domestic cups: the gate is
+   shared equally; the crowd grows round by round (75% of a league crowd early on, 125% by the final), with
+   more for a bigger visitor or a derby, never above capacity. Neutral-venue semi-finals and finals draw on
+   both clubs' support (up to 45,000, or 75,000 for a final) at premium prices, shared equally. European
+   ties and play-offs: the home club keeps its gate, Europe at bigger crowds and dearer seats. Returns the
+   crowd and what each club took. */
+function cupGate(fx) {
+  const H = C(fx.h), A = C(fx.a), comp = fx.comp === "K" ? S.ko[fx.key] : null, cont = fx.comp === "G" || (comp && comp.kind === "cont");
+  const late = comp ? fx.r / Math.max(1, comp.rounds.length - 1) : .3, credit = (c, x) => { x = Math.round(x); c.cash += x; if (c.fin) { c.fin.rev += x; c.fin.gate = (c.fin.gate || 0) + x; } return x; };
+  if (fx.neutral) {
+    const cap = comp && fx.r === comp.rounds.length - 1 ? 75000 : 45000;
+    const att = Math.round(Math.min(cap, (demandOf(H) + demandOf(A)) * (1 + late * .6) * rf(.92, 1.05)));
+    const half = att * (H.price + A.price) / 2 * 1.5 / 2;
+    return { att, h: credit(H, half), a: credit(A, half) };
+  }
+  const pm = H.tkt || 1, pull = clamp((A.rep - H.rep) / 100, -.2, .25), derby = rivalry(fx.h, fx.a) ? 1.12 : 1;
+  const att = Math.round(Math.min(capacityNow(H), demandOf(H) * (cont ? 1.15 + .15 * late : .75 + .5 * late) * (1 + pull) * derby * rf(.92, 1.05) * Math.pow(1 / pm, .9)));
+  const gate = att * H.price * pm * (cont ? 1.3 : 1);
+  if (cont || (comp && comp.kind === "po")) return { att, h: credit(H, gate), a: 0 };
+  return { att, h: credit(H, gate / 2), a: credit(A, gate / 2) };
+}
 function recordResult(fx, M) {
   const hg = M.h.goals, ag = M.a.goals;
   let att = null;
   if (fx.comp === "L") { const L = S.leagues[fx.key]; (L.results[fx.round] ||= []).push({ h: fx.h, a: fx.a, hg, ag }); L.n++; att = gateFor(C(fx.h), fx.a); fansAfterMatch(C(fx.h), hg, ag, fx.a); fansAfterMatch(C(fx.a), ag, hg, fx.h); }
+  let cg = null;
+  if (fx.comp === "G" || fx.comp === "K") { cg = cupGate(fx); att = cg.att; }
   if (fx.comp === "G") { S.cont[fx.key].gres.push({ g: fx.g, h: fx.h, a: fx.a, hg, ag }); if (hg !== ag) pay(hg > ag ? fx.h : fx.a, CONT[fx.key].prize[1]); }
   if (fx.comp === "K") {
     const comp = S.ko[fx.key], rd = comp.rounds[fx.r], t = rd.ties[fx.tie];
@@ -223,6 +246,7 @@ function recordResult(fx, M) {
   recordRivalry(fx.h, fx.a, hg, ag);
   if (fx.h === S.club || fx.a === S.club) {
     S.myRes.push({ w: S.week, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, att, sc: M.goals.map(g => [g.side, g.n, g.min]) });
+    if (cg) { const mine = fx.h === S.club ? cg.h : cg.a; if (mine) news(`${compLabel(fx)}: crowd ${cg.att.toLocaleString()}${fx.neutral ? " at a neutral venue" : ""}. Your share of the gate: ${money(mine)}.`, false, fx.comp === "G" || S.ko[fx.key]?.kind === "cont" ? "cont" : "cup"); }
     afterUserMatch(fx, M);
   }
 }
