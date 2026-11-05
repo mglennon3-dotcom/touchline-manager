@@ -57,9 +57,11 @@ function step(M) {
   const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
   const ph = rh.mid ** 2 / (rh.mid ** 2 + ra.mid ** 2), k = R() < ph ? 0 : 1, A = sd[k], D = sd[1 - k], rA = k ? ra : rh, rD = k ? rh : ra;
   A.poss++;
-  if (A.on.length && R() < .2) {
+  // Measured against real football (about 25 shots, 8-9 on target and 2.7 goals a game): at one shot in
+  // five minutes the game managed 18 shots and 2.2 goals, with 0-0s and clean sheets far too common.
+  if (A.on.length && R() < .26) {
     A.shots++;
-    const pg = clamp(.135 * Math.pow(rA.att / Math.max(1, rD.def), 2), .03, .4);
+    const pg = clamp(.125 * Math.pow(rA.att / Math.max(1, rD.def), 2), .03, .4);
     const sh = wpick(A.on, o => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[o.slot] * eff(o.p, o.slot, o.fit));
     const gk = D.on.find(o => o.slot === "GK") || D.on[0], r0 = R();
     // The shooter's finishing and the keeper's shot-stopping move each chance either way (10 is neutral).
@@ -71,7 +73,7 @@ function step(M) {
       const as = others.length && R() < .72 ? wpick(others, o => ({ GK: .1, CB: .6, FB: 1.6, DM: 1.2, CM: 2.4, AM: 4, W: 3.4, ST: 2 })[o.slot]) : null;
       M.goals.push({ side: k, pid: sh.p.id, ast: as ? as.p.id : null, min: M.min, n: sur(sh.p) });
       lg(M, "goal", k, "GOAL! " + fillT(pick(T_GOAL), { s: sh.p.name }) + (as ? `, set up by ${sur(as.p)}.` : "."));
-    } else if (r < pg + .32) { A.sot++; if (R() < .4 && gk) lg(M, "save", k, fillT(pick(T_SAVE), { s: sur(sh.p), k: sur(gk.p) }) + "."); }
+    } else if (r < pg + .23) { A.sot++; if (R() < .4 && gk) lg(M, "save", k, fillT(pick(T_SAVE), { s: sur(sh.p), k: sur(gk.p) }) + "."); }
     else if (R() < .25) lg(M, "miss", k, fillT(pick(T_MISS), { s: sur(sh.p) }) + ".");
   }
   for (let i = 0; i < 2; i++) {

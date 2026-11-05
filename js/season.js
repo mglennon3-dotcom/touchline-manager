@@ -231,7 +231,8 @@ function quickLeagueRound(key, r) {
   const pois = l => { let k = 0, p = Math.exp(-l), s = p; const u = R(); while (u > s && k < 9) { k++; p *= l / k; s += p; } return k; };
   for (const [h, a] of L.fixtures[r]) {
     const H = C(h), A = C(a), d = (clubLevel(H) - clubLevel(A)) * .085;
-    const hg = pois(1.32 * Math.exp(d) * 1.1), ag = pois(1.32 * Math.exp(-d) / 1.1);
+    // 1.32 gave the quick-simmed leagues 2.8-3.0 goals a game against 2.2 in England; matched to the engine now.
+    const hg = pois(1.22 * Math.exp(d) * 1.1), ag = pois(1.22 * Math.exp(-d) / 1.1);
     rd.push({ h, a, hg, ag }); L.n++; recordRivalry(h, a, hg, ag); gateFor(H, a); fansAfterMatch(H, hg, ag, a); fansAfterMatch(A, ag, hg, h);
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
       const xi = autoPick(eligibleIds(c), c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
