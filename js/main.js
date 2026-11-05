@@ -309,6 +309,9 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
     for (const c of S.clubs) if (TOWN_BLOCK.has(c.town)) { const t = townName(COUNTRY[c.country]), old = c.town, taken = new Set(S.clubs.filter(x => x.country === c.country).map(x => x.short)), sh = stripAcc(t).toUpperCase().slice(0, 3);
       c.name = c.name.replace(old, t); c.town = t; if (!taken.has(sh)) c.short = sh; }
     S.towns3 = true; }
+  if (!S.names2) {  // squads from before 5.13.3 can hold two players with one name
+    for (const c of activeClubs()) { const r = dedupeNames(c); if (isUser(c)) for (const [o, n] of r) news(`To tell him apart from his namesake in the squad, ${o} will now be listed as ${n}.`, true, "squad"); }
+    S.names2 = true; }
   if (!S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   if (!S.attr2) { for (const p of Object.values(S.players)) convertAttrs(p); for (const c of S.clubs) delete c._lv; S.attr2 = true; }
 }

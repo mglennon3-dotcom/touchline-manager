@@ -83,7 +83,7 @@ function aiTransferDay(intensity) {
     let best = null, bs = -1e9;
     for (let i = 0; i < 90; i++) {
       const p = all[Math.floor(R() * all.length)];
-      if (!p || p.club === c.id || FAM[p.pos][role] < .9 || p.age > 31 || p.ovr < lvl - 1 || p.ovr > lvl + 8) continue;
+      if (!p || p.club === c.id || FAM[p.pos][role] < .9 || p.age > 31 || p.ovr < lvl - 1 || p.ovr > lvl + 8 || hasNamesake(c, p.name)) continue;
       if (p.club >= 0 && C(p.club).rep > c.rep + 8 && !p.req) continue;
       const fee = askingPrice(p, c); if (fee > budget * .6) continue;
       const sc = p.ovr - fee / 4e6 + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1;
@@ -171,7 +171,7 @@ function deadlineSales(c, ratio) {
   for (const p of list.slice(0, 8)) {
     if (ratio() <= RULES.scrSporting - .05 || sold >= 5) break;
     if (R() < .12) continue;  // this deal falls through; try the next player
-    const buyer = pick(buyers.filter(b => b.cash > value(p))); if (!buyer) continue;
+    const buyer = pick(buyers.filter(b => b.cash > value(p) && !hasNamesake(b, p.name))); if (!buyer) continue;
     const fee = Math.round(value(p) * rf(.85, 1.05) / 1e4) * 1e4;
     transfer(p, buyer, fee, contractDemand(p, buyer, .6), ri(2, 5)); sold++; trimSquad(buyer, false);
     if (!isForeign(c) && (c.lg === me().lg || c.lg === "E1" || rivalry(c.id, S.club))) news(`${c.name} sell ${p.name} to ${buyer.name} for ${money(fee)} to stay inside the cost rules.`, false, "finance");
@@ -227,7 +227,7 @@ function canTakeLoan(c, p) { const r = regInfo(c); return r.loansIn < RULES.loan
 /* Where should a young player go to play? Clubs a little below his level that would start him. */
 function loanDestinations(p, opts = {}) {
   const fit = c => Math.abs(clubLevel(c) - p.ovr - 1);
-  const ok = activeClubs().filter(c => c.id !== p.club && !isUser(c) && clubLevel(c) <= p.ovr + 3 && clubLevel(c) >= p.ovr - 9 && wouldStart(p, c) && canTakeLoan(c, p)).sort((a, b) => fit(a) - fit(b));
+  const ok = activeClubs().filter(c => c.id !== p.club && !isUser(c) && clubLevel(c) <= p.ovr + 3 && clubLevel(c) >= p.ovr - 9 && wouldStart(p, c) && canTakeLoan(c, p) && !hasNamesake(c, p.name)).sort((a, b) => fit(a) - fit(b));
   if (!opts.mix) return ok.slice(0, 4);
   // For you: a choice at home and abroad.
   return [...ok.filter(c => !isForeign(c)).slice(0, 4), ...ok.filter(c => isForeign(c)).slice(0, 4)];

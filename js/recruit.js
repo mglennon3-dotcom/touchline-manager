@@ -123,7 +123,7 @@ function weeklyRecruiting() {
     for (const id of Object.keys(y.rel).map(Number)) {
       const c = C(id); if (isUser(c) || c.gone) continue;
       y.rel[id] += rf(.008, .03) * (.6 + c.academy / 20) * (.7 + .03 * c.coach.rec);
-      if (!y.offers.includes(id) && y.rel[id] > .22 && y.offers.length < 6) y.offers.push(id);
+      if (!y.offers.includes(id) && y.rel[id] > .22 && y.offers.length < 6 && !hasNamesake(c, y.name)) y.offers.push(id);
     }
     if (S.week >= 8 && y.offers.length) {
       const ranked = y.offers.map(id => ({ id, s: clubScore(y, C(id)) })).sort((a, b) => b.s - a.s);

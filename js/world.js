@@ -14,6 +14,23 @@ const activeClubs = () => S.clubs.filter(c => !c.gone);
 
 function newStats() { return { app: 0, min: 0, g: 0, lg: 0, a: 0, yc: 0, rc: 0, rt: 0, cs: 0 }; }
 function nameFor(nat) { const N = NAMES[nat] || NAMES.ENG; return pick(N[0]) + " " + pick(N[1]); }
+/* No two players at one club share a name: the name pools are small enough that a quarter of squads had
+   a pair of identical names, impossible to tell apart on the squad page. New players get a name nobody
+   at their club has; AI clubs don't sign, borrow or offer academy places to a namesake of one of theirs. */
+const hasNamesake = (c, name, exceptId) => c.squad.some(id => id !== exceptId && S.players[id] && S.players[id].name === name);
+function uniqueNameFor(nat, c) {
+  for (let i = 0; i < 40; i++) { const n = nameFor(nat); if (!c || !hasNamesake(c, n)) return n; }
+  return nameFor(nat);
+}
+// Rename the later arrival of each same-name pair at a club (fewest appearances first, so the player with
+// the shorter history changes). Used on old saves, and each summer for AI clubs, where a loanee coming
+// home can still meet a namesake signed while he was away.
+function dedupeNames(c) {
+  const seen = new Set(), out = [];
+  const ps = c.squad.map(P).filter(Boolean).sort((a, b) => sum(b.hist, h => h[3]) + b.s.app - (sum(a.hist, h => h[3]) + a.s.app) || a.id - b.id);
+  for (const p of ps) { if (seen.has(p.name)) { const old = p.name; p.name = uniqueNameFor(p.nat, c); out.push([old, p.name]); } seen.add(p.name); }
+  return out;
+}
 
 function makePlayer(o) {
   const age = o.age ?? ri(18, 33);
@@ -21,7 +38,7 @@ function makePlayer(o) {
   ovr = clamp(ovr, 33, 90);
   const gap = age <= 17 ? ri(8, 20) : age <= 19 ? ri(5, 16) : age <= 21 ? ri(2, 10) : age <= 24 ? ri(0, 5) : age <= 27 ? ri(0, 2) : 0;
   const p = {
-    id: S.nextPid++, name: nameFor(o.nat), nat: o.nat, age, pos: o.pos, ovr, pot: clamp(ovr + gap, ovr, 95),
+    id: S.nextPid++, name: o.club != null && o.club >= 0 && S.clubs[o.club] ? uniqueNameFor(o.nat, S.clubs[o.club]) : nameFor(o.nat), nat: o.nat, age, pos: o.pos, ovr, pot: clamp(ovr + gap, ovr, 95),
     fit: ri(92, 100), mood: ri(58, 76), pt: .5, wm: 0, amb: +R().toFixed(2), loy: +R().toFixed(2),
     club: o.club ?? -1, wage: 0, yrs: ri(1, 5), am: null, yt: {}, inj: 0, sus: 0, yc: 0,
     s: newStats(), hist: [], req: false, listed: false, promise: null, joined: S.year, loan: null, peak: ovr, tot: [0, 0],

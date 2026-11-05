@@ -533,7 +533,7 @@ function aiMaintain(c) {
     let have = c.squad.filter(id => P(id).pos === pos && P(id).age >= 18).length;
     while (have++ < n) {
       bumpTick(); const lvl = clubLevel(c);
-      const fa = S.fa.map(P).filter(p => p.pos === pos && p.ovr >= lvl - 10 && p.ovr <= lvl + 2).sort((a, b) => b.ovr - a.ovr)[0];
+      const fa = S.fa.map(P).filter(p => p.pos === pos && p.ovr >= lvl - 10 && p.ovr <= lvl + 2 && !hasNamesake(c, p.name)).sort((a, b) => b.ovr - a.ovr)[0];
       if (fa) { S.fa = S.fa.filter(id => id !== fa.id); fa.club = c.id; fa.yrs = ri(1, 3); fa.wage = wageDemand(fa, c.rep); fa.joined = S.year; c.squad.push(fa.id); }
       // Fillers are journeymen a little below the club's level; generating young ones here fed a ratings spiral.
       // Anchored to reputation, not current level, so divisions neither spiral up nor drain away over decades.
@@ -557,6 +557,7 @@ function summerStep() {
   if (S.summerDay >= CAL.summerDays) newSeasonStart();
 }
 function newSeasonStart() {
+  for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);
   for (const c of activeClubs()) { const n = (isUser(c) ? 1 : ri(1, 2)) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) news(`Local academy graduate ${p.name} (${p.pos}) joins the youth squad.`, false, "youth"); } if (!isUser(c)) trimSquad(c, false); }
   S.year++;
   S.seasonOver = null;
