@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.17.2";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.17.3";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -19,7 +19,9 @@ function money(v) {
   if (a >= 1e6) return s + "€" + (a / 1e6).toFixed(2).replace(/0$/, "").replace(/\.0$/, "") + "M";
   return s + "€" + Math.round(a / 1000) + "k";
 }
-const perWeek = annual => money(annual / 52) + "/wk";
+// Weekly wages to the nearest hundred below €10k (money() rounds to whole thousands, so €1,250 and
+// €1,700 a week both read "€1k"), and to the nearest ten below €1k.
+const perWeek = annual => { const w = annual / 52; return (w >= 1e4 ? money(w) : w >= 1000 ? "€" + (w / 1000).toFixed(1).replace(/\.0$/, "") + "k" : "€" + Math.round(w / 10) * 10) + "/wk"; };
 const ord = n => n + (["th", "st", "nd", "rd"][(n % 100 > 10 && n % 100 < 14) ? 0 : (n % 10 < 4 ? n % 10 : 0)]);
 const pct = x => Math.round(x * 100) + "%";
 function km(a, b) {

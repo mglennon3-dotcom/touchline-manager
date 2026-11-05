@@ -410,6 +410,10 @@ function viewSquad() {
     { k: "atk", l: "Attack", r: 1, v: p => groupAvg(p, "atk") ?? -1, f: p => groupHtml(p, "atk") },
     { k: "dfn", l: "Defence", r: 1, v: p => groupAvg(p, "dfn") ?? -1, f: p => groupHtml(p, "dfn") },
     ...ATTR_GROUPS.out.phy.map(a => ({ k: a, l: ATTR_NAME[a], r: 1, v: p => p.pos === "GK" ? -1 : viewMid(attrView(p, a)), f: p => attrCell(p, a) })),
+    // Money next to ability, at every width: value, weekly wage and years left.
+    { k: "val", l: "Value", r: 1, v: p => value(p), f: p => money(value(p)) },
+    { k: "wage", l: "Wage /wk", r: 1, v: p => p.wage, f: p => perWeek(p.wage).replace("/wk", "") },
+    { k: "yrs", l: "Contract", r: 1, v: p => p.yrs, f: p => p.loan ? '<span class="muted">loan</span>' : `<span class="${p.yrs <= 1 ? "warn" : ""}">${p.yrs} yr${p.yrs === 1 ? "" : "s"}</span>` },
     { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
     { k: "reg", l: "Registration", v: p => isSenior(p) ? (isReg(p, c) ? 1 : 0) : 2, f: p => !isSenior(p) ? '<span class="tiny muted">Under-21</span>' : `<button class="btn sm ${isReg(p, c) ? "" : "danger"}" data-a="regtoggle" data-v="${p.id}" ${windowOpen() && !p.loan ? "" : "disabled"}>${isReg(p, c) ? "Registered" : "Not registered"}</button>` },
     { k: "nat", l: "Nat", v: p => p.nat, f: p => p.nat, cls: "hide-sm" },
@@ -421,9 +425,6 @@ function viewSquad() {
     { k: "g", l: "G", r: 1, v: p => p.s.g, f: p => p.s.g },
     { k: "a", l: "A", r: 1, v: p => p.s.a, f: p => p.s.a, cls: "hide-sm" },
     { k: "rt", l: "Avg", r: 1, v: p => p.s.app ? p.s.rt / p.s.app : 0, f: p => p.s.app ? (p.s.rt / p.s.app).toFixed(2) : "—", cls: "hide-sm" },
-    { k: "yrs", l: "Contract", r: 1, v: p => p.yrs, f: p => p.loan ? '<span class="muted">loan</span>' : `<span class="${p.yrs <= 1 ? "warn" : ""}">${p.yrs} yr${p.yrs === 1 ? "" : "s"}</span>` },
-    { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage), cls: "hide-sm" },
-    { k: "val", l: "Value", r: 1, v: p => value(p), f: p => money(value(p)), cls: "hide-sm" },
   ];
   return `<div class="stack">${needsCard(false)}<section class="card"><div class="card-h"><h2>Squad</h2>
     <span class="chips" role="group" aria-label="Filter">${[["ALL", "Everyone"], ["SEN", "Seniors (21+)"], ["U21", "Under-21"]].map(([k, l]) => `<button data-a="sqf" data-v="${k}" aria-pressed="${UI.sqf === k}">${l}</button>`).join("")}</span></div>
