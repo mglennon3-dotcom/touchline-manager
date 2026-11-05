@@ -225,9 +225,12 @@ const loanable = p => p.club >= 0 && !p.loan && p.age <= RULES.loanMaxAge && !p.
 function wouldStart(p, c) { return c.squad.map(P).filter(x => x.id !== p.id && FAM[x.pos][p.pos] >= .9 && x.ovr >= p.ovr).length < Math.max(1, roleSlots(c.formation, p.pos)); }
 function canTakeLoan(c, p) { const r = regInfo(c); return r.loansIn < RULES.loansIn && (!isSenior(p) || r.registered < RULES.squadMax) && (!isSenior(p) || isHG(p, c.country) || r.nonHG < RULES.nonHGMax); }
 /* Where should a young player go to play? Clubs a little below his level that would start him. */
-function loanDestinations(p) {
-  return activeClubs().filter(c => c.id !== p.club && !isUser(c) && clubLevel(c) <= p.ovr + 3 && clubLevel(c) >= p.ovr - 9 && wouldStart(p, c) && canTakeLoan(c, p))
-    .sort((a, b) => Math.abs(clubLevel(a) - p.ovr - 1) - Math.abs(clubLevel(b) - p.ovr - 1)).slice(0, 4);
+function loanDestinations(p, opts = {}) {
+  const fit = c => Math.abs(clubLevel(c) - p.ovr - 1);
+  const ok = activeClubs().filter(c => c.id !== p.club && !isUser(c) && clubLevel(c) <= p.ovr + 3 && clubLevel(c) >= p.ovr - 9 && wouldStart(p, c) && canTakeLoan(c, p)).sort((a, b) => fit(a) - fit(b));
+  if (!opts.mix) return ok.slice(0, 4);
+  // For you: a choice at home and abroad.
+  return [...ok.filter(c => !isForeign(c)).slice(0, 4), ...ok.filter(c => isForeign(c)).slice(0, 4)];
 }
 function userLoanIn(p) {
   const c = me();

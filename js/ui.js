@@ -547,7 +547,11 @@ function modalPlayer(p) {
   const reasons = moodReasons(p);
   let actions = "";
   const cf = UI.confirm;
-  if (cf && cf.id === p.id) actions = `<div class="row"><span class="small">${esc(cf.msg)}</span><button class="btn sm danger" data-a="confirm-yes">${cf.yes}</button><button class="btn sm" data-a="confirm-no">Cancel</button></div>`;
+  if (UI.loanPick === p.id && mine) {
+    const ds = loanDestinations(p, { mix: true });
+    actions = `<div><h3 style="margin-bottom:6px">Where should ${esc(sur(p))} go on loan?</h3>${ds.length ? ds.map(d => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span>${clubA(d.id, { flag: 1 })} <span class="tiny muted">${isForeign(d) ? COUNTRY[d.country].name + " · " : ""}${leagueName(d.lg)} · squad ${r20(clubLevel(d)).toFixed(1)} · would start</span></span><button class="btn sm" data-a="loan-to" data-v="${p.id}|${d.id}">Loan here</button></div>`).join("") : '<p class="small muted">No club with room for him would play him regularly right now.</p>'}
+      <p class="tiny muted" style="margin-top:6px">A season-long loan; the borrowing club pays his wages. Abroad he gains experience but not English homegrown time${p.age <= 20 ? `: he has ${p.yt.ENG || 0} of the 3 seasons he needs` : ""}.</p><button class="btn sm" data-a="loan-cancel" style="margin-top:6px">Cancel</button></div>`;
+  } else if (cf && cf.id === p.id) actions = `<div class="row"><span class="small">${esc(cf.msg)}</span><button class="btn sm danger" data-a="confirm-yes">${cf.yes}</button><button class="btn sm" data-a="confirm-no">Cancel</button></div>`;
   else if (mine) {
     const r = renewTerms(p);
     actions = `<div class="row">${p.yrs <= 2 ? `<button class="btn sm" data-a="renew" data-v="${p.id}" ${r.happy ? "" : "disabled"} title="${esc(r.reason)}">Renew (${perWeek(r.wage)}, 4 yrs)</button>` : ""}
