@@ -22,7 +22,7 @@ function takeClub(id, name, arch, form) {
   const c = me(); S.formation = S.me.form; c.formation = S.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), S.formation);
   startSeason();
   news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}.`, true, "board");
-  UI.page = "home"; save(); render(); window.scrollTo(0, 0);
+  UI.page = "home"; save(); render(); toTop();
 }
 
 /* ---------- playing ---------- */
@@ -48,7 +48,7 @@ async function play(mode) {
       if (ufx && !regInfo(me()).ok) { UI.page = "squad"; stopMsg = "Your registration is invalid: register at most 25 seniors (17 non-homegrown) and at least 16 eligible players."; break; }
       playOthers(day, fxs);
       if (ufx) {
-        if (S.set.live && (mode === "match" || mode === "day")) { startLive(ufx); UI.busy = false; busy(false); render(); window.scrollTo(0, 0); return; }
+        if (S.set.live && (mode === "match" || mode === "day")) { startLive(ufx); UI.busy = false; busy(false); render(); toTop(); return; }
         const M = runToEnd(makeMatch(ufx, true)); applyMatch(M); recordResult(ufx, M);
       }
       finishDay(); steps++;
@@ -88,7 +88,7 @@ function tick() {
 async function finishLive() {
   const { M, fx } = LIVE; LIVE = null;
   applyMatch(M); recordResult(fx, M); finishDay();
-  await save(); render(); window.scrollTo(0, 0);
+  await save(); render(); toTop();
 }
 
 /* ---------- actions ---------- */
@@ -110,7 +110,7 @@ const ACT = {
   buildask: v => { UI.confirmBuild = v; render(); },
   buildcancel: () => { UI.confirmBuild = null; render(); },
   build: v => { const c = me(); if (c.build) return; startExpansion(c, v); UI.confirmBuild = null; save(); render(); toast("Building work has started."); },
-  go: v => { UI.page = v; UI.sel = null; UI.menu = false; location.hash = v; render(); window.scrollTo(0, 0); },
+  go: v => { UI.page = v; UI.sel = null; UI.menu = false; location.hash = v; render(); toTop(); },
   menu: () => { UI.menu = !UI.menu; render(); },
   play: v => v === "newseason" ? playNewSeason() : play(v),
   pick: v => takeClub(+v),
@@ -153,7 +153,7 @@ const ACT = {
   scout: v => { S.rec.scoutLvl = clamp(S.rec.scoutLvl + +v, 1, 5); save(); render(); },
   academy: v => { const c = me(), cost = +v; if (c.cash < cost || c.academy >= 20) return; c.cash -= cost; c.academy++; news(`Youth development upgraded to ${c.academy}/20 at a cost of ${money(cost)}.`, false, "youth"); save(); render(); },
   takejob: v => { const c = C(+v); S.club = c.id; S.sacked = false; S.sackReason = null; S.board = 55; S.formation = c.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), c.formation); S.expPos = expectedPos(c); S.inbox.forEach(m => m.done = true); news(`You are the new manager of ${c.name}.`, true, "board"); UI.page = "home"; save(); render(); },
-  reset: async () => { await DB.del("career"); S = null; DRAFT = null; LIVE = null; UI.page = "home"; render(); window.scrollTo(0, 0); },
+  reset: async () => { await DB.del("career"); S = null; DRAFT = null; LIVE = null; UI.page = "home"; render(); toTop(); },
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   livespeed: v => { LIVE.speed = +v; render(); },
@@ -192,7 +192,43 @@ document.addEventListener("click", e => {
 /* Tall tables scroll inside a box that fits under the sticky masthead, whose height varies with screen
    width (about 100px on a laptop, 200px on a phone). */
 function syncMastHeight() { const m = document.querySelector(".mast"); document.documentElement.style.setProperty("--mast-h", (m ? m.getBoundingClientRect().height : 0) + "px"); }
-window.addEventListener("resize", syncMastHeight);
+window.addEventListener("resize", () => { if (!phoneWidth() && UI.mastCompact) setCompact(false); syncMastHeight(); });
+/* On a phone the masthead is a third of the screen. Scrolling down shrinks it to the club name and the
+   Play button; scrolling up (or reaching the top) brings back the numbers and the section tabs. */
+const phoneWidth = () => matchMedia("(max-width:760px)").matches;
+let lastY = 0, upRun = 0, downRun = 0;
+// Going to a new page starts at the top with the full masthead. Restoring it first matters: restoring it
+// at the top would otherwise scroll the new page down by the amount it grew.
+function toTop() { UI.mastCompact = false; const m = document.querySelector(".mast"); if (m) m.classList.remove("compact"); syncMastHeight(); window.scrollTo(0, 0); lastY = 0; upRun = downRun = 0; }
+function setCompact(on) {
+  const m = document.querySelector(".mast"); UI.mastCompact = on; if (!m) return;
+  const before = m.getBoundingClientRect().height;
+  m.classList.toggle("compact", on); syncMastHeight();
+  // The masthead is sticky, so it takes up room in the page: shrinking it would make everything below
+  // jump up. Scroll by the difference so what you were reading stays where it was.
+  const d = before - m.getBoundingClientRect().height; if (d) window.scrollBy(0, -d);
+  lastY = scrollY; upRun = downRun = 0;
+}
+window.addEventListener("scroll", () => {
+  const y = scrollY, dy = y - lastY; lastY = y;
+  if (!phoneWidth() || UI.menu || !document.querySelector(".mast")) return;
+  if (dy > 0) { downRun += dy; upRun = 0; } else { upRun -= dy; downRun = 0; }
+  if (!UI.mastCompact && downRun > 30 && y > 200) setCompact(true);  // 200: past the shrink (~150px on a phone) plus the 40px "at the top" zone, so it cannot bounce
+  else if (UI.mastCompact && (upRun > 60 || y < 40)) setCompact(false);
+}, { passive: true });
+/* On a phone the squad table fills most of the screen, so a swipe usually lands on it and scrolls the
+   table, not the page: the masthead never shrank and the table sat half off the bottom of the screen.
+   Scrolling down inside a tall table shrinks the masthead and lines the table up under it. */
+const innerY = new WeakMap();
+document.addEventListener("scroll", e => {
+  const w = e.target; if (!(w instanceof Element) || !w.classList.contains("tall") || !phoneWidth() || UI.menu) return;
+  const prev = innerY.get(w) ?? 0, dy = w.scrollTop - prev; innerY.set(w, w.scrollTop);
+  if (dy > 0) {
+    if (!UI.mastCompact) setCompact(true);
+    const m = document.querySelector(".mast"), gap = w.getBoundingClientRect().top - m.getBoundingClientRect().bottom - 8;
+    if (gap > 4) { window.scrollBy(0, gap); lastY = scrollY; }
+  }  // scrolling back up past the table's top carries on to the page, which restores the masthead
+}, { capture: true, passive: true });
 new MutationObserver(syncMastHeight).observe(document.getElementById("app"), { childList: true });
 document.addEventListener("change", e => { const t = e.target.closest("[data-c]"); if (t) CHG[t.dataset.c]?.(t.value, t); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) { UI.modal = null; UI.bid = null; renderModal(); render(); } });

@@ -69,7 +69,7 @@ function render() {
   const c = me(), L = S.leagues[c.lg], pos = S.phase === "season" ? posIn(L, c.id) : S.lastPos[c.id];
   const when = S.phase === "summer" ? `Summer window · day ${S.summerDay + 1} of ${CAL.summerDays}` : `Week ${S.week + 1}${CAL.jan.includes(S.week) ? " · window open" : ""}`;
   const ratio = scr(c), dec = openDecisions().length;
-  app.innerHTML = `<header class="mast" style="--club:${c.color}"><div class="wrap gut">
+  app.innerHTML = `<header class="mast${UI.mastCompact ? " compact" : ""}" style="--club:${c.color}"><div class="wrap gut">
     <div class="mast-in"><div class="ident">${crest(c, 34)}<div><div class="eyebrow">${seasonLabel(S.year)} · ${leagueName(c.lg)} · ${when}</div><h1>${esc(c.name)}</h1></div></div>
     <div class="mast-r"><dl class="kpis"><div><dt>Cash</dt><dd class="${c.cash < 0 ? "bad" : ""}">${money(c.cash)}</dd></div>
       <div><dt>Cost ratio</dt><dd class="${ratio > RULES.scrSporting ? "bad" : ratio > RULES.scrLimit ? "warn" : ""}" title="Squad Cost Ratio, projected">${pct(ratio)}</dd></div>

@@ -295,8 +295,21 @@ input[type=text]{width:100%}
 /* Big tables (the squad list) scroll inside their own box below the sticky masthead, so the column
    headings and the sideways scrollbar stay in view; the first column stays put when scrolling sideways.
    Without this the headings vanished under the masthead as soon as you scrolled down. */
-.tbl-wrap.tall{overflow:auto;max-height:calc(100dvh - var(--mast-h,100px) - 24px);overscroll-behavior:contain}
+.tbl-wrap.tall{overflow:auto;max-height:calc(100dvh - var(--mast-h,100px) - 24px)}  /* scrolling past its end carries on down the page */
 .tbl-wrap.tall thead th{position:sticky;top:0;z-index:2;background:var(--surface);box-shadow:inset 0 -1px 0 var(--line)}
 .tbl-wrap.tall th:first-child,.tbl-wrap.tall td:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}
 .tbl-wrap.tall thead th:first-child{z-index:3}
 .tbl-wrap.tall td:first-child{box-shadow:1px 0 0 var(--line)}
+/* Compact masthead on phones once you scroll down: club name and Play button only. */
+.mast.compact .eyebrow,.mast.compact .kpis,.mast.compact .tabs{display:none}
+.mast.compact .mast-in{flex-wrap:nowrap;padding-block:6px}
+.mast.compact .ident{gap:8px;flex:1 1 auto}
+.mast.compact .ident .crest{width:20px;height:23px}
+.mast.compact .ident h1{font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mast.compact .ident>div{min-width:0}
+.mast.compact .playbtn button{font-size:15px;padding:6px 12px}
+/* The compact masthead keeps your place by scrolling by exactly the amount it shrank. Chrome's scroll
+   anchoring makes the same correction on its own (Safari's doesn't), and the two together jumped the
+   page back twice as far, bouncing the masthead open and shut. One correction, ours, everywhere. */
+html{overflow-anchor:none}
+.tbl-wrap.tall table{border-collapse:separate;border-spacing:0}  /* collapsed borders vanish under pinned cells */
