@@ -187,6 +187,7 @@ function dayFixtures(day) {
   return out;
 }
 function compLabel(fx) {
+  if (fx.comp === "F") return "Preseason friendly";
   if (fx.comp === "L") return leagueName(fx.key);
   if (fx.comp === "G") return `${CONT[fx.key].name} · Group ${"ABCDEFGH"[fx.g]}`;
   const comp = S.ko[fx.key], rd = comp.rounds[fx.r];
@@ -491,7 +492,7 @@ function endSeason() {
   signingDay();
   ageAndContracts();
   for (const c of activeClubs()) if (!isUser(c)) aiMaintain(c);
-  S.phase = "summer"; S.summerDay = 0; S.seasonOverSeen = false;
+  S.phase = "summer"; S.summerDay = 0; S.seasonOverSeen = false; S.friendlies = []; S.friNo = [];
   news(`The ${seasonLabel(S.year)} season is over. Five weeks of preseason follow, with the transfer window open.`, true, "transfer");
 }
 
@@ -581,4 +582,52 @@ function newSeasonStart() {
     else if (o.lg !== me().lg && was === mineWas) news(`No league meetings with ${rivalry(S.club, id) >= 2 ? "derby rivals " : "rivals "}${o.name} this season: they're now in the ${leagueName(o.lg)}. Only a cup draw can bring you together.`, false, "league");
   }
   news(`The ${seasonLabel(S.year)} season begins. The board's target: ${expText(S.expPos, me().lg).toLowerCase()}.`, true, "board");
+}
+
+/* ---------- preseason friendlies ----------
+   One a week at most, booked from the Preseason card: home or away, against any English club or a top-flight
+   side abroad. Smaller clubs always agree; a much bigger club may not visit, though it will usually host you.
+   Home: a friendly crowd (about a third of a league one, more for a big-name visitor, never above capacity)
+   at 60% of your ticket price, minus an appearance fee of 30% if the visitors are much bigger. Away at a
+   bigger club: they pay you 15% of their gate. Played like any match (live or simulated), but nothing goes
+   on the record: no table, appearances, goals, cards, bans or ratings. Fitness and injuries are real. */
+const friendlyAt = wk => (S.friendlies || []).find(f => f.wk === wk);
+const friendlyPull = (host, guest) => clamp(.35 + (guest.rep - host.rep) / 60, .25, 1.1);
+function friendlyGate(host, guest) { const att = Math.round(Math.min(capacityNow(host), demandOf(host) * friendlyPull(host, guest))); return { att, gate: Math.round(att * host.price * .6) }; }
+function friendlyMoney(c, opp, home) {
+  if (home) { const g = friendlyGate(c, opp), fee = opp.rep > c.rep + 10 ? Math.round(g.gate * .3) : 0; return { att: g.att, gate: g.gate, fee: -fee, net: g.gate - fee }; }
+  const g = friendlyGate(opp, c), fee = opp.rep > c.rep + 5 ? Math.round(g.gate * .15) : 0; return { att: g.att, gate: 0, fee, net: fee };
+}
+function friendlyOptions() {
+  const c = me(), t = LG[c.lg].tier, eng = ENG_LGS.filter(k => Math.abs(LG[k].tier - t) <= 1 || LG[k].tier === 1);
+  return [...eng, ...TOP_LGS.slice(1)].flatMap(k => S.leagues[k].clubs).map(C).filter(o => o.id !== c.id && !o.gone && !(S.friendlies || []).some(f => f.opp === o.id) && !(S.friNo || []).includes(o.id));
+}
+function bookFriendly(wk, oppId, home) {
+  const c = me(), opp = C(oppId);
+  if (S.phase !== "summer") return "Friendlies are played in preseason.";
+  if (wk < S.summerDay || wk >= CAL.summerDays) return "That week has gone.";
+  if (friendlyAt(wk)) return "You already have a friendly that week.";
+  const gap = opp.rep - c.rep;
+  // A much bigger club may not come to you; most will host you (it's their gate).
+  const yes = home ? gap <= 12 || R() < clamp(1 - (gap - 12) / 25, .15, 1) : gap >= -30 || R() < .7;
+  if (!yes) { (S.friNo ||= []).push(opp.id); return `${opp.name} turned down ${home ? "a visit" : "your request"}. Try someone else.`; }
+  (S.friendlies ||= []).push({ wk, opp: opp.id, home, played: false });
+  news(`Preseason friendly arranged: ${home ? `${opp.name} visit you` : `away at ${opp.name}`} in week ${wk + 1}.`, false, "club");
+  return `${opp.name} agreed: ${home ? "home" : "away"} friendly in preseason week ${wk + 1}.`;
+}
+function cancelFriendly(wk) { const f = friendlyAt(wk); if (!f || f.played || wk === S.summerDay && LIVE) return "That friendly can't be cancelled."; S.friendlies = S.friendlies.filter(x => x !== f); return `Friendly against ${C(f.opp).name} cancelled.`; }
+function friendlyFixture(f) { return f.home ? { comp: "F", h: S.club, a: f.opp, neutral: false } : { comp: "F", h: f.opp, a: S.club, neutral: false }; }
+// After the final whistle: fitness and injuries are real, the money is paid, nothing else is recorded.
+function settleFriendly(M, f) {
+  const c = me(), opp = C(f.opp), mine = M.fx.h === S.club ? M.h : M.a, theirs = mine === M.h ? M.a : M.h;
+  for (const s of [M.h, M.a]) { for (const o of s.on) M.fit[o.p.id] = o.fit; for (const id of s.used) { const p = P(id); if (p && M.fit[id] != null) p.fit = Math.round(M.fit[id]); } }
+  for (const id of M.inj) { const p = P(id); if (p) injure(p); }
+  const m = friendlyMoney(c, opp, f.home); c.cash += m.net; if (c.fin) c.fin.rev += Math.max(0, m.net);
+  Object.assign(f, { played: true, gf: mine.goals, ga: theirs.goals, att: m.att, gate: m.gate, fee: m.fee, net: m.net });
+  news(`Friendly: ${C(M.fx.h).name} ${M.h.goals}–${M.a.goals} ${C(M.fx.a).name}.${f.home ? ` Crowd ${m.att.toLocaleString()}, gate ${money(m.gate)}${m.fee ? `, appearance fee ${money(-m.fee)}` : ""}.` : m.fee ? ` Appearance fee received: ${money(m.fee)}.` : ""}`, false, "result");
+}
+// Preseason week by week: this week's friendly first (simulated here), then the rest of the week.
+function playFriendlySim() {
+  const f = friendlyAt(S.summerDay); if (!f || f.played) return;
+  const M = runToEnd(makeMatch(friendlyFixture(f), true)); settleFriendly(M, f);
 }

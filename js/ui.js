@@ -103,7 +103,7 @@ function playControl() {
   const dec = openDecisions().length;
   if (dec) return `<div class="playbox"><div class="playbtn block"><button data-a="go" data-v="home">Decide (${dec})</button></div></div>`;
   let label = "Play", items = [];
-  if (S.phase === "summer") { label = "Next week"; items = [["day", "Next preseason week", `${CAL.summerDays - S.summerDay} week${CAL.summerDays - S.summerDay === 1 ? "" : "s"} before the season starts`], ["newseason", "Start the season", "AI clubs finish their summer business"]]; }
+  if (S.phase === "summer") { const fw = friendlyAt(S.summerDay); label = fw && !fw.played ? "Play friendly" : "Next week"; items = [["day", fw && !fw.played ? `Play the friendly, then next week` : "Next preseason week", `${CAL.summerDays - S.summerDay} week${CAL.summerDays - S.summerDay === 1 ? "" : "s"} before the season starts`], ["newseason", "Start the season", (S.friendlies || []).some(f => !f.played) ? "Skips ahead; booked friendlies are simulated" : "AI clubs finish their summer business"]]; }
   else {
     const nx = peekUserFixture();
     label = nx && nx.di === S.di ? "Play match" : nx ? "To match day" : "Next day";
@@ -113,7 +113,7 @@ function playControl() {
   }
   return `<div class="playbox"><div class="playbtn"><button data-a="play" data-v="${S.phase === "summer" ? "day" : label === "To match day" ? "match" : label === "Play match" ? "play" : "day"}">${label}</button><button data-a="menu" aria-label="More play options" aria-expanded="${UI.menu}">▾</button></div>
     ${UI.menu ? `<div class="playmenu">${items.map(([k, l, s]) => `<button data-a="play" data-v="${k}">${l}${s ? `<small>${esc(s)}</small>` : ""}</button>`).join("")}
-      ${S.phase === "season" ? `<label><input type="checkbox" id="opt-live" data-c="live" ${S.set.live ? "checked" : ""}> Watch my matches live</label>` : ""}</div>` : ""}</div>`;
+      <label><input type="checkbox" id="opt-live" data-c="live" ${S.set.live ? "checked" : ""}> Watch my matches live${S.phase === "summer" ? " (friendlies too)" : ""}</label></div>` : ""}</div>`;
 }
 function dayLabel(d) {
   if (d.k === "lg") return d.mid ? "Midweek league round" : "League round";
@@ -367,6 +367,23 @@ function janCard() {
     ${last ? `<p class="warn">Registration locks when this week ends and stays locked until preseason.</p>` : ""}</div>
     <div class="row" style="margin-top:10px"><button class="btn" data-a="go" data-v="squad">Change registrations</button><button class="btn" data-a="go" data-v="transfers">Transfer market</button></div></section>`;
 }
+/* Preseason friendlies: this preseason's bookings and results, and the form to book one. */
+function friendliesHtml() {
+  const c = me(), list = (S.friendlies || []).slice().sort((a, b) => a.wk - b.wk), u = UI.fri || {};
+  const openWks = []; for (let w = S.summerDay; w < CAL.summerDays; w++) if (!friendlyAt(w)) openWks.push(w);
+  const wk = openWks.includes(u.wk) ? u.wk : openWks[0], home = u.home !== false, opts = friendlyOptions();
+  const groups = {}; for (const o of opts) (groups[o.lg] ||= []).push(o);
+  const sel = opts.find(o => o.id === u.opp), est = sel ? friendlyMoney(c, sel, home) : null;
+  const row = f => { const o = C(f.opp); return `<div class="need-row"><span><b>Week ${f.wk + 1}</b> · ${f.home ? "vs" : "at"} ${clubA(o.id)} <span class="tiny muted">${leagueName(o.lg)}${o.country !== c.country ? " · " + COUNTRY[o.country].name : ""}</span></span>
+    ${f.played ? `<span class="small">${f.gf}–${f.ga} <span class="muted">· ${f.home ? `crowd ${f.att.toLocaleString()}, ` : ""}${f.net >= 0 ? "+" : ""}${money(f.net)}</span></span>` : `<span class="row" style="gap:6px"><span class="small muted">${f.wk === S.summerDay ? "this week" : "upcoming"}</span><button class="btn sm" data-a="fricancel" data-v="${f.wk}">Cancel</button></span>`}</div>`; };
+  return `<div class="fri"><h3 style="margin:12px 0 6px">Friendlies</h3>
+    ${list.length ? list.map(row).join("") : '<p class="small muted">None booked. A friendly gets minutes into legs, lets you try a formation or a new signing, and a home one brings in a gate.</p>'}
+    ${openWks.length ? `<div class="fri-book row small"><label class="row">Week <select data-c="fri-wk">${openWks.map(w => `<option value="${w}" ${w === wk ? "selected" : ""}>${w + 1}${w === S.summerDay ? " (this week)" : ""}</option>`).join("")}</select></label>
+      <label class="row">Venue <select data-c="fri-home"><option value="H" ${home ? "selected" : ""}>Home</option><option value="A" ${home ? "" : "selected"}>Away</option></select></label>
+      <label class="row">Opponent <select data-c="fri-opp"><option value="">Choose a club…</option>${Object.entries(groups).map(([k, os]) => `<optgroup label="${esc((LG[k].foreign ? COUNTRY[LG[k].c].name + ": " : "") + leagueName(k))}">${os.sort((a, b) => b.rep - a.rep).map(o => `<option value="${o.id}" ${o.id === u.opp ? "selected" : ""}>${esc(o.name)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+      <button class="btn sm primary" data-a="friask">Ask them</button></div>
+      ${est ? `<p class="tiny muted" style="margin-top:4px">${home ? `Expected crowd about ${est.att.toLocaleString()} at friendly prices: gate ~${money(est.gate)}${est.fee ? `, less a ${money(-est.fee)} appearance fee (they're the bigger club)` : ""}.` : est.fee ? `They pay you an appearance fee of about ${money(est.fee)}.` : "No fee: they're no bigger than you."}${sel.rep > c.rep + 12 && home ? " A club this much bigger may not want to visit." : ""}</p>` : ""}` : '<p class="small muted">No weeks left to book.</p>'}</div>`;
+}
 function summerCard() {
   const c = me(), reg = regInfo(c), newKids = c.squad.map(P).filter(p => p.age === 16), gks = c.squad.filter(id => P(id).pos === "GK").length;
   const left = CAL.summerDays - S.summerDay;
@@ -374,6 +391,7 @@ function summerCard() {
     <div class="prose"><p>${S.firstPre ? "Your first preseason: get to know the squad, and buy, sell and loan before the opening game." : "Buy, sell, loan and renew contracts before the new season."} Each week AI clubs do business of their own, and training brings everyone up to full fitness. The season starts in ${left} week${left === 1 ? "" : "s"}.</p>
     <p>Registration for next season: <b>${reg.registered}/${RULES.squadMax}</b> seniors registered (${reg.nonHG}/${RULES.nonHGMax} non-homegrown), ${reg.unregistered ? `<b class="warn">${reg.unregistered} left out</b>, ` : ""}${reg.u21} under-21s. Choose who's registered on the Squad page; it locks when the window closes.</p>
     ${reg.total < 20 || gks < 2 ? `<p class="bad">Your squad is thin: ${reg.total} players, ${gks} goalkeeper${gks === 1 ? "" : "s"}. Free agents cost no fee.</p>` : ""}
+    ${friendliesHtml()}
     ${newKids.length ? `<p>New in the academy: ${newKids.map(p => playerA(p) + ` <span class="muted small">${p.pos}</span>`).join(", ")}.</p>` : ""}</div>
     <div class="row" style="margin-top:10px"><button class="btn" data-a="go" data-v="transfers">Transfer market</button><button class="btn" data-a="go" data-v="squad">Contracts and loans</button><button class="btn primary" data-a="play" data-v="newseason">Start the season</button></div></section>`;
 }

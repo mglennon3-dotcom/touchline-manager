@@ -94,6 +94,14 @@ open throughout (buy, sell, loan, renew, register), AI clubs do business week by
 your squad to full fitness. Play it a week at a time, or start the season straight away. The second window
 is January, weeks 19 to 22.
 
+**Preseason friendlies:** book up to one a week from the Preseason card, home or away, against any English
+club near your level (or in the top division) or a top-flight side abroad. Smaller clubs always agree; much
+bigger ones may refuse to visit but will usually host you. A home friendly draws about a third of a league
+crowd (more for a big-name visitor) at 60% of your ticket price, less a 30% appearance fee if the visitors
+are much bigger; away at a bigger club, they pay you 15% of their gate. Friendlies are played live or
+simulated like any match, with real fitness and injuries, but don't count: no table, appearances, goals,
+cards, bans or ratings.
+
 **Live matches** show your team on a pitch in its formation: each player's rating in his position right now
 (fitness included), fitness bars and bookings, with the bench below. Tap a player and then a substitute to
 bring him on, or two players to swap their positions; change formation from the menu above the pitch. Any of

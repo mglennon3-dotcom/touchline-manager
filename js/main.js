@@ -47,7 +47,7 @@ function takeClub(id, name, arch, form) {
   const c = me(); S.formation = S.me.form; c.formation = S.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), S.formation);
   startSeason();
   // Every career starts with five weeks of preseason, window open, before the first match.
-  S.phase = "summer"; S.summerDay = 0; S.firstPre = true;
+  S.phase = "summer"; S.summerDay = 0; S.firstPre = true; S.friendlies = []; S.friNo = [];
   news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}. Five weeks of preseason first, with the transfer window open.`, true, "board");
   UI.page = "home"; save(); render(); toTop();
 }
@@ -66,6 +66,12 @@ async function play(mode) {
       if (S.sacked) break;
       if (openDecisions().length) { UI.page = "home"; if (!S.sacked) stopMsg = "A decision needs your attention."; break; }
       if (S.phase === "summer") {
+        // This week's friendly first: live if you watch matches live (the week moves on when it ends).
+        const f = friendlyAt(S.summerDay);
+        if (f && !f.played) {
+          if (S.set.live && mode === "day") { startLive(friendlyFixture(f)); UI.busy = false; busy(false); render(); toTop(); return; }
+          playFriendlySim();
+        }
         summerStep(); steps++;
         if (mode === "day" || S.phase === "season") break;
         busy(true, "Preseason…"); await nextTick();
@@ -100,7 +106,7 @@ async function playNewSeason() {
   if (UI.busy) return;
   if (openDecisions().length) { UI.page = "home"; render(); toast("Deal with the decision waiting for you first."); return; }
   UI.busy = true; busy(true, "Preseason…");
-  while (S.phase === "summer" && !openDecisions().length) { summerStep(); await nextTick(); }
+  while (S.phase === "summer" && !openDecisions().length) { playFriendlySim(); summerStep(); await nextTick(); }
   UI.busy = false; busy(false); UI.page = "home"; await save(); render();
   if (S.phase === "summer") toast("A decision needs your attention before the season starts.");
 }
@@ -129,6 +135,7 @@ function tick() {
 }
 async function finishLive() {
   const { M, fx } = LIVE; LIVE = null;
+  if (fx.comp === "F") { settleFriendly(M, friendlyAt(S.summerDay)); summerStep(); await save(); render(); toTop(); return; }  // a friendly: off the record, then the week moves on
   applyMatch(M); recordResult(fx, M); finishDay();
   await save(); render(); toTop();
 }
@@ -178,6 +185,8 @@ const ACT = {
     S.bench = b; save(); render(); },
   // From the match card: drop a sub (yours or automatic; he isn't brought back automatically) or add one.
   benchdrop: v => { const id = +v, cur = benchFor(me(), S.lineup); S.bench = cur.filter(x => x !== id && (S.bench || []).includes(x)); (S.benchNo ||= []).includes(id) || S.benchNo.push(id); save(); render(); },
+  friask: () => { const f = UI.fri || {}; if (f.opp == null) return toast("Choose an opponent first."); const r = bookFriendly(f.wk ?? S.summerDay, f.opp, f.home !== false); UI.fri = { home: f.home }; save(); render(); toast(r); },
+  fricancel: v => { const r = cancelFriendly(+v); save(); render(); toast(r); },
   benchauto: () => { S.bench = null; S.benchNo = []; save(); render(); toast("Bench back to automatic: your best available players."); },
   autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render(); },
@@ -246,6 +255,7 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  "fri-wk": v => { (UI.fri ||= {}).wk = +v; render(); }, "fri-home": v => { (UI.fri ||= {}).home = v === "H"; render(); }, "fri-opp": v => { (UI.fri ||= {}).opp = +v; render(); },
   benchgk: (v, el) => { S.set.benchGK = el.checked; save(); render(); toast(el.checked ? "A substitute goalkeeper will always be named." : "No automatic substitute goalkeeper. If your keeper goes off, an outfielder goes in goal."); },
   benchadd: v => { if (v) ACT.benchtoggle(v); },
   autoscout: (v, el) => { S.set.autoScout = el.checked; delete S.set.autoAbroad; save(); render(); toast(el.checked ? "Scouting assistant on: spare hours, England only, no cost." : "Scouting assistant off."); },
