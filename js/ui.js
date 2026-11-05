@@ -127,7 +127,7 @@ function viewStart() {
         <div class="row between"><span class="club-in">${crest(c, 26)} <span><b>${esc(c.name)}</b><br><span class="tiny muted">${esc(c.region)} · ${OWNER[c.owner].l}</span></span></span><button class="btn sm" data-a="choose" data-v="${c.id}">Manage</button></div>
         <dl class="pick-stats"><div><dt>Squad</dt><dd>${r20(r.lvl).toFixed(1)}</dd></div><div><dt>Prestige</dt><dd>${c.rep}</dd></div><div><dt>Youth dev</dt><dd><b class="rt ${aCls(c.academy)}">${c.academy}</b></dd></div>
           <div><dt>Ground</dt><dd>${c.cap.toLocaleString()}</dd></div><div><dt>Support</dt><dd><span class="rt ${aCls(c.support)}">${c.support}</span></dd></div><div><dt>Coach</dt><dd class="tiny">${esc(ARCH[c.coach.arch].l)}</dd></div></dl>
-        <p class="small"><b class="${h.cls}">${h.label}</b> <span class="tiny muted">· ${money(c.cash)} cash · ${money(c.revBase)} a year</span></p>
+        <p class="small"><b class="${h.cls}">${h.label}</b> <span class="tiny muted">· ${money(c.cash)} cash · ${money(annualIncome(c))} a year</span></p>
         <p class="small">Board target: <b>${expText(r.exp, key)}</b></p></div>`; }).join("")}</div>
       <div class="only-wide">${table("start-" + key, [
         { k: "n", l: "Club", v: r => r.c.name, f: r => `<span class="club-in">${crest(r.c, 18)} <b>${esc(r.c.name)}</b></span>` },
@@ -136,7 +136,7 @@ function viewStart() {
         { k: "co", l: "Coach", f: r => esc(ARCH[r.c.coach.arch].l), cls: "hide-sm" },
         { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep },
         { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => `<b class="rt ${aCls(r.c.academy)}">${r.c.academy}</b>` },
-        { k: "fin", l: "Finances", v: r => finHealth(r.c).ratio, f: r => { const h = finHealth(r.c); return `<b class="${h.cls}">${h.label}</b><br><span class="tiny muted">${money(r.c.cash)} cash · ${money(r.c.revBase)} a year</span>`; } },
+        { k: "fin", l: "Finances", v: r => finHealth(r.c).ratio, f: r => { const h = finHealth(r.c); return `<b class="${h.cls}">${h.label}</b><br><span class="tiny muted">${money(r.c.cash)} cash · ${money(annualIncome(r.c))} a year</span>`; } },
         { k: "cap", l: "Ground", r: 1, v: r => r.c.cap, f: r => r.c.cap.toLocaleString() },
         { k: "sup", l: "Support", r: 1, v: r => r.c.support, f: r => `<span class="rt ${aCls(r.c.support)}">${r.c.support}</span>` },
         { k: "own", l: "Owner", f: r => OWNER[r.c.owner].l, cls: "hide-sm" },
@@ -172,7 +172,7 @@ function stadiumCard(c) {
       : `<p class="small" style="margin-bottom:6px">Expand the ground. ${demandOf(c) > c.cap ? "Demand is above capacity, so new seats should sell." : "Demand is below capacity right now, so new seats would mostly sit empty."}</p><div class="row">${EXPANSIONS.map(([k, l]) => { const q = expansionQuote(c, k); return `<button class="btn sm" data-a="buildask" data-v="${k}" title="${money(q.cost)}, ${seasonsText(q.weeks)}">${l} (+${q.add.toLocaleString()}, ${seasonsText(q.weeks).replace("about ", "~")})</button>`; }).join("")}</div>`}</div></section>`;
 }
 function finHealth(c) {
-  const ratio = squadCost(c) / Math.max(1, c.revBase);
+  const ratio = squadCost(c) / Math.max(1, annualIncome(c));
   const [label, cls] = ratio < .75 ? ["Healthy", "good"] : ratio < .85 ? ["Comfortable", "ok"] : ratio <= 1 ? ["Stretched", "warn"] : ["Over the limit", "bad"];
   return { ratio, label, cls };
 }
@@ -489,7 +489,7 @@ function viewFinances() {
       <dt>Broadcast, commercial and matchday</dt><dd>${money(f.rev)}</dd><dt class="tiny" style="padding-left:12px">of which ticket sales</dt><dd class="tiny">${money(f.gate || 0)}</dd><dt class="tiny" style="padding-left:12px">of which sponsorship</dt><dd class="tiny">${money(f.spons || 0)}</dd><dt>Prize money</dt><dd>${money(f.prize + f.merit)}</dd><dt>Player sales (fees received)</dt><dd>${money(f.sold)}</dd>${f.scheme ? `<dt>Connected-party income</dt><dd>${money(f.scheme)}</dd>` : ""}
       <dt>Wages</dt><dd class="bad">${money(-f.wages)}</dd><dt>Staff and running costs</dt><dd class="bad">${money(-f.ops)}</dd><dt>Transfer fees paid</dt><dd class="bad">${money(-f.bought)}</dd><dt>Agent fees</dt><dd class="bad">${money(-f.agent)}</dd>${f.stadium ? `<dt>Stadium works</dt><dd class="bad">${money(-f.stadium)}</dd>` : ""}<dt>Scouting network</dt><dd class="bad">${money(-f.scouting)}</dd>${f.levy ? `<dt>Cost-ratio levy</dt><dd class="bad">${money(-f.levy)}</dd>` : ""}
       <dt class="tot">Cash in the bank</dt><dd class="tot">${money(c.cash)}</dd></dl>
-      <p class="small muted" style="margin-top:8px">Annual income at this level: about ${money(c.revSeason)}. Transfer fees are spread over the contract (amortisation: ${money(sum(c.squad, id => P(id).am ? P(id).am.per : 0))} a year).</p></section></div>
+      <p class="small muted" style="margin-top:8px">Annual income at this level: about ${money(annualIncome(c))}, of which ${money(sponsorTotal(c))} sponsorship and about ${money(matchdayEstimate(c))} ticket sales. Transfer fees are spread over the contract (amortisation: ${money(sum(c.squad, id => P(id).am ? P(id).am.per : 0))} a year).</p></section></div>
     <div class="stack">${sponsorCard(c)}${stadiumCard(c)}<section class="card"><div class="card-h"><h2>Scouting & academy</h2></div>
       <div class="prose"><p>Scouting network: <b>level ${S.rec.scoutLvl}</b> (${money(S.rec.scoutLvl * scoutCost())} a year) gives ${recHours()} recruiting hours a week.</p>
       <div class="row"><button class="btn sm" data-a="scout" data-v="-1" ${S.rec.scoutLvl <= 1 ? "disabled" : ""}>Reduce</button><button class="btn sm" data-a="scout" data-v="1" ${S.rec.scoutLvl >= 5 ? "disabled" : ""}>Expand</button></div>

@@ -115,3 +115,8 @@ function ensureStadiums() { for (const c of activeClubs()) if (c.cap == null) in
 /* Saves from before demand was anchored keep their grounds; demand is pinned to what they draw today. */
 function ensureDemandAnchor() { for (const c of activeClubs()) if (c.cap != null && c.dem0 == null) { const d = demandOf(c); c.dem0 = d; c.rep0 = c.rep; c.fans0 = c.fans; } S.dem2 = true; }
 const seasonsText = w => { const y = w / SEASON_WEEKS; return y < 1.15 ? "about a season" : `about ${Math.round(y * 2) / 2} seasons`; };
+/* A season's ticket income at today's ground, demand and prices. */
+const matchdayEstimate = c => c.cap ? ticketForecast(c, c.tkt || 1).income * homeGames(c) : 0;
+/* Everything a club expects to earn in a season. Ticket sales and sponsorship were carved out of the base
+   income when they were added, so anything judging a club's finances must add them back. */
+const annualIncome = c => (c.revSeason || c.revBase) + sponsorTotal(c) + matchdayEstimate(c);

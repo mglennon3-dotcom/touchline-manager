@@ -34,7 +34,7 @@ function scr(c, extraCost = 0, extraRev = 0) {
   // Season-to-date ratio, projected to a full year where the season is still running.
   const f = c.fin; if (!f) return 0;
   const cost = sum(c.squad, id => P(id).wage + (P(id).am ? P(id).am.per : 0)) + extraCost;
-  const rev = c.revSeason + f.prize + f.merit + f.scheme + Math.max(0, f.sales) + extraRev;
+  const rev = annualIncome(c) + f.prize + f.merit + f.scheme + Math.max(0, f.sales) + extraRev;
   return cost / Math.max(1, rev);
 }
 function transfer(p, to, fee, wage, yrs) {
@@ -162,7 +162,7 @@ function renewTerms(p) {
 /* Before the accounts close, an AI club heading for a charge sells whoever books the biggest profit,
    as real clubs do, until it is back under the line or can't find a buyer. */
 function deadlineSales(c, ratio) {
-  const buyers = activeClubs().filter(b => b.id !== c.id && !isUser(b) && b.tier === 1 && b.squad.length < 30 && rivalry(b.id, c.id) < 2);
+  const lvl = clubLevel(c), buyers = activeClubs().filter(b => b.id !== c.id && !isUser(b) && b.squad.length < 32 && clubLevel(b) >= lvl - 2 && rivalry(b.id, c.id) < 2);
   const book = p => p.am ? p.am.per * p.am.left : 0;
   const list = c.squad.map(P).filter(p => !p.loan && p.age >= 18).sort((a, b) => (value(b) - book(b)) - (value(a) - book(a)));
   let sold = 0;
@@ -172,7 +172,7 @@ function deadlineSales(c, ratio) {
     if (R() < .12) continue;  // this deal falls through; try the next player
     const buyer = pick(buyers.filter(b => b.cash > value(p))); if (!buyer) continue;
     const fee = Math.round(value(p) * rf(.85, 1.05) / 1e4) * 1e4;
-    transfer(p, buyer, fee, contractDemand(p, buyer, .6), ri(2, 5)); sold++;
+    transfer(p, buyer, fee, contractDemand(p, buyer, .6), ri(2, 5)); sold++; trimSquad(buyer, false);
     if (!isForeign(c) && (c.lg === me().lg || c.lg === "E1" || rivalry(c.id, S.club))) news(`${c.name} sell ${p.name} to ${buyer.name} for ${money(fee)} to stay inside the cost rules.`, false, "finance");
   }
 }
