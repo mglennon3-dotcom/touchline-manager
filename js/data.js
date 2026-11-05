@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.12";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.12.1";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -88,6 +88,10 @@ const MENT = {
   def: { l: "Defensive", ag: -2, m: [.97, .97, 1.1], sh: .9, open: 0, tire: .97, d: "Sit deeper. Fewer goals against, fewer for. Suits the weaker side." },
   vdef: { l: "Very defensive", ag: -3, m: [.93, .94, 1.25], sh: .8, open: 0, tire: .95, d: "Park the bus. Hard to break down and rarely threatening. For holding a lead." },
 };
+// The attributes each style leans on. How far the XI's are above or below what's usual for their positions
+// and ratings decides how well the style works for them (see styleFit).
+const STYLE_KEYS = { vatt: ["fin", "dri", "pac", "sta"], att: ["fin", "dri", "vis", "tec"], pos: ["pas", "tec", "vis", "cmp"], bal: [],
+  ctr: ["pac", "dri", "fin", "vis"], def: ["tac", "mar", "hea", "str"], vdef: ["tac", "mar", "hea", "cmp"] };
 const STYLE_BY_AG = { 3: "vatt", 2: "att", 1: "pos", 0: "bal", "-1": "ctr", "-2": "def", "-3": "vdef" };
 const TRAIN = {
   rec: { l: "Recovery", fit: 24, grow: .45, d: "+24 fitness a week. Players barely develop." },

@@ -58,6 +58,12 @@ feeds on sides that commit forward and does little against a deep block. Every A
 from its coach, shifts it for stronger or weaker opponents, and changes it during the game: chasing a
 deficit, protecting a lead, pushing late when a draw is no use. You set yours on the Tactics page, before
 a match, or live; your assistant can adapt it with the score in matches you don't watch.
+Styles also depend on your players. Each leans on four attributes (possession on Passing, Technique, Vision
+and Composure; counter-attacking on Pace, Dribbling, Finishing and Vision; and so on), and its fit is how far
+your XI's are above or below what's usual for their positions and ratings. A good fit strengthens a style's
+benefits and softens its costs; a poor fit does the reverse, so a style your players can't play is worse
+than Neutral. The Tactics page and the match card show each style's fit, and AI coaches without a strong
+leaning pick possession or counter-attacking when their squad suits it.
 
 **Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development, and each has a preferred
 formation: teams play about 2% better in their coach's own system. Twelve modern shapes are available

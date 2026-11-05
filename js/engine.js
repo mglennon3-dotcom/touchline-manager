@@ -1,19 +1,48 @@
 "use strict";
 /* Minute-by-minute match engine. */
-function sideRatings(on, ment, form, co) {
+/* How well a style suits the players on the pitch, in attribute points: the average amount by which the
+   style's key attributes beat what's typical for each player's position and rating. 0 is an ordinary XI;
+   a side of quick forwards scores well for counter-attacking, an ageing one badly. */
+const DOFF = Object.fromEntries(Object.entries(AW).map(([pos, w]) => [pos, -Object.entries(w).reduce((s, [k, x]) => s + x * (AOFF[pos][k] || 0), 0)]));
+function styleFit(on, ment) {
+  const keys = STYLE_KEYS[ment]; if (!keys || !keys.length) return 0;
+  let t = 0, n = 0;
+  for (const o of on) { const p = o.p; if (p.pos === "GK") continue; const base = r20(p.ovr) + DOFF[p.pos];
+    for (const k of keys) { t += p.at[k] - base - (AOFF[p.pos][k] || 0); n++; } }
+  return n ? t / n : 0;
+}
+// A good fit makes a style's strengths stronger and its costs smaller; a poor fit the reverse.
+const fitScale = fit => clamp(1 + fit * .5, .5, 1.7);
+const bend = (m, F) => m >= 1 ? 1 + (m - 1) * F : 1 + (m - 1) / F;
+function sideRatings(on, ment, form, co, fitIn) {
   const N = FNORM[form];
   let a = 0, m = 0, d = 0;
   for (const o of on) { const e = eff(o.p, o.slot, o.fit), w = WT[o.slot]; a += e * w[0]; m += e * w[1]; d += e * w[2]; }
-  const k = MENT[ment].m, ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
-  return { att: a / N[0] * k[0] * ca * pf, mid: m / N[1] * k[1] * pf, def: d / N[2] * k[2] * cd * pf };
+  const fit = fitIn ?? styleFit(on, ment), F = fitScale(fit);
+  const k = MENT[ment].m.map(x => bend(x, F)), ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
+  return { att: a / N[0] * k[0] * ca * pf, mid: m / N[1] * k[1] * pf, def: d / N[2] * k[2] * cd * pf, fit, F };
 }
 /* Every club has a usual style, set by its coach: attacking coaches attack, organisers sit deeper, and the
    rest lean toward possession, neutral or counter-attacking football. */
 function baseStyle(c) {
   if (isUser(c)) return S.mentality;
   const co = coachOf(c), t = co.off - co.def + (co.arch === "off" ? 2 : co.arch === "def" ? -2 : 0);
-  return t >= 5 ? "att" : t <= -5 ? "def" : ["pos", "bal", "ctr", "bal"][(c.id + co.name.length) % 4];
+  if (t >= 5) return "att";
+  if (t <= -5) return "def";
+  // Coaches without a strong leaning play to their squad: possession with good passers, counters with
+  // quick forwards. Worked out once a week; the XI doesn't change much faster than that.
+  const key = S.year * 100 + S.week;
+  if (c._sty && c._sty[0] === key) return c._sty[1];
+  const f = c.formation, sl = slotsOf(f), on = autoPick(eligibleIds(c), f).map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean);
+  const lean = ["pos", "bal", "ctr", "bal"][(c.id + co.name.length) % 4], fits = { pos: styleFit(on, "pos"), ctr: styleFit(on, "ctr"), bal: 0 };
+  const best = Object.keys(fits).reduce((a, b) => fits[b] > fits[a] ? b : a);
+  const st = fits[best] - fits[lean] > .15 ? best : lean;
+  c._sty = [key, st]; return st;
 }
+// The user's XI as on-pitch entries, for showing how each style suits it.
+function userOn() { fixUserLineup(); const sl = slotsOf(S.formation); return S.lineup.map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean); }
+const FIT_WORDS = [[.35, "Great fit", "good"], [.12, "Good fit", "good"], [-.12, "Average fit", "muted"], [-.35, "Poor fit", "warn"], [-99, "Very poor fit", "bad"]];
+const fitWord = f => FIT_WORDS.find(([t]) => f >= t);
 // For one match the AI shifts its usual style: further forward against weaker sides, deeper against stronger.
 function aiStyle(c, opp, home) {
   const base = baseStyle(c), d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5);
@@ -84,19 +113,20 @@ function step(M) {
   const sd = [M.h, M.a];
   for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.25 - o.p.at.sta / 40) * MENT[s.ment].tire));  // stamina 10 tires at the old rate, 20 a quarter slower
   if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); }
-  for (const s of sd) if (!s.rt || M.min % 5 === 0) s.rt = sideRatings(s.on, s.ment, s.form, s.co);
+  // Fit only changes with the players or the style, so it isn't recomputed with every fitness update.
+  for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length; if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV); }
   const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
-  const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
+  const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb, F: M.h.rt.F }, ra = M.a.rt;
   const ph = rh.mid ** 2 / (rh.mid ** 2 + ra.mid ** 2), k = R() < ph ? 0 : 1, A = sd[k], D = sd[1 - k], rA = k ? ra : rh, rD = k ? rh : ra;
   A.poss++;
   // Measured against real football (about 25 shots, 8-9 on target and 2.7 goals a game): at one shot in
   // five minutes the game managed 18 shots and 2.2 goals, with 0-0s and clean sheets far too common.
   const stA = MENT[A.ment], stD = MENT[D.ment];
-  if (A.on.length && R() < .26 * stA.sh) {
+  if (A.on.length && R() < .26 * bend(stA.sh, rA.F || 1)) {
     A.shots++;
     // .12 rather than .125 since sides started chasing games late, which added goals.
     // A counter-attacking side gets better chances the more the other side has committed forward.
-    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def), 2) * (stA.ctr ? 1 + stA.ctr * stD.open : 1), .03, .45);
+    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def), 2) * (stA.ctr ? 1 + stA.ctr * (rA.F || 1) * stD.open : 1), .03, .45);
     // About a fifth of chances are headers, from crosses and set pieces: centre-backs come up for those,
     // and the best in the air get them. The rest go to whoever is in position, weighted by role.
     const header = R() < .2;
