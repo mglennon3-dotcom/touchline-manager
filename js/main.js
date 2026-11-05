@@ -72,16 +72,19 @@ async function play(mode) {
         continue;
       }
       const day = S.days[S.di], fxs = dayFixtures(day), ufx = userFixture(fxs);
+      // "To my next match day" stops at the start of your match day without playing it, so you can set the
+      // team first; Play match then plays it (live if you watch live).
+      if (mode === "match" && ufx) { UI.page = "home"; stopMsg = steps ? `Match day: ${compLabel(ufx)}. Set your team, then press Play match.` : "Your match is today. Set your team, then press Play match."; break; }
       if (ufx && !regInfo(me()).ok) { UI.page = "squad"; stopMsg = "Your registration is invalid: register at most 25 seniors (17 non-homegrown) and at least 16 eligible players."; break; }
       playOthers(day, fxs);
       if (ufx) {
-        if (S.set.live && (mode === "match" || mode === "day")) { startLive(ufx); UI.busy = false; busy(false); render(); toTop(); return; }
+        if (S.set.live && (mode === "play" || mode === "day")) { startLive(ufx); UI.busy = false; busy(false); render(); toTop(); return; }
         const M = runToEnd(makeMatch(ufx, true)); applyMatch(M); recordResult(ufx, M);
       }
       finishDay(); steps++;
       if (S.phase !== startPhase || S.year !== startYear) break;
       if (mode === "day") break;
-      if (mode === "match" && ufx) break;
+      if (mode === "play" && ufx) break;
       if (mode === "week" && S.week > startWeek) break;
       if (mode === "month" && S.week >= startWeek + 4) break;
       if (mode === "window" && !CAL.jan.includes(S.week)) break;
@@ -301,7 +304,11 @@ function floatHead() {
 window.addEventListener("scroll", floatHead, { passive: true });
 window.addEventListener("resize", () => { floatSrc = null; floatHead(); });
 document.addEventListener("scroll", e => { if (e.target instanceof Element && e.target.matches("#app .tbl-wrap.tall")) floatHead(); }, { capture: true, passive: true });
-new MutationObserver(() => { floatSrc = null; floatHead(); }).observe(document.getElementById("app"), { childList: true, subtree: true });
+// An open Play menu gets the height left below it, and scrolls inside if that's not enough (on an iPhone
+// SE the masthead is tall enough that a fixed limit still ran the menu off the bottom).
+function fitMenu() { const m = document.querySelector(".playmenu"); if (m) m.style.maxHeight = Math.max(160, innerHeight - m.getBoundingClientRect().top - 12) + "px"; }
+window.addEventListener("resize", fitMenu);
+new MutationObserver(() => { floatSrc = null; floatHead(); fitMenu(); }).observe(document.getElementById("app"), { childList: true, subtree: true });
 new MutationObserver(syncMastHeight).observe(document.getElementById("app"), { childList: true });
 document.addEventListener("change", e => { const t = e.target.closest("[data-c]"); if (t) CHG[t.dataset.c]?.(t.value, t); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) { UI.modal = null; UI.bid = null; renderModal(); render(); } });

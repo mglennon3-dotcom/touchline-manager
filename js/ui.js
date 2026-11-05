@@ -106,12 +106,12 @@ function playControl() {
   if (S.phase === "summer") { label = "Next week"; items = [["day", "Next preseason week", `${CAL.summerDays - S.summerDay} week${CAL.summerDays - S.summerDay === 1 ? "" : "s"} before the season starts`], ["newseason", "Start the season", "AI clubs finish their summer business"]]; }
   else {
     const nx = peekUserFixture();
-    label = nx && nx.di === S.di ? "Play match" : "Next day";
-    items = [["day", "Next day", S.days[S.di] ? dayLabel(S.days[S.di]) : ""], ["match", "Until my next match", nx ? `${compLabel(nx.fx)}, week ${nx.day.w + 1}` : "No more matches"], ["week", "One week", ""]];
+    label = nx && nx.di === S.di ? "Play match" : nx ? "To match day" : "Next day";
+    items = [["day", "Next day", S.days[S.di] ? dayLabel(S.days[S.di]) : ""], ["match", "To my next match day", nx ? `Stops before ${compLabel(nx.fx)}, week ${nx.day.w + 1}, so you can set your team` : "No more matches"], ["week", "One week", "Your match is simulated"]];
     if (CAL.jan.includes(S.week)) items.push(["window", "Until the window closes", ""]);
     items.push(["month", "Four weeks", ""], ["season", "Until the end of the season", "Your matches are simulated"]);
   }
-  return `<div class="playbox"><div class="playbtn"><button data-a="play" data-v="${S.phase === "summer" ? "day" : "match"}">${label}</button><button data-a="menu" aria-label="More play options" aria-expanded="${UI.menu}">▾</button></div>
+  return `<div class="playbox"><div class="playbtn"><button data-a="play" data-v="${S.phase === "summer" ? "day" : label === "To match day" ? "match" : label === "Play match" ? "play" : "day"}">${label}</button><button data-a="menu" aria-label="More play options" aria-expanded="${UI.menu}">▾</button></div>
     ${UI.menu ? `<div class="playmenu">${items.map(([k, l, s]) => `<button data-a="play" data-v="${k}">${l}${s ? `<small>${esc(s)}</small>` : ""}</button>`).join("")}
       ${S.phase === "season" ? `<label><input type="checkbox" id="opt-live" data-c="live" ${S.set.live ? "checked" : ""}> Watch my matches live</label>` : ""}</div>` : ""}</div>`;
 }
@@ -314,7 +314,7 @@ function nextMatchCard() {
     <p class="small muted" style="margin:-4px 0 10px">${(() => { const f = styleFit(userOn(), S.mentality), [, w, cls] = fitWord(f); return STYLE_KEYS[S.mentality].length ? `${MENT[S.mentality].l} is a <span class="${cls}">${w.toLowerCase()}</span> for your XI. ` : ""; })()}${esc(opp.short)} usually play ${MENT[baseStyle(opp)].l.toLowerCase()}${aiStyle(opp, c, fx.h === opp.id && !fx.neutral) !== baseStyle(opp) ? `; expect ${MENT[aiStyle(opp, c, fx.h === opp.id && !fx.neutral)].l.toLowerCase()} against you` : ""}.</p>
     ${!reg.ok ? `<p class="bad small">Registration is invalid: ${reg.registered}/${RULES.squadMax} seniors registered, ${reg.nonHG}/${RULES.nonHGMax} non-homegrown, ${reg.eligible} eligible players (16 minimum). Fix it on the Squad page before you can play.</p>` : ""}
     ${tired ? `<p class="warn small">${tired} of your XI ${tired > 1 ? "are" : "is"} below 70 fitness.</p>` : ""}${oop ? `<p class="warn small">${oop} player${oop > 1 ? "s are" : " is"} out of position.</p>` : ""}
-    <div class="row" style="margin-top:6px"><button class="btn primary" data-a="play" data-v="match">${nx.di === S.di ? (S.set.live ? "Kick off" : "Play match") : "Play to match day"}</button><button class="btn" data-a="go" data-v="tactics">Pick the team</button></div></section>`;
+    <div class="row" style="margin-top:6px"><button class="btn primary" data-a="play" data-v="${nx.di === S.di ? "play" : "match"}">${nx.di === S.di ? (S.set.live ? "Kick off" : "Play match") : "Go to match day"}</button><button class="btn" data-a="go" data-v="tactics">Pick the team</button></div></section>`;
 }
 function previewRatings(c, opp, home) { const s = makeSide(c, opp, home, true); return sideRatings(s.on, s.ment, s.form, s.co); }
 /* ---------- awards ---------- */

@@ -401,3 +401,10 @@ body{padding-top:env(safe-area-inset-top,0px)}
 .live-grid{grid-template-areas:"team ctrl" "team stats" "rat rat" "feed feed"}
 @media (min-width:1100px){.live-grid{grid-template-areas:"feed team ctrl" "feed team stats" "feed team rat"}}
 @media (max-width:860px){.live-grid{grid-template-areas:"ctrl" "team" "rat" "feed" "stats"}}
+/* Play menu on phones: the button sits at the left of the masthead, so the menu hangs from its left edge
+   (pinned right it ran 89px off the screen in portrait), fits the width, and scrolls if it's too tall. In
+   the compact masthead the button is on the right again. */
+@media (max-width:760px){
+  .playmenu{right:auto;left:0;min-width:0;width:min(320px,calc(100vw - 32px));overflow-y:auto}
+  .mast.compact .playmenu{left:auto;right:0}
+}
