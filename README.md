@@ -75,6 +75,13 @@ you can afford who would come, with Sign or Bid buttons. Above them, your XI's f
 dribbling, defending, aerial ability, pace, stamina and physical strength against the division's average XI,
 and the style that suits your players. The Squad page shows a summary and Transfers lists the roles to fix.
 
+**Scouting assistant** (on both Scouted lists, Youth and Transfers): Off, Youth prospects, Transfer
+targets or Both. At the end of each week it spends the scouting hours you left unused, so your own scouting
+comes first. For youth it takes undecided prospects with the best potential estimates to a detailed report,
+favouring positions your formation uses and lads nearer home; for transfers it scouts players at positions
+Team Needs flags who would improve on your weakest starter there and whose price you could meet. It stays
+in England unless you allow trips abroad, which cost travel money. A weekly news item names who it scouted.
+
 **Preseason:** every season, your first included, opens with five weeks of preseason. The transfer window is
 open throughout (buy, sell, loan, renew, register), AI clubs do business week by week, and training brings
 your squad to full fitness. Play it a week at a time, or start the season straight away. The second window

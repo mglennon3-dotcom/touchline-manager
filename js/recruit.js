@@ -150,3 +150,46 @@ function signingDay() {
     c.squad.push(p.id);
   }
 }
+
+/* ---------- scouting a senior player (yours, or the assistant's) ---------- */
+function scoutPlayer(p) {
+  const code = playerCountry(p); S.rec.hours -= scoutHours(2, code); payTravel(code); learnCountry(code);
+  S.scout[p.id] = Math.min(2, (S.scout[p.id] || 0) + (knowOf(code) >= 15 ? 2 : 1));
+  (S.scoutT ||= {})[p.id] = { y: S.year, w: whenLabel(), n: ((S.scoutT[p.id] || {}).n || 0) + 1, t: Date.now() };
+}
+/* ---------- the scouting assistant ----------
+   Optional (S.set.autoScout: off, youth, players or both). At the end of each week it spends the hours you
+   left unused, so your own scouting always comes first. Youth: undecided prospects with the best potential
+   estimates, favouring positions your formation uses and lads nearer home, taking each to a detailed
+   report. Players: those at positions Team Needs flags who could improve on your weakest starter there and
+   whose price you could meet. Abroad only if S.set.autoAbroad, since trips cost money. */
+function autoScout() {
+  const mode = (S.set || {}).autoScout || "off"; if (mode === "off" || !S.me) return;
+  const c = me(), abroad = !!S.set.autoAbroad, ok = code => abroad || code === "ENG", uses = new Set(slotsOf(S.formation));
+  const youth = mode === "players" ? [] : S.prospects.filter(y => y.commit == null && !y.signed && y.sc < 2 && ok(prospectCountry(y)))
+    .map(y => ({ k: "y", o: y, cost: scoutHours(REC_COST.scout, prospectCountry(y)), s: viewMid(prospectPot(y)) + (uses.has(y.pos) ? 1.5 : 0) - km(y, c) / 400 }));
+  let players = [];
+  if (mode !== "youth") {
+    const needs = teamNeeds().filter(n => n.status[1] !== "good"), budget = c.cash * 1.2;
+    for (const n of needs.slice(0, 4)) for (const p of Object.values(S.players)) {
+      if (p.club === S.club || p.club < 0 && !S.fa.includes(p.id) || p.loan || p.age < 18 || p.age > 31 || scoutLevel(p) >= 2 || FAM[p.pos][n.role] < .9 || !ok(playerCountry(p))) continue;
+      if (ratingMid(p) < n.weakest + .5 || (p.club >= 0 && askingPrice(p) > budget)) continue;
+      players.push({ k: "p", o: p, cost: scoutHours(2, playerCountry(p)), s: ratingMid(p) - n.weakest + n.score * .2 - (p.club >= 0 ? askingPrice(p) / 1e7 : 0) });
+    }
+    const seen = new Set(); players = players.filter(x => !seen.has(x.o.id) && seen.add(x.o.id));
+  }
+  youth.sort((a, b) => b.s - a.s); players.sort((a, b) => b.s - a.s);
+  const done = { y: [], p: [] }; let turn = mode === "players" ? "p" : "y", guard = 0;
+  while (guard++ < 40) {
+    const list = turn === "y" ? youth : players, other = turn === "y" ? players : youth;
+    const i = list.findIndex(x => x.cost <= S.rec.hours), j = other.findIndex(x => x.cost <= S.rec.hours);
+    if (i < 0 && j < 0) break;
+    const [pickList, idx] = i >= 0 ? [list, i] : [other, j], x = pickList[idx];
+    if (x.k === "y") { recAct(x.o, "scout"); if (x.o.sc >= 2) pickList.splice(idx, 1); if (!done.y.includes(x.o.name)) done.y.push(x.o.name); }
+    else { scoutPlayer(x.o); if (scoutLevel(x.o) >= 2) pickList.splice(idx, 1); if (!done.p.includes(x.o.name)) done.p.push(x.o.name); }
+    if (mode === "both") turn = turn === "y" ? "p" : "y";
+  }
+  S.autoLast = { w: whenLabel(), y: done.y.length, p: done.p.length };
+  const names = a => a.slice(0, 3).join(", ") + (a.length > 3 ? ` and ${a.length - 3} more` : "");
+  if (done.y.length || done.p.length) news(`Your scouts filed reports on ${[done.y.length ? `${done.y.length} youth prospect${done.y.length > 1 ? "s" : ""} (${names(done.y)})` : "", done.p.length ? `${done.p.length} transfer target${done.p.length > 1 ? "s" : ""} (${names(done.p)})` : ""].filter(Boolean).join(" and ")}.`, false, done.p.length ? "transfer" : "youth");
+}

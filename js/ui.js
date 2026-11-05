@@ -634,7 +634,7 @@ function viewTransfers() {
     if (f.fee && UI.tab !== "loans") pool = pool.filter(p => askingPrice(p) <= f.fee);
     pool.sort((a, b) => ratingMid(b) - ratingMid(a)); pool = pool.slice(0, 200);
     const loans = UI.tab === "loans";
-    body = `<div class="filters"><label class="f">Position<select id="tf-pos" data-c="tf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
+    body = `${UI.tab === "scouted" ? scoutAssistHtml() : ""}<div class="filters"><label class="f">Position<select id="tf-pos" data-c="tf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Max age<select id="tf-age" data-c="tf-age">${[40, 30, 27, 24, 21].map(a => `<option value="${a}" ${f.age === a ? "selected" : ""}>${a === 40 ? "Any" : a}</option>`).join("")}</select></label>
       <label class="f">Min rating<select id="tf-min" data-c="tf-min">${[0, 6, 8, 10, 12, 14, 16].map(a => `<option value="${a}" ${f.min === a ? "selected" : ""}>${a ? a + "+" : "Any"}</option>`).join("")}</select></label>
       ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
@@ -661,6 +661,13 @@ function viewTransfers() {
 }
 
 /* ---------- youth recruitment ---------- */
+// The scouting assistant's controls, shown on both Scouted lists (the setting is shared).
+function scoutAssistHtml() {
+  const m = S.set.autoScout || "off", L = S.autoLast;
+  return `<div class="assist row small"><label class="row">Scouting assistant <select data-c="autoscout" aria-label="Scouting assistant">${[["off", "Off"], ["youth", "Youth prospects"], ["players", "Transfer targets"], ["both", "Both"]].map(([k, l]) => `<option value="${k}" ${m === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+    <label class="row"><input type="checkbox" data-c="autoabroad" ${S.set.autoAbroad ? "checked" : ""} ${m === "off" ? "disabled" : ""}> Allow trips abroad <span class="tiny muted">(travel costs money)</span></label>
+    <span class="tiny muted">${m === "off" ? "Off: only the scouting you do yourself." : `Uses whatever hours you leave each week${L ? ` · last time (${L.w}): ${L.y} youth, ${L.p} transfer` : ""}.`}</span></div>`;
+}
 function viewYouth() {
   const c = me(), f = UI.yf;
   let ys = S.prospects.slice();
@@ -685,6 +692,7 @@ function viewYouth() {
     { k: "rep", l: "Report", v: y => y.sc, f: y => `<span class="${y.sc >= 3 ? "good" : y.sc === 1 ? "warn" : ""}">${REPORT[y.sc]}</span>${y.scT ? `<br><span class="tiny muted">${y.scT}</span>` : ""}` },
     cols[4], cols[5], cols[6]];
   const scoutedCard = `<section class="card"><div class="card-h"><h2>Scouted prospects</h2><span class="small">${scouted.length} watched · ${scouted.filter(y => y.commit == null).length} still undecided · Hours this week <b class="num">${S.rec.hours}/${recHours()}</b></span></div>
+    ${scoutAssistHtml()}
     ${table("youth-sc", scoutCols, scouted, { sort: { k: "st", d: -1 }, empty: "You haven't scouted any prospects yet. Use Scout on anyone in the list below: each visit narrows his potential, and a detailed report shows his injury risk and what matters most to him." })}</section>`;
   return `<div class="stack">${scoutedCard}<section class="card"><div class="card-h"><h2>Youth recruitment · class of ${S.year + 1}</h2>
     <span class="small">Hours this week <b class="num">${S.rec.hours}/${recHours()}</b> · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b> · Youth development <b class="num">${c.academy}/20</b></span></div>

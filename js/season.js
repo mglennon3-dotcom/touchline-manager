@@ -287,6 +287,7 @@ function weekly() {
   for (const c of activeClubs()) { stadiumWeek(c); sponsorPay(c, 1 / 52); if (windowOpen() && !isUser(c)) refreshRegistration(c); }
   for (const id of S.fa) { const p = P(id); p.fit = 100; if (p.inj) p.inj--; }
   weeklyMood();
+  autoScout();  // spends this week's leftover hours before they refill
   weeklyRecruiting();
   weeklyStories();
   if (CAL.jan.includes(S.week + 1) || CAL.jan.includes(S.week)) aiTransferDay(.12);
@@ -557,7 +558,7 @@ function summerStep() {
   aiTransferDay(.6);
   if (S.summerDay === 1) aiLoans();
   for (const p of me().squad.map(P)) p.fit = Math.min(100, p.fit + 10);  // preseason training gets everyone fit
-  S.rec.hours = recHours();  // scouting hours are weekly in preseason too; only the season's weekly() refilled them
+  autoScout(); S.rec.hours = recHours();  // scouting hours are weekly in preseason too; only the season's weekly() refilled them
   S.summerDay++;
   if (S.summerDay < CAL.summerDays) return;
   if (S.firstPre) {  // a new career: the season was drawn when you took the job, so just open it

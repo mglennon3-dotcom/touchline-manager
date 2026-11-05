@@ -147,7 +147,7 @@ const ACT = {
   startcareer: () => { const el = document.getElementById("coach-name"), fe = document.getElementById("coach-form"), us = document.getElementById("coach-unsack"); const m = UI.modal; UI.modal = null; takeClub(m.club, (el && el.value.trim()) || "The Manager", m.arch, fe ? fe.value : "4-3-3"); S.set.unsackable = !!(us && us.checked); save(); render(); },
   coachpt: v => { if (S.me.pts <= 0 || S.me[v] >= 20) return; S.me[v]++; S.me.pts--; save(); render(); },
   knowpt: v => { if (S.me.pts <= 0 || knowOf(v) >= 20) return; S.me.know[v] = Math.min(20, Math.floor(knowOf(v)) + 1); S.me.pts--; save(); render(); },
-  scoutp: v => { const p = P(+v), code = playerCountry(p), h = scoutHours(2, code); if (S.rec.hours < h) return toast(`Not enough scouting hours left this week (${S.rec.hours}); scouting in ${KNOW_NAME(code)} takes ${h}.`); S.rec.hours -= h; payTravel(code); learnCountry(code); S.scout[p.id] = Math.min(2, (S.scout[p.id] || 0) + (knowOf(code) >= 15 ? 2 : 1)); (S.scoutT ||= {})[p.id] = { y: S.year, w: whenLabel(), n: (S.scoutT[p.id] || {}).n + 1 || 1, t: Date.now() }; save(); renderModal(); render(); toast(S.scout[p.id] >= 2 ? `Full report on ${p.name} filed.` : `First look at ${p.name}: one more visit for a full report.`); },
+  scoutp: v => { const p = P(+v), code = playerCountry(p), h = scoutHours(2, code); if (S.rec.hours < h) return toast(`Not enough scouting hours left this week (${S.rec.hours}); scouting in ${KNOW_NAME(code)} takes ${h}.`); scoutPlayer(p); save(); renderModal(); render(); toast(S.scout[p.id] >= 2 ? `Full report on ${p.name} filed.` : `First look at ${p.name}: one more visit for a full report.`); },
   sort: v => { const [id, k] = v.split("|"); const cur = UI.sort[id]; UI.sort[id] = { k, d: cur && cur.k === k ? -cur.d : (["n", "pos", "club", "from", "rank"].includes(k) ? 1 : -1) }; render(); },
   club: v => { UI.modal = { t: "club", id: +v }; UI.confirm = null; renderModal(); },
   player: v => { UI.modal = { t: "player", id: +v }; UI.confirm = null; UI.loanPick = null; renderModal(); },
@@ -222,6 +222,8 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  autoscout: v => { S.set.autoScout = v; save(); render(); toast(v === "off" ? "Scouting assistant off." : "Your scouts will use the hours you leave each week."); },
+  autoabroad: (v, el) => { S.set.autoAbroad = el.checked; save(); },
   liveform: v => { livePause(); changeForm(LIVE.M, LIVE.k, v); UI.lsel = null; render(); },
   startsort: v => { const cur = UI.sort.start; UI.sort.start = { k: v, d: cur && cur.k === v ? cur.d : (v === "n" || v === "reg" || v === "co" ? 1 : -1) }; render(); },
   style: v => { S.mentality = v; save(); render(); },
