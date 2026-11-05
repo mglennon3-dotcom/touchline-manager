@@ -47,10 +47,11 @@ function groupHtml(p, g) {
   if (v == null) return `<span class="muted tiny">${keys.length ? "?" : "—"}</span>`;
   return `<span class="rt ${aCls(v)}" title="${p.pos === "GK" ? (g === "atk" ? "Distribution: " : "Shot-stopping: ") : ""}${keys.map(k => ATTR_NAME[k]).join(", ")}">${v.toFixed(1)}</span>`;
 }
-function physHtml(p) {
+// One attribute as a single coloured number (a range if only partly scouted); keepers have no physical ratings.
+function attrCell(p, k) {
   if (p.pos === "GK") return '<span class="muted tiny">—</span>';
-  if (scoutLevel(p) === 0) return '<span class="muted tiny">?</span>';
-  return `<span class="atts">${ATTR_GROUPS.out.phy.map(k => { const [lo, hi] = attrView(p, k); return `<span class="at ${aCls((lo + hi) / 2)}" title="${ATTR_NAME[k]}">${k.toUpperCase()} ${lo === hi ? lo : lo + "–" + hi}</span>`; }).join("")}</span>`;
+  const v = attrView(p, k); if (!v) return '<span class="muted tiny">?</span>';
+  return `<span class="rt ${aCls((v[0] + v[1]) / 2)}">${v[0] === v[1] ? v[0] : v[0] + "–" + v[1]}</span>`;
 }
 const formOpts = sel => FORM_KEYS.map(f => `<option value="${f}" ${f === sel ? "selected" : ""}>${f}${S && S.me && S.me.form === f ? ", preferred" : ""}</option>`).join("");
 function statusChips(p, c) {
@@ -380,7 +381,7 @@ function viewSquad() {
     { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
     { k: "atk", l: "Attack", r: 1, v: p => groupAvg(p, "atk") ?? -1, f: p => groupHtml(p, "atk") },
     { k: "dfn", l: "Defence", r: 1, v: p => groupAvg(p, "dfn") ?? -1, f: p => groupHtml(p, "dfn") },
-    { k: "phy", l: "Physical", v: p => groupAvg(p, "phy") ?? -1, f: p => physHtml(p) },
+    ...ATTR_GROUPS.out.phy.map(a => ({ k: a, l: ATTR_NAME[a], r: 1, v: p => p.pos === "GK" ? -1 : viewMid(attrView(p, a)), f: p => attrCell(p, a) })),
     { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
     { k: "reg", l: "Registration", v: p => isSenior(p) ? (isReg(p, c) ? 1 : 0) : 2, f: p => !isSenior(p) ? '<span class="tiny muted">Under-21</span>' : `<button class="btn sm ${isReg(p, c) ? "" : "danger"}" data-a="regtoggle" data-v="${p.id}" ${windowOpen() && !p.loan ? "" : "disabled"}>${isReg(p, c) ? "Registered" : "Not registered"}</button>` },
     { k: "nat", l: "Nat", v: p => p.nat, f: p => p.nat, cls: "hide-sm" },
@@ -401,7 +402,7 @@ function viewSquad() {
     <div class="reg" style="margin-bottom:10px"><span>Registered seniors <b class="${reg.registered > RULES.squadMax ? "bad" : ""}">${reg.registered}/${RULES.squadMax}</b></span><span>Non-homegrown registered <b class="${reg.nonHG > RULES.nonHGMax ? "bad" : ""}">${reg.nonHG}/${RULES.nonHGMax}</b></span><span>Unregistered <b class="${reg.unregistered ? "warn" : ""}">${reg.unregistered}</b></span><span>Under-21s <b>${reg.u21}</b> (no limit)</span><span>Loans in <b>${reg.loansIn}/${RULES.loansIn}</b></span><span>Wage bill <b>${perWeek(sum(c.squad, id => P(id).wage))}</b></span></div>
     <div class="row" style="margin-bottom:10px">${windowOpen() ? `<button class="btn sm" data-a="regbest">Register my best 25</button><span class="small muted">Tap Registered / Not registered on a player to change it.</span>` : `<span class="small muted">Registration is locked until the transfer window opens (January, weeks 19–22, and the summer).</span>`}</div>
     ${table("squad", cols, ps, { sort: { k: "pos", d: 1 }, tall: true })}
-    <p class="hint" style="margin-top:8px"><b>Attack</b> averages Finishing, Dribbling, Technique, Vision, Passing and Composure; <b>Defence</b> Tackling, Marking and Heading; <b>Physical</b> shows Pace, Stamina and Strength (sorting uses their average). For keepers, Attack is distribution and Defence is shot-stopping.</p>
+    <p class="hint" style="margin-top:8px"><b>Attack</b> averages Finishing, Dribbling, Technique, Vision, Passing and Composure; <b>Defence</b> Tackling, Marking and Heading; Pace, Stamina and Strength are shown as they are. For keepers, Attack is distribution and Defence is shot-stopping.</p>
     <p class="hint" style="margin-top:6px">Squads can be any size, but only 25 seniors (21 and over, at most 17 not homegrown) can be registered; under-21s are always eligible. Unregistered players can't play, grow unhappy, may ask to leave, and several of them sulking unsettles the dressing room. Ratings are out of 20: 10 is average, 20 world class. Potential is your scouts' estimate, not a promise: it depends on minutes, form, happiness and your Development rating. Homegrown (HG) means three seasons at an English club before turning 21.</p></section>
     <section class="card"><div class="card-h"><h2>Out on loan</h2></div>${table("loanout", [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "c", l: "At", f: p => clubA(p.club, { flag: 1 }) }, { k: "app", l: "Apps", r: 1, f: p => p.s.app }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "pt", l: "Minutes", f: p => `<span class="bar"><i style="width:${p.pt * 100}%"></i></span>` }], out, { empty: "Nobody is out on loan. Young players develop faster when they play: loan them out from their profile during a window." })}</section></div>`;
 }
