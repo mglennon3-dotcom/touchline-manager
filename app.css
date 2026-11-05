@@ -313,3 +313,9 @@ input[type=text]{width:100%}
    page back twice as far, bouncing the masthead open and shut. One correction, ours, everywhere. */
 html{overflow-anchor:none}
 .tbl-wrap.tall table{border-collapse:separate;border-spacing:0}  /* collapsed borders vanish under pinned cells */
+/* Installed on an iPhone the page draws under the status bar (black-translucent). Reserve that space at
+   the top of the page itself. Without it the sticky masthead, whose top offset is the same inset, had to
+   shift down 47px from where the page had placed it, covering the top 29px+ of every page when the app
+   opened (scrolling hid the problem); the start screen's title went under the status bar instead. */
+body{padding-top:env(safe-area-inset-top,0px)}
+.tbl-wrap.tall{max-height:calc(100dvh - var(--mast-h,100px) - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px) - 24px)}
