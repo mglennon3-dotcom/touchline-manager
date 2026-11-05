@@ -289,8 +289,8 @@ function weekly() {
   weeklyRecruiting();
   weeklyStories();
   if (CAL.jan.includes(S.week + 1) || CAL.jan.includes(S.week)) aiTransferDay(.12);
-  if (S.week === CAL.jan[0] - 1) news("The January transfer window is now open.", true, "transfer");
-  if (S.week === CAL.jan[CAL.jan.length - 1]) news("The January transfer window has closed.", true, "transfer");
+  if (S.week === CAL.jan[0] - 1) news(`The January transfer window is now open. Until it closes after week ${CAL.jan[CAL.jan.length - 1] + 1} you can buy, sell and loan players, and change which 25 seniors are registered.`, true, "transfer");
+  if (S.week === CAL.jan[CAL.jan.length - 1]) news("The January transfer window has closed. Registrations are locked until the summer.", true, "transfer");
 }
 const scoutCost = () => [0, 4e5, 2.5e5, 1.2e5, 6e4, 4e4, 4e4][me().tier];
 

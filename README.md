@@ -50,6 +50,15 @@ a coach who develops players; young players who don't play lose some of it. Rati
 players and your division; everyone else shows a range until scouted (2 hours of your weekly scouting time
 for a first look, again for a full report).
 
+**Style of play:** Very attacking, Attacking, Control possession, Neutral, Counter attack, Defensive or
+Very defensive. Attacking styles create more chances at both ends, slightly more against than for, so they
+pay when you're the stronger side or chasing a goal; deeper styles keep games against better teams close.
+Possession keeps the ball (fewer chances against, less created, exposed to counters); counter-attacking
+feeds on sides that commit forward and does little against a deep block. Every AI club has a usual style
+from its coach, shifts it for stronger or weaker opponents, and changes it during the game: chasing a
+deficit, protecting a lead, pushing late when a draw is no use. You set yours on the Tactics page, before
+a match, or live; your assistant can adapt it with the score in matches you don't watch.
+
 **Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development, and each has a preferred
 formation: teams play about 2% better in their coach's own system. Twelve modern shapes are available
 (4-3-3, 4-2-3-1, 4-4-2, 4-4-1-1, 4-1-4-1, 4-3-2-1, 4-1-2-1-2, 3-4-2-1, 3-4-3, 3-5-2, 5-3-2, 5-4-1), and AI
@@ -118,7 +127,7 @@ Team of the Season. Foreign top flights name the first three. Winners get a mora
 their honours; if you win Manager of the Season the board gains 5 and you earn an extra coaching point.
 The season review shows your division's awards, and the History page browses every season and league.
 
-**Rules modelled on the English game:** 25 registered senior players, at most 17 not homegrown,
+**Rules modelled on the English game:** 25 registered senior players, at most 17 not homegrown, changeable only in the summer and January windows,
 unlimited under-21s; homegrown means three seasons at an English club before turning 21; nine named
 substitutes and five changes; yellow-card bans at 5, 10 and 15 bookings; three games for a straight red;
 ties split on goal difference, goals scored, then head-to-head. Finances use a Squad Cost Ratio:

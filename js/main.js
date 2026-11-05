@@ -128,6 +128,7 @@ const ACT = {
   decide: v => { const [id, ch] = v.split("|"); const m = S.inbox.find(x => x.id === +id); if (!m || m.done) return; const msg = resolveDecision(m, ch); save(); render(); if (msg) toast(msg); },
   seenreview: () => { S.seasonOverSeen = true; save(); render(); },
   ment: v => { S.mentality = v; save(); render(); },
+
   train: v => { S.training = v; save(); render(); },
   autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render(); },
@@ -162,6 +163,8 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  style: v => { S.mentality = v; save(); render(); },
+  autostyle: (v, el) => { S.set.autoStyle = el.checked; save(); },
   awy: v => { UI.awY = +v; render(); },
   awl: v => { UI.awL = v; render(); },
   form: v => { reshapeUser(v); save(); render(); toast(`Switched to ${v}.`); },

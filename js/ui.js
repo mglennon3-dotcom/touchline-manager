@@ -204,7 +204,7 @@ function viewHome() {
   const c = me(), parts = [];
   for (const m of openDecisions()) parts.push(`<section class="decision"><div class="eyebrow">Decision needed · ${m.w}</div><h3>${esc(m.title)}</h3><p>${esc(m.body)}</p><div class="row">${m.opts.map(([k, l], i) => `<button class="btn ${i === 0 ? "primary" : ""}" data-a="decide" data-v="${m.id}|${k}">${l}</button>`).join("")}</div></section>`);
   if (S.phase === "summer" && S.seasonOver && !S.seasonOverSeen) parts.push(seasonReview());
-  if (S.phase === "season") parts.push(nextMatchCard()); else parts.push(summerCard());
+  if (S.phase === "season") { if (CAL.jan.includes(S.week)) parts.push(janCard()); parts.push(nextMatchCard()); } else parts.push(summerCard());
   const recent = (S.myRes || []).slice(-6).reverse();
   if (recent.length) parts.push(`<section class="card"><div class="card-h"><h2>Recent results</h2><button class="lnk small" data-a="go" data-v="fixtures">All fixtures</button></div>${recent.map(resultRow).join("")}</section>`);
   const L = S.leagues[c.lg], t = standings(L), i = t.findIndex(r => r.id === c.id), lo = clamp(i - 3, 0, t.length - 7);
@@ -258,7 +258,8 @@ function nextMatchCard() {
     <div class="row small muted between"><span>Your XI · ${ARCH[S.me.arch].l}</span><span>${esc(opp.short)}'s likely XI · ${esc(coachOf(opp).name)}, ${ARCH[coachOf(opp).arch].l.toLowerCase()}</span></div>
     <div class="cmp">${cmp("Attack", mr.att, orr.att)}${cmp("Midfield", mr.mid, orr.mid)}${cmp("Defence", mr.def, orr.def)}</div>
     <div class="row between" style="margin-bottom:10px"><label class="row small">Formation <select id="nx-form" data-c="form">${formOpts(S.formation)}</select></label>
-      <span class="seg" role="group" aria-label="Mentality">${Object.entries(MENT).map(([k, v]) => `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}">${v.l}</button>`).join("")}</span></div>
+      <label class="row small">Style <select data-c="style" aria-label="Style of play">${Object.entries(MENT).map(([k, v]) => `<option value="${k}" ${S.mentality === k ? "selected" : ""}>${v.l}</option>`).join("")}</select></label></div>
+    <p class="small muted" style="margin:-4px 0 10px">${esc(opp.short)} usually play ${MENT[baseStyle(opp)].l.toLowerCase()}${aiStyle(opp, c, fx.h === opp.id && !fx.neutral) !== baseStyle(opp) ? `; expect ${MENT[aiStyle(opp, c, fx.h === opp.id && !fx.neutral)].l.toLowerCase()} against you` : ""}.</p>
     ${!reg.ok ? `<p class="bad small">Registration is invalid: ${reg.registered}/${RULES.squadMax} seniors registered, ${reg.nonHG}/${RULES.nonHGMax} non-homegrown, ${reg.eligible} eligible players (16 minimum). Fix it on the Squad page before you can play.</p>` : ""}
     ${tired ? `<p class="warn small">${tired} of your XI ${tired > 1 ? "are" : "is"} below 70 fitness.</p>` : ""}${oop ? `<p class="warn small">${oop} player${oop > 1 ? "s are" : " is"} out of position.</p>` : ""}
     <div class="row" style="margin-top:6px"><button class="btn primary" data-a="play" data-v="match">${nx.di === S.di ? (S.set.live ? "Kick off" : "Play match") : "Play to match day"}</button><button class="btn" data-a="go" data-v="tactics">Pick the team</button></div></section>`;
@@ -292,6 +293,17 @@ function seasonReview() {
       return `<h3 style="margin:10px 0 6px">${leagueName(o.lg)} awards</h3>${awardsHtml(l, true)}${yours.length ? `<p class="small good" style="margin-top:6px">Your honours: ${[...new Set(yours)].join("; ")}</p>` : ""}`; })()}
     <p class="small muted">Over the summer players aged a year, veterans retired, loans ended and your youth recruits joined the academy. Contracts that ran out have ended.</p></div>
     <div class="row" style="margin-top:12px"><button class="btn" data-a="seenreview">Got it</button><button class="btn" data-a="go" data-v="history">History</button></div></section>`;
+}
+// The mid-season window is the one chance to rethink the registered 25 before the summer.
+function janCard() {
+  const c = me(), reg = regInfo(c), last = S.week === CAL.jan[CAL.jan.length - 1];
+  const out = c.squad.map(P).filter(p => isSenior(p) && !isReg(p, c) && !p.loan), sulky = out.filter(p => p.mood < 45);
+  return `<section class="card"><div class="card-h"><h2>January transfer window</h2><span class="eyebrow">${last ? "Final week" : `Closes after week ${CAL.jan[CAL.jan.length - 1] + 1}`}</span></div>
+    <div class="prose"><p>Buy, sell and loan players, and change your registered 25 for the rest of the season.</p>
+    <p>Registered: <b>${reg.registered}/${RULES.squadMax}</b> seniors (${reg.nonHG}/${RULES.nonHGMax} non-homegrown), ${reg.u21} under-21s always eligible.${out.length ? ` Left out: ${out.map(p => playerA(p)).join(", ")}${sulky.length ? ` <span class="warn">(${sulky.length} unhappy about it)</span>` : ""}.` : ""}</p>
+    ${!reg.ok ? `<p class="bad">Your registration is invalid. Fix it before the next match.</p>` : ""}
+    ${last ? `<p class="warn">Registration locks when this week ends and stays locked until the summer.</p>` : ""}</div>
+    <div class="row" style="margin-top:10px"><button class="btn" data-a="go" data-v="squad">Change registrations</button><button class="btn" data-a="go" data-v="transfers">Transfer market</button></div></section>`;
 }
 function summerCard() {
   const c = me(), reg = regInfo(c), newKids = c.squad.map(P).filter(p => p.age === 16), gks = c.squad.filter(id => P(id).pos === "GK").length;
@@ -355,7 +367,9 @@ function viewTactics() {
     <div class="pitch">${lines}${slotsHtml}</div>
     ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}
     <p class="hint">Tap a shirt, then a player, to swap. The number is his rating in that role; a dashed ring means he's out of position. Your formation also matters in youth recruitment: prospects want a position your shape actually uses.</p>
-    <div class="card"><h3 style="margin-bottom:8px">Mentality</h3><span class="seg" role="group">${Object.entries(MENT).map(([k, v]) => `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}">${v.l}</button>`).join("")}</span></div>
+    <div class="card"><h3 style="margin-bottom:8px">Style of play</h3><div class="train styles">${Object.entries(MENT).map(([k, t]) => `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}"><b>${t.l}</b><span class="tiny muted">${t.d}</span></button>`).join("")}</div>
+      <p class="hint" style="margin-top:8px">More attacking means more goals at both ends. It pays when you're the stronger side or need a goal; against better teams a deeper style keeps games close. Counter-attacking feeds on opponents who commit forward.</p>
+      <label class="row small" style="margin-top:8px"><input type="checkbox" data-c="autostyle" ${S.set.autoStyle !== false ? "checked" : ""}> In matches you don't watch live, your assistant changes style with the score (chasing a deficit, protecting a lead)</label></div>
     <div class="card"><h3 style="margin-bottom:8px">Training focus</h3><div class="train">${Object.entries(TRAIN).map(([k, t]) => `<button data-a="train" data-v="${k}" aria-pressed="${S.training === k}"><b>${t.l}</b><span class="tiny muted">${t.d}</span></button>`).join("")}</div>
       <p class="hint" style="margin-top:8px">A full match costs an outfield player about 18 fitness. Midweek rounds and cup ties mean rotating.</p></div></div>
     <section class="card"><div class="card-h"><h2>Selection</h2><span class="small muted">XI, then the nine on the bench (5 substitutions allowed)</span></div>
@@ -610,7 +624,7 @@ function modalClub(c) {
   const L = S.leagues[c.lg], ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr);
   return mHead(esc(c.name), `${leagueName(c.lg)} · ${esc(c.region)}, ${COUNTRY[c.country].name}${c.gone ? ` · dropped out ${seasonLabel(c.goneYear)}` : ""}`, c.color, crest(c, 40)) + `<div class="modal-b">
     <dl class="facts">${c.gone ? "" : `<div><dt>Position</dt><dd>${ord(posIn(L, c.id))}</dd></div>`}<div><dt>Squad level</dt><dd class="num">${r20(clubLevel(c)).toFixed(1)} / 20</dd></div><div><dt>Prestige</dt><dd class="num">${c.rep}</dd></div>
-      <div><dt>Formation</dt><dd>${c.formation}</dd></div><div><dt>Youth development</dt><dd>${c.academy}/20</dd></div><div><dt>Owner</dt><dd>${OWNER[c.owner].l}</dd></div>
+      <div><dt>Formation</dt><dd>${c.formation}</dd></div><div><dt>Style</dt><dd>${MENT[baseStyle(c)].l}</dd></div><div><dt>Youth development</dt><dd>${c.academy}/20</dd></div><div><dt>Owner</dt><dd>${OWNER[c.owner].l}</dd></div>
       <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · prefers ${coachOf(c).form} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
       <div><dt>Shirt sponsor</dt><dd>${esc(((c.deals || []).find(d => d.kind === "shirt") || {}).name || "—")}</dd></div><div><dt>Ground</dt><dd class="num">${(c.cap || 0).toLocaleString()}${c.build ? ' <span class="tiny muted">(expanding)</span>' : ""}</dd></div><div><dt>Supporters</dt><dd>${fanWord(c.fans)[0]} <span class="tiny muted">· support ${c.support}/20</span></dd></div><div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
     ${c.hist.length ? `<p class="small">Recent finishes: ${c.hist.slice(-6).reverse().map(h => `${seasonLabel(h.y)} ${ord(h.pos)} in ${leagueName(h.lg)}`).join(" · ")}</p>` : ""}
@@ -672,7 +686,8 @@ function viewLive() {
     const b = benchAvail(M, k);
     ctrl = `<div class="row">${LIVE.paused ? `<button class="btn primary" data-a="liveresume">${M.min === 0 ? "Kick off" : M.min === 45 ? "Second half" : M.min === 90 ? "Extra time" : "Resume"}</button>` : `<button class="btn" data-a="livepause">Pause</button>`}<button class="btn" data-a="liveskip">Skip to the end</button></div>
     <label>Speed<span class="seg" role="group">${[["Normal", 300], ["Fast", 80]].map(([l, v]) => `<button data-a="livespeed" data-v="${v}" aria-pressed="${LIVE.speed === v}">${l}</button>`).join("")}</span></label>
-    <label>Mentality<span class="seg" role="group">${Object.entries(MENT).map(([x, v]) => `<button data-a="liveme" data-v="${x}" aria-pressed="${mine.ment === x}">${v.l}</button>`).join("")}</span></label>
+    <label>Style<span class="seg" role="group">${Object.entries(MENT).map(([x, v]) => `<button data-a="liveme" data-v="${x}" aria-pressed="${mine.ment === x}" title="${esc(v.d)}">${v.l}</button>`).join("")}</span></label>
+    <p class="small muted">${esc(C((k ? M.h : M.a).club).short)} are playing ${MENT[(k ? M.h : M.a).ment].l.toLowerCase()}.</p>
     ${LIVE.paused ? `<div class="ctrl" style="gap:8px;border-top:1px solid var(--line);padding-top:12px"><span class="eyebrow">Substitutions · ${RULES.subs - mine.subs} left</span>
       ${mine.subs < RULES.subs && b.length ? `<label>Off<select id="sub-off">${mine.on.map((o, i) => `<option value="${i}">${o.slot} · ${esc(o.p.name)} · fit ${Math.round(o.fit)}</option>`).join("")}</select></label>
       <label>On<select id="sub-on">${b.map(p => `<option value="${p.id}">${p.pos} · ${esc(p.name)} · ${Math.round(r20(p.ovr))} · fit ${Math.round(p.fit)}</option>`).join("")}</select></label>

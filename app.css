@@ -289,3 +289,6 @@ input[type=text]{width:100%}
 .attr-more{display:grid;gap:6px}
 .attr-more summary{cursor:pointer;padding:4px 0}
 .attr-more[open] summary{margin-bottom:2px}
+.train.styles{grid-template-columns:1fr;gap:6px}
+.train.styles button{display:grid;grid-template-columns:minmax(110px,32%) 1fr;gap:10px;align-items:baseline;text-align:left;padding:8px 10px}
+.train.styles button .tiny{font-size:12.5px}

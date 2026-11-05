@@ -7,16 +7,46 @@ function sideRatings(on, ment, form, co) {
   const k = MENT[ment].m, ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
   return { att: a / N[0] * k[0] * ca * pf, mid: m / N[1] * k[1] * pf, def: d / N[2] * k[2] * cd * pf };
 }
-function aiMent(c, opp, home) { const d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5); return d < -4 ? "def" : d > 4 ? "att" : "bal"; }
+/* Every club has a usual style, set by its coach: attacking coaches attack, organisers sit deeper, and the
+   rest lean toward possession, neutral or counter-attacking football. */
+function baseStyle(c) {
+  if (isUser(c)) return S.mentality;
+  const co = coachOf(c), t = co.off - co.def + (co.arch === "off" ? 2 : co.arch === "def" ? -2 : 0);
+  return t >= 5 ? "att" : t <= -5 ? "def" : ["pos", "bal", "ctr", "bal"][(c.id + co.name.length) % 4];
+}
+// For one match the AI shifts its usual style: further forward against weaker sides, deeper against stronger.
+function aiStyle(c, opp, home) {
+  const base = baseStyle(c), d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5);
+  const shift = d >= 9 ? 2 : d >= 4 ? 1 : d <= -9 ? -2 : d <= -4 ? -1 : 0;
+  return shift ? STYLE_BY_AG[clamp(MENT[base].ag + shift, -3, 3)] : base;
+}
+/* In-game: chase a deficit, protect a lead, push late when a draw is no use. Checked every five minutes
+   after the hour for AI sides, and for yours when the match is simulated and the assistant is allowed to. */
+function adaptStyle(M, k) {
+  const s = k ? M.a : M.h, o = k ? M.h : M.a, ko = M.fx.ko, base = s.base;
+  if (!s.auto || (isUser(C(s.club)) && S.set.autoStyle === false)) return;
+  const own = s.goals + (ko ? (k ? ko.aggA : ko.aggH) : 0), opp = o.goals + (ko ? (k ? ko.aggH : ko.aggA) : 0), diff = own - opp, mn = M.min, b = MENT[base].ag;
+  // A side behind only gets bolder and a side ahead only gets more careful, so a second goal doesn't
+  // send a team that had dug in back out to play.
+  const cur = MENT[s.ment].ag;
+  let ag = b;
+  if (diff <= -2) ag = 3;
+  else if (diff === -1) ag = Math.max(cur, b, mn >= 75 ? 3 : 2);
+  else if (diff === 0) ag = (ko || M.fx.needWinner) && mn >= 80 ? Math.max(b, 2) : b;
+  else if (diff === 1) ag = Math.min(cur, b, mn >= 80 ? -2 : mn >= 70 ? -1 : b);
+  else ag = Math.min(cur, b, mn >= 70 ? -1 : b);
+  const st = STYLE_BY_AG[ag];
+  if (st !== s.ment) { s.ment = st; s.rt = null; s.changes = (s.changes || 0) + 1; lg(M, "tac", k, `${C(s.club).name} switch to ${MENT[st].l.toLowerCase()}.`); }
+}
 
 function makeSide(c, opp, home, auto) {
   let xi, f, ment;
   if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = S.mentality; }
-  else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiMent(c, opp, home); auto = true; }
+  else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
   const sl = slotsOf(f);
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));
-  return { club: c.id, form: f, ment, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, yel: {}, mins: {}, rt: null,
+  return { club: c.id, form: f, ment, base: ment, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
 }
 /* fx: { comp, neutral, ko: {aggH, aggA} | null, needWinner } */
@@ -52,7 +82,8 @@ function step(M) {
   if (M.done) return;
   M.min++;
   const sd = [M.h, M.a];
-  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.25 - o.p.at.sta / 40)));  // stamina 10 tires at the old rate, 20 a quarter slower
+  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.25 - o.p.at.sta / 40) * MENT[s.ment].tire));  // stamina 10 tires at the old rate, 20 a quarter slower
+  if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); }
   for (const s of sd) if (!s.rt || M.min % 5 === 0) s.rt = sideRatings(s.on, s.ment, s.form, s.co);
   const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
   const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
@@ -60,9 +91,12 @@ function step(M) {
   A.poss++;
   // Measured against real football (about 25 shots, 8-9 on target and 2.7 goals a game): at one shot in
   // five minutes the game managed 18 shots and 2.2 goals, with 0-0s and clean sheets far too common.
-  if (A.on.length && R() < .26) {
+  const stA = MENT[A.ment], stD = MENT[D.ment];
+  if (A.on.length && R() < .26 * stA.sh) {
     A.shots++;
-    const pg = clamp(.125 * Math.pow(rA.att / Math.max(1, rD.def), 2), .03, .4);
+    // .12 rather than .125 since sides started chasing games late, which added goals.
+    // A counter-attacking side gets better chances the more the other side has committed forward.
+    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def), 2) * (stA.ctr ? 1 + stA.ctr * stD.open : 1), .03, .45);
     // About a fifth of chances are headers, from crosses and set pieces: centre-backs come up for those,
     // and the best in the air get them. The rest go to whoever is in position, weighted by role.
     const header = R() < .2;

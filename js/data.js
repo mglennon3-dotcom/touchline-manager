@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.11";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.12";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -74,7 +74,21 @@ const FNORM = (() => {
   const mean = [0, 1, 2].map(i => FORM_KEYS.reduce((s, f) => s + sums[f][i], 0) / FORM_KEYS.length);
   return Object.fromEntries(FORM_KEYS.map(f => [f, sums[f].map((v, i) => Math.pow(v, .75) * Math.pow(mean[i], .25))]));
 })();
-const MENT = { def: { l: "Defensive", m: [.9, .98, 1.08] }, bal: { l: "Balanced", m: [1, 1, 1] }, att: { l: "Attacking", m: [1.09, 1, .93] } };
+/* Style of play. m multiplies attack, midfield and defence; sh is how often possession becomes a shot;
+   open is how exposed the side leaves itself, which is what a counter-attacking side feeds on (ctr).
+   Between two equal sides every step toward attack adds goals at both ends, and slightly more against
+   than for, so it pays when you are the better side or need a goal, and costs when you are not.
+   ag orders them from most to least attacking, for the AI's adjustments. */
+const MENT = {
+  vatt: { l: "Very attacking", ag: 3, m: [1.08, 1, .84], sh: 1.16, open: 1, tire: 1.12, d: "Everyone forward. Far more chances at both ends; players tire faster. For chasing a game." },
+  att: { l: "Attacking", ag: 2, m: [1.04, 1, .92], sh: 1.08, open: .7, tire: 1.06, d: "Push on. More chances for and against. Suits the stronger side." },
+  pos: { l: "Control possession", ag: 1, m: [.98, 1.08, 1], sh: .9, open: .5, tire: 1.03, d: "Keep the ball. More possession, so fewer chances against, but patient build-up creates less, and a high line invites counters." },
+  bal: { l: "Neutral", ag: 0, m: [1, 1, 1], sh: 1, open: .3, tire: 1, d: "No particular bias." },
+  ctr: { l: "Counter attack", ag: -1, m: [1, .92, 1.04], sh: 1, open: .1, ctr: .35, tire: 1, d: "Concede the ball, break quickly. Better chances against open sides, little against a deep block." },
+  def: { l: "Defensive", ag: -2, m: [.97, .97, 1.1], sh: .9, open: 0, tire: .97, d: "Sit deeper. Fewer goals against, fewer for. Suits the weaker side." },
+  vdef: { l: "Very defensive", ag: -3, m: [.93, .94, 1.25], sh: .8, open: 0, tire: .95, d: "Park the bus. Hard to break down and rarely threatening. For holding a lead." },
+};
+const STYLE_BY_AG = { 3: "vatt", 2: "att", 1: "pos", 0: "bal", "-1": "ctr", "-2": "def", "-3": "vdef" };
 const TRAIN = {
   rec: { l: "Recovery", fit: 24, grow: .45, d: "+24 fitness a week. Players barely develop." },
   bal: { l: "Balanced", fit: 17, grow: 1, d: "+17 fitness a week. Steady development." },
