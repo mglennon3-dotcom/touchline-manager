@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.9.1";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.10";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -166,7 +166,9 @@ const COUNTRIES = [
     fmt: ["KV {t}","RSC {t}","Royal {t}","KRC {t}","Standard {t}","Sporting {t}","{t} FC","Racing {t}"] },
 ];
 const COUNTRY = Object.fromEntries(COUNTRIES.map(c => [c.code, c]));
-const TOWN_BLOCK = new Set(["Torino","Valencia","Hamburg","Wolfsburg","Marino","Salerno","Lucca","Sevilla","Marburg","Rotdam","Amsdam","Brugge","Genk"]);
+const TOWN_BLOCK = new Set(["Torino","Valencia","Hamburg","Wolfsburg","Marino","Salerno","Lucca","Sevilla","Marburg","Rotdam","Amsdam","Brugge","Genk",
+  // Real English clubs the generator can spell out of its own parts (one was "Everton FC" in a test save).
+  "Ashford","Brackley","Margate","Bromley","Weston","Salford","Everton","Tilbury","Kirkby","Corby","Hartley","Bradford"]);
 // Youth prospects also come from outside the eight leagues.
 const ABROAD = [["BRA","Brazil",-15.8,-47.9],["ARG","Argentina",-34.6,-58.4],["WAF","West Africa",6.5,-1.5],["SCA","Scandinavia",59.9,10.8]];
 const NAT_NAME = { ENG: "England", ESP: "Spain", GER: "Germany", ITA: "Italy", POR: "Portugal", FRA: "France", NED: "Netherlands", BEL: "Belgium", BRA: "Brazil", ARG: "Argentina", WAF: "Ghana", SCA: "Norway" };

@@ -282,3 +282,7 @@ input[type=text]{width:100%}
 .pick-stats dt{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted)}
 .pick-stats dd{margin:0;font-family:var(--f-mono);font-weight:600}
 @media (max-width:760px){.only-wide{display:none}.only-narrow{display:grid}}
+.tots{display:grid;gap:8px}
+.tots-line{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;padding:6px 0;border-top:1px solid var(--line)}
+.tots-line .eyebrow{min-width:84px}
+.tots-p.me{font-weight:700;color:var(--accent)}

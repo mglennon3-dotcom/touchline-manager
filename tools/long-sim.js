@@ -7,7 +7,7 @@ const { chromium } = require('playwright');
 const N = +process.argv[2] || 50;
 (async () => { const b = await chromium.launch(); const pg = await b.newPage();
   const errs=[]; pg.on('pageerror',e=>errs.push(e.message+' '+(e.stack||'').split('\n')[1]));
-  await pg.goto((process.env.URL || 'http://localhost:8000/index.html')); await pg.waitForTimeout(1500);
+  await pg.goto((process.env.URL || 'http://localhost:8800/index.html')); await pg.waitForTimeout(1500);
   await pg.evaluate(()=>{ takeClub(DRAFT.leagues.E3.clubs[8], 'Test Manager', 'dev'); S.set.unsackable = true; });
   for (let s=0; s<N; s++) {
     const r = await pg.evaluate(async ()=>{ S.set.live=false; const t=Date.now(); let g=0;

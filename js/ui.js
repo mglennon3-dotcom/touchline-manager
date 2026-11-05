@@ -2,7 +2,7 @@
 /* Rendering. Every page is a function returning HTML; actions are wired by data-a attributes in main.js. */
 const UI = { page: "home", sel: null, modal: null, sort: {}, menu: false, busy: false, toastT: 0,
   lg: null, cupK: "FA", tab: "search", tf: { pos: "ALL", age: 40, min: 0, fee: 0, lg: "ALL" }, sqf: "ALL",
-  yf: { reg: "ENG", pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5 };
+  yf: { reg: "ENG", pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5, awY: null, awL: null };
 const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
 
 /* ---------- atoms ---------- */
@@ -264,6 +264,22 @@ function nextMatchCard() {
     <div class="row" style="margin-top:6px"><button class="btn primary" data-a="play" data-v="match">${nx.di === S.di ? (S.set.live ? "Kick off" : "Play match") : "Play to match day"}</button><button class="btn" data-a="go" data-v="tactics">Pick the team</button></div></section>`;
 }
 function previewRatings(c, opp, home) { const s = makeSide(c, opp, home, true); return sideRatings(s.on, s.ment, s.form, s.co); }
+/* ---------- awards ---------- */
+const AWARD_ROWS = [["poty", "Player of the Season", "avg"], ["ypoty", "Young Player of the Season", "avg"], ["top", "Golden Boot", "goals"], ["glove", "Golden Glove", "clean sheets"], ["assists", "Playmaker", "assists"]];
+function awardWho(a) { return `${S.players[a[0]] ? playerA(S.players[a[0]]) : esc(a[1])}`; }
+function awardsHtml(l, compact) {
+  if (!l) return '<p class="muted small">No awards recorded.</p>';
+  const mine = a => a && S.players[a[0]] && S.players[a[0]].club === S.club && !S.players[a[0]].loan;
+  const rows = AWARD_ROWS.filter(([k]) => l[k]).map(([k, label, unit]) => { const a = l[k];
+    return `<tr${mine(a) ? ' class="me"' : ""}><td class="small">${label}</td><td>${awardWho(a)} <span class="tiny muted">${esc(a[2])}</span></td><td class="r mono small">${a[3] != null ? a[3] + " " + unit : ""}</td></tr>`; });
+  if (l.manager) rows.push(`<tr${l.manager[0] === S.club ? ' class="me"' : ""}><td class="small">Manager of the Season</td><td><b>${esc(l.manager[1])}</b> <span class="tiny muted">${clubA(l.manager[0])}</span></td><td class="r small muted">${esc(l.manager[3])}</td></tr>`);
+  let out = `<div class="tbl-wrap"><table><tbody>${rows.join("") || '<tr><td class="muted">No awards recorded.</td></tr>'}</tbody></table></div>`;
+  if (!compact && l.tots && l.tots.length) {
+    const lines = [["Goalkeeper", ["GK"]], ["Defence", ["CB", "FB"]], ["Midfield", ["DM", "CM", "AM"]], ["Attack", ["W", "ST"]]];
+    out += `<h3 style="margin:14px 0 6px">Team of the Season</h3><div class="tots">${lines.map(([n, roles]) => `<div class="tots-line"><span class="eyebrow">${n}</span>${l.tots.filter(t => roles.includes(t[3])).map(t => `<span class="tots-p${mine(t) ? " me" : ""}">${awardWho(t)} <span class="tiny muted">${t[3]} · ${esc(t[2])} · ${t[4]}</span></span>`).join("")}</div>`).join("")}</div>`;
+  }
+  return out;
+}
 function seasonReview() {
   const o = S.seasonOver, c = me();
   const tro = o.won.map(trophyName);
@@ -272,6 +288,8 @@ function seasonReview() {
     <div class="prose"><p>The board's target was ${expText(o.exp, o.lg).toLowerCase()} (${ord(o.exp)}). ${tro.length ? `Trophies: <b>${tro.join(", ")}</b>.` : ""}</p>
     ${o.moved === "up" ? `<p class="good"><b>Promoted!</b> Next season you play in the ${leagueName(o.to)}. Income rises sharply.</p>` : o.moved === "down" ? `<p class="bad"><b>Relegated</b> to the ${leagueName(o.to)}. Income falls; relegation clauses cut some wages.</p>` : ""}
     <p>Board reaction: <b class="${o.board >= 0 ? "good" : "bad"}">${o.board >= 0 ? "+" : ""}${o.board}</b>. You earned <b>${o.earned || 1} coaching point${(o.earned || 1) > 1 ? "s" : ""}</b> to spend on the Manager page. ${S.qual.CC.includes(S.club) ? "You qualify for the Champions Cup." : S.qual.CS.includes(S.club) ? "You qualify for the Continental Shield." : S.qual.CT.includes(S.club) ? "You qualify for the Continental Trophy." : ""}</p>
+    ${(() => { const h = S.history[0], l = h && h.L[o.lg]; if (!l) return ""; const yours = c.squad.map(P).flatMap(p => (p.awards || []).filter(a => a.endsWith(seasonLabel(h.year))).map(a => `${esc(p.name)}: ${esc(a.split(",")[0])}`));
+      return `<h3 style="margin:10px 0 6px">${leagueName(o.lg)} awards</h3>${awardsHtml(l, true)}${yours.length ? `<p class="small good" style="margin-top:6px">Your honours: ${[...new Set(yours)].join("; ")}</p>` : ""}`; })()}
     <p class="small muted">Over the summer players aged a year, veterans retired, loans ended and your youth recruits joined the academy. Contracts that ran out have ended.</p></div>
     <div class="row" style="margin-top:12px"><button class="btn" data-a="seenreview">Got it</button><button class="btn" data-a="go" data-v="history">History</button></div></section>`;
 }
@@ -518,8 +536,11 @@ function viewHistory() {
     <p class="small" style="margin-top:8px">${["FA", "LC", "CC", "CS", "CT"].filter(k => h.K[k] && h.K[k].w != null).map(k => `${trophyName(k)}: ${clubA(h.K[k].w, { flag: 1 })}`).join(" · ")}</p>
     <p class="small muted" style="margin-top:4px">Abroad: ${TOP_LGS.slice(1).filter(k => h.L[k]).map(k => `${COUNTRY[LG[k].c].name} ${C(h.L[k].champ).short}`).join(" · ")}</p></section>`).join("");
   const hof = S.hof.slice(0, 40);
+  const ah = S.history.find(h => h.year === UI.awY) || S.history[0], akeys = ah ? [...ENG_LGS, ...TOP_LGS.slice(1)].filter(k => ah.L[k]) : [], ak = akeys.includes(UI.awL) ? UI.awL : (ah && ah.L[me().lg] ? me().lg : akeys[0]);
+  const awardsCard = ah ? `<section class="card"><div class="card-h"><h2>Awards</h2><div class="row"><select data-c="awy" aria-label="Season">${S.history.map(h => `<option value="${h.year}" ${h === ah ? "selected" : ""}>${seasonLabel(h.year)}</option>`).join("")}</select><select data-c="awl" aria-label="League">${akeys.map(k => `<option value="${k}" ${k === ak ? "selected" : ""}>${LG[k].foreign ? COUNTRY[LG[k].c].name + ": " : ""}${leagueName(k)}</option>`).join("")}</select></div></div>${awardsHtml(ah.L[ak])}${(S.me.awards || []).length ? `<p class="small" style="margin-top:10px"><b>Your manager awards:</b> ${S.me.awards.map(esc).join("; ")}</p>` : ""}</section>` : "";
   return `<div class="stack"><section class="card"><div class="card-h"><h2>Your career</h2></div>${S.career.length ? table("career", [{ k: "y", l: "Season", f: r => seasonLabel(r.year) }, { k: "c", l: "Club", f: r => clubA(r.club) }, { k: "l", l: "League", f: r => leagueName(r.lg) }, { k: "p", l: "Finish", r: 1, f: r => ord(r.pos) }, { k: "e", l: "Target", r: 1, f: r => ord(r.exp) }, { k: "t", l: "Trophies", f: r => r.trophies.map(trophyName).join(", ") || "—" }], S.career) : '<p class="muted">Finish a season to start your record.</p>'}
     <p class="small" style="margin-top:8px">${esc(c.name)} honours: ${c.trophies.length ? c.trophies.map(t => `${trophyName(t.t)} ${seasonLabel(t.y)}`).join(", ") : "none yet"}.</p></section>
+    ${awardsCard}
     ${seasons || '<section class="card"><p class="muted">League history fills in at the end of each season.</p></section>'}
     ${S.history.length > UI.histN ? `<button class="btn" data-a="morehist">Show older seasons</button>` : ""}
     <section class="card"><div class="card-h"><h2>Hall of fame</h2><span class="small muted">Retired players with long or decorated careers</span></div>${hof.length ? table("hof", [{ k: "n", l: "Player", f: h => `<b>${esc(h.name)}</b> <span class="tiny muted">${h.nat}</span>` }, { k: "pos", l: "Pos", f: h => h.pos }, { k: "y", l: "Career", f: h => `${h.y0}–${h.y1}` }, { k: "a", l: "Apps", r: 1, f: h => h.apps }, { k: "g", l: "Goals", r: 1, f: h => h.goals }, { k: "pk", l: "Peak", r: 1, f: h => h.peak }, { k: "c", l: "Clubs", f: h => h.clubs.join(", "), cls: "hide-sm" }, { k: "aw", l: "Awards", r: 1, f: h => h.awards.length }], hof) : '<p class="muted">Nobody has retired with a hall-of-fame career yet.</p>'}</section>

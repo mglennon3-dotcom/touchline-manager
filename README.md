@@ -107,6 +107,13 @@ start of the season that it will be their last, others surprise you at the end.
 - *Continental Trophy*: the third tier, 7th and 8th from each top division, with England's first place going
   to the League Cup winner (or runner-up). Two-legged knockout rounds.
 
+**End-of-season awards:** every English division names a Player of the Season, Young Player of the
+Season (21 or under), Golden Boot, Golden Glove (most clean sheets), Playmaker (most assists), Manager of
+the Season (whoever most beat their pre-season prediction, with credit for a title or promotion) and a
+Team of the Season. Foreign top flights name the first three. Winners get a morale boost and a line in
+their honours; if you win Manager of the Season the board gains 5 and you earn an extra coaching point.
+The season review shows your division's awards, and the History page browses every season and league.
+
 **Rules modelled on the English game:** 25 registered senior players, at most 17 not homegrown,
 unlimited under-21s; homegrown means three seasons at an English club before turning 21; nine named
 substitutes and five changes; yellow-card bans at 5, 10 and 15 bookings; three games for a straight red;

@@ -162,6 +162,8 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  awy: v => { UI.awY = +v; render(); },
+  awl: v => { UI.awL = v; render(); },
   form: v => { reshapeUser(v); save(); render(); toast(`Switched to ${v}.`); },
   live: (v, el) => { S.set.live = el.checked; save(); },
   lg: v => { UI.lg = v; render(); },
@@ -200,6 +202,10 @@ async function boot(data) {
   if (S && !S.dem2) ensureDemandAnchor();
   if (S && S.me && !S.me.know) S.me.know = newKnowledge("ENG");  // saves from before league knowledge
   if (S && !S.reg2) { for (const c of activeClubs()) autoRegister(c, false); S.reg2 = true; }
+  if (S && !S.towns2) {  // rename any club the generator gave a real club's town before the blocklist covered it
+    for (const c of S.clubs) if (TOWN_BLOCK.has(c.town)) { const t = townName(COUNTRY[c.country]), old = c.town, taken = new Set(S.clubs.filter(x => x.country === c.country).map(x => x.short)), sh = stripAcc(t).toUpperCase().slice(0, 3);
+      c.name = c.name.replace(old, t); c.town = t; if (!taken.has(sh)) c.short = sh; }
+    S.towns2 = true; }
   if (S && !S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.

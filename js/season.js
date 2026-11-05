@@ -55,6 +55,8 @@ function startSeason() {
   S.days = buildDays();
   newProspectClass();
   S.expPos = expectedPos(me());
+  // Pre-season predictions for every English club, used for Manager of the Season.
+  S.expAll = {}; for (const k of ENG_LGS) S.leagues[k].clubs.forEach(id => S.expAll[id] = expectedPos(C(id)));
 }
 
 /* ---------- continental ---------- */
@@ -310,16 +312,44 @@ function afterUserMatch(fx, M) {
 }
 
 /* ---------- end of season ---------- */
+/* End-of-season awards. English divisions get the full set; foreign top flights the headline three. */
 function awardsFor(key) {
-  const L = S.leagues[key], ps = L.clubs.flatMap(id => C(id).squad.map(P));
-  const avg = p => p.s.app ? p.s.rt / p.s.app : 0, n = roundsOf(key);
-  const top = ps.slice().sort((a, b) => b.s.lg - a.s.lg || a.s.app - b.s.app)[0];
-  const poty = ps.filter(p => p.s.app >= n * .55).sort((a, b) => avg(b) - avg(a))[0];
-  const ypoty = ps.filter(p => p.s.app >= n * .3 && p.age <= 21).sort((a, b) => avg(b) - avg(a))[0];
-  const tag = (p, v, what) => { if (!p) return null; (p.awards ||= []).push(`${what} ${seasonLabel(S.year)}`); return [p.id, p.name, C(p.club).short, v]; };
-  return { top: top && top.s.lg ? tag(top, top.s.lg, "Golden boot, " + leagueName(key)) : null,
-    poty: poty ? tag(poty, +avg(poty).toFixed(2), "Player of the season, " + leagueName(key)) : null,
-    ypoty: ypoty ? tag(ypoty, +avg(ypoty).toFixed(2), "Young player of the season, " + leagueName(key)) : null };
+  const L = S.leagues[key], ps = L.clubs.flatMap(id => C(id).squad.map(P)).filter(p => p.club >= 0), full = !LG[key].foreign;
+  const avg = p => p.s.app ? p.s.rt / p.s.app : 0, n = roundsOf(key), regular = p => p.s.app >= n * .5;
+  const tag = (p, v, what, mood = 6) => {
+    if (!p) return null;
+    (p.awards ||= []).push(`${what}, ${leagueName(key)} ${seasonLabel(S.year)}`); p.mood = Math.min(100, p.mood + mood);
+    if (p.club === S.club) news(`${p.name} wins ${what} in the ${leagueName(key)}.`, true, "squad");
+    return [p.id, p.name, C(p.club).short, v];
+  };
+  const best = (list, f) => list.sort((a, b) => f(b) - f(a))[0];
+  const top = best(ps.slice(), p => p.s.lg * 100 - p.s.app);
+  const out = {
+    top: top && top.s.lg ? tag(top, top.s.lg, "the Golden Boot") : null,
+    poty: tag(best(ps.filter(regular), avg), null, "Player of the Season", 8),
+    ypoty: tag(best(ps.filter(p => p.s.app >= n * .3 && p.age <= 21), avg), null, "Young Player of the Season", 8),
+  };
+  if (out.poty) out.poty[3] = +avg(P(out.poty[0])).toFixed(2);
+  if (out.ypoty) out.ypoty[3] = +avg(P(out.ypoty[0])).toFixed(2);
+  if (!full) return out;
+  const glove = best(ps.filter(p => p.pos === "GK" && p.s.app >= n * .4), p => p.s.cs * 100 + avg(p));
+  out.glove = glove && glove.s.cs ? tag(glove, glove.s.cs, "the Golden Glove") : null;
+  const pm = best(ps.slice(), p => p.s.a * 100 + avg(p));
+  out.assists = pm && pm.s.a ? tag(pm, pm.s.a, "the Playmaker award") : null;
+  // Team of the season: the best-rated regulars in a 4-3-3 shape.
+  const lines = [["GK", ["GK"], 1], ["CB", ["CB"], 2], ["FB", ["FB"], 2], ["MID", ["DM", "CM", "AM"], 3], ["ATT", ["W", "ST"], 3]], used = new Set();
+  out.tots = [];
+  for (const [, roles, k] of lines) for (const p of ps.filter(p => regular(p) && roles.includes(p.pos)).sort((a, b) => avg(b) - avg(a)).slice(0, k)) {
+    used.add(p.id); out.tots.push([p.id, p.name, C(p.club).short, p.pos, +avg(p).toFixed(2)]);
+    (p.awards ||= []).push(`Team of the Season, ${leagueName(key)} ${seasonLabel(S.year)}`); p.mood = Math.min(100, p.mood + 3);
+  }
+  // Manager of the season: who most beat expectations, with a bonus for the title and promotion.
+  const t = standings(L).map(r => r.id), po = S.ko["PO" + key];
+  const score = id => ((S.expAll || {})[id] || t.indexOf(id) + 1) - (t.indexOf(id) + 1) + (t[0] === id ? 4 : 0) + ((LG[key].up && t.indexOf(id) < LG[key].up) || (po && po.w === id) ? 2 : 0);
+  const mid = t.slice().sort((a, b) => score(b) - score(a))[0], mc = C(mid), mco = coachOf(mc);
+  out.manager = [mid, mco.name, mc.short, `${ord(t.indexOf(mid) + 1)}, tipped ${ord((S.expAll || {})[mid] || t.indexOf(mid) + 1)}`];
+  if (isUser(mc)) { S.board = clamp(S.board + 5, 0, 100); S.me.pts += 1; (S.me.awards ||= []).push(`Manager of the Season, ${leagueName(key)} ${seasonLabel(S.year)}`); news(`You are the ${leagueName(key)} Manager of the Season! Board +5 and an extra coaching point.`, true, "board"); }
+  return out;
 }
 function endSeason() {
   bumpTick();
