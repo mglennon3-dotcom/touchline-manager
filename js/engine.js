@@ -11,9 +11,12 @@ function styleFit(on, ment) {
     for (const k of keys) { t += p.at[k] - base - (AOFF[p.pos][k] || 0); n++; } }
   return n ? t / n : 0;
 }
-// A good fit makes a style's strengths stronger and its costs smaller; a poor fit the reverse.
-const fitScale = fit => clamp(1 + fit * .5, .5, 1.7);
-const bend = (m, F) => m >= 1 ? 1 + (m - 1) * F : 1 + (m - 1) / F;
+/* Fit decides whether a style's benefits arrive at all. A poor fit shrinks the upside toward nothing and
+   enlarges the costs; a good one does the reverse. On top of that a side that can't play its style gets
+   exposed (see MENT.expose): poor passers trying to keep the ball give it away where it hurts. Before this,
+   a bad passing side playing possession lost only its bonus and finished level with playing neutral. */
+const fitScale = fit => [clamp(1 + fit * .75, -.5, 1.6), clamp(1 - fit * .6, .5, 1.8)];  // [benefit, cost]
+const bend = (m, F) => m >= 1 ? 1 + (m - 1) * F[0] : 1 + (m - 1) * F[1];
 function sideRatings(on, ment, form, co, fitIn) {
   const N = FNORM[form];
   let a = 0, m = 0, d = 0;
@@ -26,18 +29,29 @@ function sideRatings(on, ment, form, co, fitIn) {
    rest lean toward possession, neutral or counter-attacking football. */
 function baseStyle(c) {
   if (isUser(c)) return S.mentality;
-  const co = coachOf(c), t = co.off - co.def + (co.arch === "off" ? 2 : co.arch === "def" ? -2 : 0);
-  if (t >= 5) return "att";
-  if (t <= -5) return "def";
-  // Coaches without a strong leaning play to their squad: possession with good passers, counters with
-  // quick forwards. Worked out once a week; the XI doesn't change much faster than that.
+  return clubStyles(c).base;
+}
+/* A club's usual style and how well each style suits its squad, worked out once a week (the XI doesn't
+   change faster than that). Coaches with a strong leaning attack or sit deep, unless the squad plainly
+   can't play that way; the rest play to their squad: possession with good passers, counters with quick
+   forwards. */
+function clubStyles(c) {
   const key = S.year * 100 + S.week;
-  if (c._sty && c._sty[0] === key) return c._sty[1];
+  if (c._sty && c._sty[0] === key && typeof c._sty[1] === "object") return c._sty[1];  // 5.12.1 cached a bare string here
+  const co = coachOf(c), t = co.off - co.def + (co.arch === "off" ? 2 : co.arch === "def" ? -2 : 0);
   const f = c.formation, sl = slotsOf(f), on = autoPick(eligibleIds(c), f).map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean);
-  const lean = ["pos", "bal", "ctr", "bal"][(c.id + co.name.length) % 4], fits = { pos: styleFit(on, "pos"), ctr: styleFit(on, "ctr"), bal: 0 };
-  const best = Object.keys(fits).reduce((a, b) => fits[b] > fits[a] ? b : a);
-  const st = fits[best] - fits[lean] > .15 ? best : lean;
-  c._sty = [key, st]; return st;
+  const fits = Object.fromEntries(Object.keys(MENT).map(st => [st, styleFit(on, st)]));
+  let base;
+  if (t >= 5) base = fits.att > -.25 ? "att" : "bal";
+  else if (t <= -5) base = fits.def > -.25 ? "def" : "bal";
+  else { const lean = ["pos", "bal", "ctr", "bal"][(c.id + co.name.length) % 4], best = ["pos", "bal", "ctr"].reduce((a, b) => fits[b] > fits[a] ? b : a);
+    base = fits[best] - fits[lean] > .15 || fits[lean] < -.25 ? best : lean; }
+  const r = { base, fits }; c._sty = [key, r]; return r;
+}
+// Step from ag toward toAg until the style is one the players can manage.
+function playable(fitOf, ag, toAg) {
+  while (ag !== toAg && fitOf(STYLE_BY_AG[ag]) < -.25) ag += ag > toAg ? -1 : 1;
+  return ag;
 }
 // The user's XI as on-pitch entries, for showing how each style suits it.
 function userOn() { fixUserLineup(); const sl = slotsOf(S.formation); return S.lineup.map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean); }
@@ -45,9 +59,9 @@ const FIT_WORDS = [[.35, "Great fit", "good"], [.12, "Good fit", "good"], [-.12,
 const fitWord = f => FIT_WORDS.find(([t]) => f >= t);
 // For one match the AI shifts its usual style: further forward against weaker sides, deeper against stronger.
 function aiStyle(c, opp, home) {
-  const base = baseStyle(c), d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5);
+  const { base, fits } = clubStyles(c), d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5);
   const shift = d >= 9 ? 2 : d >= 4 ? 1 : d <= -9 ? -2 : d <= -4 ? -1 : 0;
-  return shift ? STYLE_BY_AG[clamp(MENT[base].ag + shift, -3, 3)] : base;
+  return shift ? STYLE_BY_AG[playable(st => fits[st], clamp(MENT[base].ag + shift, -3, 3), MENT[base].ag)] : base;
 }
 /* In-game: chase a deficit, protect a lead, push late when a draw is no use. Checked every five minutes
    after the hour for AI sides, and for yours when the match is simulated and the assistant is allowed to. */
@@ -64,7 +78,7 @@ function adaptStyle(M, k) {
   else if (diff === 0) ag = (ko || M.fx.needWinner) && mn >= 80 ? Math.max(b, 2) : b;
   else if (diff === 1) ag = Math.min(cur, b, mn >= 80 ? -2 : mn >= 70 ? -1 : b);
   else ag = Math.min(cur, b, mn >= 70 ? -1 : b);
-  const st = STYLE_BY_AG[ag];
+  const st = STYLE_BY_AG[playable(x => styleFit(s.on, x), ag, b)];
   if (st !== s.ment) { s.ment = st; s.rt = null; s.changes = (s.changes || 0) + 1; lg(M, "tac", k, `${C(s.club).name} switch to ${MENT[st].l.toLowerCase()}.`); }
 }
 
@@ -116,17 +130,17 @@ function step(M) {
   // Fit only changes with the players or the style, so it isn't recomputed with every fitness update.
   for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length; if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV); }
   const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
-  const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb, F: M.h.rt.F }, ra = M.a.rt;
+  const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb, F: M.h.rt.F, fit: M.h.rt.fit }, ra = M.a.rt;
   const ph = rh.mid ** 2 / (rh.mid ** 2 + ra.mid ** 2), k = R() < ph ? 0 : 1, A = sd[k], D = sd[1 - k], rA = k ? ra : rh, rD = k ? rh : ra;
   A.poss++;
   // Measured against real football (about 25 shots, 8-9 on target and 2.7 goals a game): at one shot in
   // five minutes the game managed 18 shots and 2.2 goals, with 0-0s and clean sheets far too common.
   const stA = MENT[A.ment], stD = MENT[D.ment];
-  if (A.on.length && R() < .26 * bend(stA.sh, rA.F || 1)) {
+  if (A.on.length && R() < .26 * bend(stA.sh, rA.F || [1, 1])) {
     A.shots++;
     // .12 rather than .125 since sides started chasing games late, which added goals.
     // A counter-attacking side gets better chances the more the other side has committed forward.
-    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def), 2) * (stA.ctr ? 1 + stA.ctr * (rA.F || 1) * stD.open : 1), .03, .45);
+    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def), 2) * (stA.ctr ? 1 + stA.ctr * (rA.F || [1])[0] * stD.open : 1) * (1 + (stD.expose || 0) * clamp(-(rD.fit || 0), 0, .8)), .03, .45);
     // About a fifth of chances are headers, from crosses and set pieces: centre-backs come up for those,
     // and the best in the air get them. The rest go to whoever is in position, weighted by role.
     const header = R() < .2;

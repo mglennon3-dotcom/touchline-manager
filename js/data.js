@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.12.1";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.12.2";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -80,13 +80,13 @@ const FNORM = (() => {
    than for, so it pays when you are the better side or need a goal, and costs when you are not.
    ag orders them from most to least attacking, for the AI's adjustments. */
 const MENT = {
-  vatt: { l: "Very attacking", ag: 3, m: [1.08, 1, .84], sh: 1.16, open: 1, tire: 1.12, d: "Everyone forward. Far more chances at both ends; players tire faster. For chasing a game." },
-  att: { l: "Attacking", ag: 2, m: [1.04, 1, .92], sh: 1.08, open: .7, tire: 1.06, d: "Push on. More chances for and against. Suits the stronger side." },
-  pos: { l: "Control possession", ag: 1, m: [.98, 1.08, 1], sh: .9, open: .5, tire: 1.03, d: "Keep the ball. More possession, so fewer chances against, but patient build-up creates less, and a high line invites counters." },
+  vatt: { l: "Very attacking", ag: 3, m: [1.08, 1, .84], sh: 1.16, open: 1, expose: .25, tire: 1.12, d: "Everyone forward. Far more chances at both ends; players tire faster. For chasing a game." },
+  att: { l: "Attacking", ag: 2, m: [1.04, 1, .92], sh: 1.08, open: .7, expose: .2, tire: 1.06, d: "Push on. More chances for and against. Suits the stronger side." },
+  pos: { l: "Control possession", ag: 1, m: [.98, 1.08, 1], sh: .9, open: .5, expose: 1, tire: 1.03, d: "Keep the ball. More possession, so fewer chances against, but patient build-up creates less, and a high line invites counters." },
   bal: { l: "Neutral", ag: 0, m: [1, 1, 1], sh: 1, open: .3, tire: 1, d: "No particular bias." },
-  ctr: { l: "Counter attack", ag: -1, m: [1, .92, 1.04], sh: 1, open: .1, ctr: .35, tire: 1, d: "Concede the ball, break quickly. Better chances against open sides, little against a deep block." },
-  def: { l: "Defensive", ag: -2, m: [.97, .97, 1.1], sh: .9, open: 0, tire: .97, d: "Sit deeper. Fewer goals against, fewer for. Suits the weaker side." },
-  vdef: { l: "Very defensive", ag: -3, m: [.93, .94, 1.25], sh: .8, open: 0, tire: .95, d: "Park the bus. Hard to break down and rarely threatening. For holding a lead." },
+  ctr: { l: "Counter attack", ag: -1, m: [1, .92, 1.04], sh: 1, open: .1, ctr: .35, expose: .2, tire: 1, d: "Concede the ball, break quickly. Better chances against open sides, little against a deep block." },
+  def: { l: "Defensive", ag: -2, m: [.97, .97, 1.1], sh: .9, open: 0, expose: .15, tire: .97, d: "Sit deeper. Fewer goals against, fewer for. Suits the weaker side." },
+  vdef: { l: "Very defensive", ag: -3, m: [.93, .94, 1.25], sh: .8, open: 0, expose: .15, tire: .95, d: "Park the bus. Hard to break down and rarely threatening. For holding a lead." },
 };
 // The attributes each style leans on. How far the XI's are above or below what's usual for their positions
 // and ratings decides how well the style works for them (see styleFit).

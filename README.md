@@ -61,9 +61,11 @@ a match, or live; your assistant can adapt it with the score in matches you don'
 Styles also depend on your players. Each leans on four attributes (possession on Passing, Technique, Vision
 and Composure; counter-attacking on Pace, Dribbling, Finishing and Vision; and so on), and its fit is how far
 your XI's are above or below what's usual for their positions and ratings. A good fit strengthens a style's
-benefits and softens its costs; a poor fit does the reverse, so a style your players can't play is worse
-than Neutral. The Tactics page and the match card show each style's fit, and AI coaches without a strong
-leaning pick possession or counter-attacking when their squad suits it.
+benefits and softens its costs. A poor fit takes the benefits away and exposes you on top: poor passers
+trying to keep the ball give it away in dangerous places, so possession with a side that can't pass is the
+worst choice on the board. The Tactics page and the match card show each style's fit. AI coaches know their
+squads: those without a strong leaning pick possession or counter-attacking when it suits, and none of them
+switch, before or during a match, to a style their players plainly can't play.
 
 **Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development, and each has a preferred
 formation: teams play about 2% better in their coach's own system. Twelve modern shapes are available
