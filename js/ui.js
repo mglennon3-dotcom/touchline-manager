@@ -117,34 +117,48 @@ function viewStart() {
   if (!DRAFT) { newWorld(); DRAFT = S; S = null; }
   const keep = S; S = DRAFT; bumpTick();
   const key = UI.startL, L = S.leagues[key];
-  const rows = L.clubs.map(C).map(c => ({ c, lvl: clubLevel(c) })).sort((a, b) => b.lvl - a.lvl);
+  const rows = L.clubs.map(C).map(c => ({ c, lvl: clubLevel(c), fin: finHealth(c), inc: annualIncome(c), sty: baseStyle(c) })).sort((a, b) => b.lvl - a.lvl);
   rows.forEach((r, i) => r.exp = i + 1);
+  /* Every column sorts, on the table's headers or the "Sort by" menu (the only way on a phone, where clubs
+     show as cards). One sort is shared by both layouts and kept when you switch division. */
+  const OWN_ORDER = { prudent: 0, balanced: 1, ambitious: 2, reckless: 3 };
+  const cols = [
+    { k: "n", l: "Club", v: r => r.c.name, f: r => `<span class="club-in">${crest(r.c, 18)} <b>${esc(r.c.name)}</b></span>` },
+    { k: "reg", l: "Region", v: r => r.c.region, f: r => `${r.c.region}<br><span class="tiny muted">${OWNER[r.c.owner].l}</span>`, cls: "hide-sm" },
+    { k: "lvl", l: "Squad", r: 1, v: r => r.lvl, f: r => r20(r.lvl).toFixed(1) },
+    { k: "co", l: "Coach", v: r => ARCH[r.c.coach.arch].l, f: r => `${esc(ARCH[r.c.coach.arch].l)}<br><span class="tiny muted">${MENT[r.sty].l}</span>`, cls: "hide-sm" },
+    { k: "sty", l: "Style", v: r => MENT[r.sty].ag, f: r => MENT[r.sty].l, hide: 1 },  // shown under the coach
+    { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep },
+    { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => `<b class="rt ${aCls(r.c.academy)}">${r.c.academy}</b>` },
+    { k: "fin", l: "Finances", v: r => -r.fin.ratio, f: r => `<b class="${r.fin.cls}">${r.fin.label}</b><br><span class="tiny muted">${money(r.c.cash)} cash · ${money(r.inc)} a year</span>` },
+    { k: "cash", l: "Cash", r: 1, v: r => r.c.cash, f: r => money(r.c.cash), hide: 1 },
+    { k: "inc", l: "Income", r: 1, v: r => r.inc, f: r => money(r.inc), hide: 1 },
+    { k: "cap", l: "Ground", r: 1, v: r => r.c.cap, f: r => r.c.cap.toLocaleString() },
+    { k: "sup", l: "Support", r: 1, v: r => r.c.support, f: r => `<span class="rt ${aCls(r.c.support)}">${r.c.support}</span>` },
+    { k: "own", l: "Owner", v: r => OWN_ORDER[r.c.owner], f: r => OWNER[r.c.owner].l, hide: 1 },  // shown under the region
+    { k: "exp", l: "Board target", v: r => -r.exp, f: r => expText(r.exp, key) },
+    { k: "go", l: "", f: r => `<button class="btn sm" data-a="choose" data-v="${r.c.id}">Manage</button>` },
+  ];
+  const st = UI.sort.start || { k: "lvl", d: -1 }, sc = cols.find(x => x.k === st.k) || cols[2];
+  rows.sort((a, b) => { const x = sc.v(a), y = sc.v(b); return (x < y ? -1 : x > y ? 1 : 0) * st.d || b.lvl - a.lvl; });
+  const SORT_HELP = { fin: ["healthiest first", "most stretched first"], exp: ["highest target first", "lowest target first"], own: ["biggest spenders first", "most prudent first"], sty: ["most attacking first", "most defensive first"], n: ["Z to A", "A to Z"], reg: ["Z to A", "A to Z"], co: ["Z to A", "A to Z"] };
+  const dirWord = (k, d) => (SORT_HELP[k] || ["highest first", "lowest first"])[d > 0 ? 1 : 0];
+  const sortBar = `<div class="row small" style="margin-bottom:10px;gap:8px"><label class="row">Sort by <select data-c="startsort" aria-label="Sort clubs by">${cols.filter(x => x.v).map(x => `<option value="${x.k}" ${x.k === sc.k ? "selected" : ""}>${x.l}</option>`).join("")}</select></label>
+      <button class="btn sm" data-a="sort" data-v="start|${sc.k}" title="Reverse the order">${dirWord(sc.k, st.d)} ⇅</button></div>`;
   const html = `<div class="wrap gut"><section class="hero"><div class="eyebrow">Seven English divisions · 164 clubs · seven foreign countries with three divisions each</div>
     <h1>Touchline <span>Manager</span></h1>
     <p>Take any club in the English pyramid, from the Premier Division down to the National Division North and South. Win promotion, survive the cost rules, recruit fifteen-year-olds against academies across Europe, and keep the board on side for fifty seasons.</p></section>
     <div class="card"><div class="card-h"><h2>Choose your club</h2>
       <label class="row small">Division <select id="start-lg" data-c="startl">${lgOpts(key, ENG_LGS)}</select></label></div>
       <p class="small muted" style="margin-bottom:10px">${leagueRules(key)}</p>
-      <div class="pick-cards only-narrow">${rows.map(r => { const c = r.c, h = finHealth(c); return `<div class="pick-card" style="--c:${c.color}">
+      ${sortBar}
+      <div class="pick-cards only-narrow">${rows.map(r => { const c = r.c, h = r.fin; return `<div class="pick-card" style="--c:${c.color}">
         <div class="row between"><span class="club-in">${crest(c, 26)} <span><b>${esc(c.name)}</b><br><span class="tiny muted">${esc(c.region)} · ${OWNER[c.owner].l}</span></span></span><button class="btn sm" data-a="choose" data-v="${c.id}">Manage</button></div>
         <dl class="pick-stats"><div><dt>Squad</dt><dd>${r20(r.lvl).toFixed(1)}</dd></div><div><dt>Prestige</dt><dd>${c.rep}</dd></div><div><dt>Youth dev</dt><dd><b class="rt ${aCls(c.academy)}">${c.academy}</b></dd></div>
-          <div><dt>Ground</dt><dd>${c.cap.toLocaleString()}</dd></div><div><dt>Support</dt><dd><span class="rt ${aCls(c.support)}">${c.support}</span></dd></div><div><dt>Coach</dt><dd class="tiny">${esc(ARCH[c.coach.arch].l)}</dd></div></dl>
-        <p class="small"><b class="${h.cls}">${h.label}</b> <span class="tiny muted">· ${money(c.cash)} cash · ${money(annualIncome(c))} a year</span></p>
+          <div><dt>Ground</dt><dd>${c.cap.toLocaleString()}</dd></div><div><dt>Support</dt><dd><span class="rt ${aCls(c.support)}">${c.support}</span></dd></div><div><dt>Coach</dt><dd class="tiny">${esc(ARCH[c.coach.arch].l)}</dd></div><div><dt>Style</dt><dd class="tiny">${MENT[r.sty].l}</dd></div></dl>
+        <p class="small"><b class="${h.cls}">${h.label}</b> <span class="tiny muted">· ${money(c.cash)} cash · ${money(r.inc)} a year</span></p>
         <p class="small">Board target: <b>${expText(r.exp, key)}</b></p></div>`; }).join("")}</div>
-      <div class="only-wide">${table("start-" + key, [
-        { k: "n", l: "Club", v: r => r.c.name, f: r => `<span class="club-in">${crest(r.c, 18)} <b>${esc(r.c.name)}</b></span>` },
-        { k: "reg", l: "Region", f: r => r.c.region, cls: "hide-sm" },
-        { k: "lvl", l: "Squad", r: 1, v: r => r.lvl, f: r => r20(r.lvl).toFixed(1) },
-        { k: "co", l: "Coach", f: r => esc(ARCH[r.c.coach.arch].l), cls: "hide-sm" },
-        { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep },
-        { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => `<b class="rt ${aCls(r.c.academy)}">${r.c.academy}</b>` },
-        { k: "fin", l: "Finances", v: r => finHealth(r.c).ratio, f: r => { const h = finHealth(r.c); return `<b class="${h.cls}">${h.label}</b><br><span class="tiny muted">${money(r.c.cash)} cash · ${money(annualIncome(r.c))} a year</span>`; } },
-        { k: "cap", l: "Ground", r: 1, v: r => r.c.cap, f: r => r.c.cap.toLocaleString() },
-        { k: "sup", l: "Support", r: 1, v: r => r.c.support, f: r => `<span class="rt ${aCls(r.c.support)}">${r.c.support}</span>` },
-        { k: "own", l: "Owner", f: r => OWNER[r.c.owner].l, cls: "hide-sm" },
-        { k: "exp", l: "Board target", f: r => expText(r.exp, key) },
-        { k: "go", l: "", f: r => `<button class="btn sm" data-a="choose" data-v="${r.c.id}">Manage</button>` },
-      ], rows)}</div>
+      <div class="only-wide">${table("start", cols.filter(x => !x.hide), rows, { sort: st })}</div>
       <p class="small muted" style="margin-top:10px"><b>Youth dev</b> is the academy's rating out of 20: it sets how good each summer's graduates can become and helps attract young prospects. <b>Finances</b> compare the wage bill and transfer costs with annual income: <span class="good">Healthy</span> under 75%, <span class="ok">Comfortable</span> under 85%, <span class="warn">Stretched</span> up to 100%, <span class="bad">Over the limit</span> above that, where the cost rules start to bite.</p>
       <p class="small muted" style="margin-top:6px">All clubs and players are fictional. Your career saves in this browser; export a save file from the History page to keep a backup. Version ${APP_VERSION}.</p></div></div>`;
   S = keep; return html;

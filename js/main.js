@@ -163,6 +163,7 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  startsort: v => { const cur = UI.sort.start; UI.sort.start = { k: v, d: cur && cur.k === v ? cur.d : (v === "n" || v === "reg" || v === "co" ? 1 : -1) }; render(); },
   style: v => { S.mentality = v; save(); render(); },
   autostyle: (v, el) => { S.set.autoStyle = el.checked; save(); },
   awy: v => { UI.awY = +v; render(); },
