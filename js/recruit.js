@@ -1,0 +1,142 @@
+"use strict";
+/* Youth recruitment. 15-year-olds pick an academy on more than money:
+   distance from home, a route to minutes, whether the club's shape uses their position,
+   who else is there, the club's standing, the academy itself, and the relationship you build. */
+const FACTORS = [
+  ["loc", "Close to home"], ["time", "Playing time"], ["form", "Formation fit"],
+  ["dyn", "Squad dynamics"], ["prest", "Club prestige"], ["acad", "Academy quality"],
+];
+const FACTOR_HELP = {
+  loc: "Distance from his home town. Players abroad weigh this by how open they are to moving.",
+  time: "Players ahead of him at his position, and how many minutes your club gave under-21s last season.",
+  form: "How many places your formation has for his position.",
+  dyn: "Compatriots in the squad, other recruits you've signed at his position, and dressing-room mood.",
+  prest: "Reputation, division, and Champions Cup football.",
+  acad: "Your academy rating.",
+};
+const starsOf = pot => pot >= 86 ? 5 : pot >= 80 ? 4 : pot >= 73 ? 3 : pot >= 66 ? 2 : 1;
+
+function newProspectClass() {
+  S.prospects = [];
+  const add = (nat, country, region, lat, lon, open) => {
+    const pot = clamp(Math.round(62 + Math.pow(R(), 1.8) * 32 + gauss() * 2), 52, 95);
+    const pri = {}; for (const [k] of FACTORS) pri[k] = .6 + R() * .6;
+    const top = shuffle(FACTORS.map(f => f[0])).slice(0, 2); pri[top[0]] += 2.2; pri[top[1]] += 1.2;
+    const tot = sum(Object.values(pri)); for (const k in pri) pri[k] /= tot;
+    S.prospects.push({ id: "y" + S.year + "-" + S.prospects.length, name: nameFor(nat), nat, country, region, lat: lat + rf(-.6, .6), lon: lon + rf(-.8, .8),
+      pos: pick(["GK", "CB", "CB", "FB", "DM", "CM", "CM", "AM", "W", "W", "ST", "ST"]), ovr: clamp(Math.round(pot * .55 + gauss() * 3), 30, 60), pot, open: +rf(.15, 1).toFixed(2),
+      pri, top, sc: 0, known: false, rel: {}, offers: [], visit: false, called: -1, commit: null, cw: null });
+  };
+  for (let i = 0; i < 80; i++) { const [r, la, lo] = pick(COUNTRY.ENG.regions); add("ENG", "ENG", r, la, lo); }
+  for (const K of COUNTRIES.filter(k => k.code !== "ENG")) for (let i = 0; i < 7; i++) { const [r, la, lo] = pick(K.regions); add(K.code, K.code, r, la, lo); }
+  for (let i = 0; i < 22; i++) { const [code, r, la, lo] = pick(ABROAD); add(code, null, r, la, lo); }
+  // AI clubs pick their targets for the year
+  for (const c of activeClubs()) {
+    if (isUser(c) || c.tier >= 5) continue;
+    const k = 1 + Math.floor(c.academy / 3), reach = c.rep >= 80 ? 1 : 0;
+    const cands = S.prospects.filter(y => y.country === c.country || reach || (y.country == null && c.rep >= 70))
+      .map(y => ({ y, s: starsOf(y.pot) * (c.rep / 60) + factorScore(y, c) * 4 + R() * 2 })).sort((a, b) => b.s - a.s).slice(0, k + 3);
+    for (const { y } of shuffle(cands).slice(0, k)) y.rel[c.id] = rf(.02, .08);
+  }
+  S.rec.offers = 0; S.rec.hours = recHours();
+}
+const recHours = () => 8 + 3 * S.rec.scoutLvl;
+const offerCap = () => 3 + Math.floor(me().academy / 2);
+
+function factors(y, c) {
+  const d = km(y, c), domestic = y.country === c.country;
+  const loc = domestic ? 1 / (1 + d / 220) : (y.country == null ? y.open : y.open * .7) * .7 / (1 + d / 2500);
+  const f = c.formation, slots = roleSlots(f, y.pos);
+  const ahead = c.squad.map(P).filter(p => FAM[p.pos][y.pos] >= .9 && p.age <= 27 && p.ovr >= y.pot - 10).length;
+  const time = clamp(1 - ahead / (Math.max(1, slots) * 2 + 1), 0, 1) * .7 + clamp(c.youthMin * 4, 0, 1) * .3;
+  const form = y.pos === "GK" ? 1 : slots === 0 ? .12 : slots === 1 ? .62 : 1;
+  const compat = c.squad.filter(id => P(id).nat === y.nat).length;
+  const sameRole = S.prospects.filter(o => o !== y && o.commit === c.id && o.pos === y.pos).length;
+  const moodAvg = sum(c.squad, id => P(id).mood) / Math.max(1, c.squad.length);
+  const dyn = .45 * Math.min(1, compat / 5) + .35 * (1 - Math.min(1, sameRole / 2)) + .2 * (moodAvg / 100);
+  const inCC = S.cont.CC && S.cont.CC.groups.some(g => g.includes(c.id));
+  const prest = clamp(c.rep / 100 * [1, 1, .85, .75, .65, .55, .5][c.tier] + (inCC ? .1 : 0), 0, 1);
+  const acad = c.academy / 10;
+  return { loc, time, form, dyn, prest, acad, d, ahead, slots, compat, sameRole };
+}
+function factorScore(y, c) { const f = factors(y, c); return sum(FACTORS, ([k]) => y.pri[k] * f[k]); }
+const clubScore = (y, c) => factorScore(y, c) + .45 * (y.rel[c.id] || 0);
+const grade = v => v >= .8 ? "A" : v >= .62 ? "B" : v >= .45 ? "C" : v >= .3 ? "D" : "F";
+
+/* What you can see depends on how much you've scouted him. */
+function shownStars(y) {
+  const s = starsOf(y.pot);
+  if (y.sc >= 2) return [s, s];
+  if (y.sc === 1) { const lo = Math.max(1, s - (y.id.length % 2)), hi = Math.min(5, lo + 1); return [lo, hi]; }
+  return [Math.max(1, s - 1), Math.min(5, s + 1)];
+}
+function contenders(y) {
+  return Object.keys(y.rel).map(Number).filter(id => !C(id).gone).map(id => ({ c: C(id), s: clubScore(y, C(id)), offer: y.offers.includes(id) })).sort((a, b) => b.s - a.s);
+}
+
+/* ---------- actions ---------- */
+const REC_COST = { scout: 3, call: 1, visit: 5 };
+function recAct(y, act) {
+  const c = me();
+  if (y.commit === c.id) return "He has already committed to you.";
+  if (y.signed) return "He has already joined an academy.";
+  if (act === "offer") {
+    if (y.offers.includes(c.id)) { y.offers = y.offers.filter(id => id !== c.id); S.rec.offers--; return `Offer to ${y.name} withdrawn.`; }
+    if (y.sc < 1) return "Scout him at least once before offering a place.";
+    if (S.rec.offers >= offerCap()) return `Your academy can only offer ${offerCap()} places a year. Withdraw one first.`;
+    y.offers.push(c.id); y.rel[c.id] = (y.rel[c.id] || 0) + .05; S.rec.offers++; return `Academy place offered to ${y.name}.`;
+  }
+  const cost = REC_COST[act];
+  if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}).`;
+  if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc++; if (y.sc >= 2) y.known = true; }
+  if (act === "call") { if (y.called === S.week + S.year * 100) return "You've already spoken to his family this week."; y.called = S.week + S.year * 100; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .045 + .03 * (y.pri.dyn + y.pri.acad); }
+  if (act === "visit") { if (y.visit) return "He has already visited."; y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16; }
+  S.rec.hours -= cost;
+  return { scout: `Scouting report on ${y.name} updated.`, call: `You spoke with ${y.name}'s family.`, visit: `${y.name} visited your training ground.` }[act];
+}
+
+/* ---------- the weekly cycle ---------- */
+function weeklyRecruiting() {
+  S.rec.hours = recHours();
+  for (const y of S.prospects) {
+    if (y.commit != null) {
+      // A commitment isn't binding until signing day: a better offer can still turn his head.
+      const cur = clubScore(y, C(y.commit)), rival = y.offers.filter(id => id !== y.commit).map(id => ({ id, s: clubScore(y, C(id)) })).sort((a, b) => b.s - a.s)[0];
+      if (rival && rival.s > cur + .08 && R() < (S.week >= 30 ? .12 : .06)) {
+        const old = C(y.commit); y.commit = rival.id; y.cw = S.week;
+        if (isUser(C(rival.id))) news(`${y.name} has backed out of his commitment to ${old.name} and will join your academy instead!`, true, "youth");
+        else if (isUser(old)) news(`${y.name} has broken his commitment to your academy and will join ${C(rival.id).name}.`, true, "youth");
+        else if (starsOf(y.pot) >= 5) news(`Five-star prospect ${y.name} flips from ${old.name} to ${C(rival.id).name}.`, false, "youth");
+      }
+      continue;
+    }
+    for (const id of Object.keys(y.rel).map(Number)) {
+      const c = C(id); if (isUser(c) || c.gone) continue;
+      y.rel[id] += rf(.008, .03) * (.6 + c.academy / 10);
+      if (!y.offers.includes(id) && y.rel[id] > .22 && y.offers.length < 6) y.offers.push(id);
+    }
+    if (S.week >= 8 && y.offers.length) {
+      const ranked = y.offers.map(id => ({ id, s: clubScore(y, C(id)) })).sort((a, b) => b.s - a.s);
+      const best = ranked[0], second = ranked[1] ? ranked[1].s : 0;
+      const p = clamp((best.s - .5) * .6 + (best.s - second) * 1.2, 0, .25) * (S.week < 20 ? .35 : S.week >= 30 ? 1.6 : 1);
+      if (R() < p) commitProspect(y, best.id);
+    }
+  }
+}
+function commitProspect(y, id) {
+  y.commit = id; y.cw = S.week; const c = C(id);
+  if (isUser(c)) news(`${y.name} (${y.pos}, ${y.region}) has committed to your academy!`, true, "youth");
+  else if (y.offers.includes(S.club)) news(`${y.name} has chosen ${c.name} over your academy.`, false, "youth");
+  else if (starsOf(y.pot) >= 5) news(`Five-star prospect ${y.name} (${y.region}) commits to ${c.name}.`, false, "youth");
+}
+function signingDay() {
+  for (const y of S.prospects) {
+    if (y.commit == null && y.offers.length) { const best = y.offers.map(id => ({ id, s: clubScore(y, C(id)) })).sort((a, b) => b.s - a.s)[0]; commitProspect(y, best.id); }
+    if (y.commit == null || C(y.commit).gone) continue;
+    const c = C(y.commit); y.signed = true;
+    const p = makePlayer({ pos: y.pos, base: y.ovr + 9, age: 16, nat: y.nat, club: c.id, rep: c.rep });
+    p.name = y.name; p.ovr = clamp(y.ovr + ri(0, 4), 30, 70); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 20000;
+    p.yt[c.country] = 1; p.from = y.region;
+    c.squad.push(p.id);
+  }
+}

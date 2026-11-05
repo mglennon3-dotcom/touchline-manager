@@ -1,0 +1,37 @@
+/* Simulates many seasons headlessly and checks the world stays sane: every division keeps its size,
+   no club sits in two divisions, continental groups have four countries, every squad entry is a real player.
+   It also prints drift indicators (ratings, wages against income, cost-rule charges, save size).
+   Usage: serve the folder (python3 -m http.server 8000), then: node tools/long-sim.js 50
+   Needs Playwright with Chromium installed. */
+const { chromium } = require('playwright');
+const N = +process.argv[2] || 50;
+(async () => { const b = await chromium.launch(); const pg = await b.newPage();
+  const errs=[]; pg.on('pageerror',e=>errs.push(e.message+' '+(e.stack||'').split('\n')[1]));
+  await pg.goto((process.env.URL || 'http://localhost:8000/index.html')); await pg.waitForTimeout(1500);
+  await pg.selectOption('#start-lg','E3'); await pg.waitForTimeout(300);
+  await pg.click('[data-a="pick"] >> nth=8');
+  for (let s=0; s<N; s++) {
+    const r = await pg.evaluate(async ()=>{ S.set.live=false; const t=Date.now(); let g=0;
+      while(S.phase==='season'&&g++<600){ S.board=Math.max(S.board,40); if(S.sacked){ S.sacked=false; if(me().gone){ const c=activeClubs().find(c=>c.lg==='E5'); S.club=c.id; S.lineup=[]; } }
+        if(!regInfo(me()).ok) trimSquad(me(),false); while(me().squad.length<16){ const p=S.fa.map(P).sort((a,b)=>b.ovr-a.ovr)[0]; S.fa=S.fa.filter(x=>x!==p.id); p.club=S.club; p.yrs=2; me().squad.push(p.id);} 
+        for(const m of openDecisions()) resolveDecision(m,m.opts[0][0]); await play('season'); }
+      let gg=0; while(S.phase==="summer"&&gg++<60){ if(S.sacked){S.sacked=false; if(me().gone){ const c=activeClubs().find(c=>c.lg==='E5'); S.club=c.id; S.lineup=[];}} for(const m of openDecisions()) resolveDecision(m,m.opts[1]?m.opts[1][0]:m.opts[0][0]); await playNewSeason(); }
+      const bad=[]; const seen={};
+      for(const [k,L] of Object.entries(S.leagues)){ if(L.clubs.length!==LG[k].size) bad.push(k+':'+L.clubs.length); for(const id of L.clubs){ if(seen[id]) bad.push('dup'+id); seen[id]=1; if(C(id).lg!==k||C(id).gone) bad.push('mis'+id);} }
+      for(const k of ['CC','CS']) S.cont[k].groups.forEach((g,i)=>{ if(g.length!==4) bad.push(k+i+'len'); if(new Set(g.map(id=>C(id).country)).size!==4) bad.push(k+i+'ctry'); });
+      for(const c of activeClubs()) for(const id of c.squad){ const p=S.players[id]; if(!p) bad.push('ghost'); else if(p.club!==c.id) bad.push('clubmismatch'); }
+      const med=a=>{a.sort((x,y)=>x-y);return a[Math.floor(a.length/2)]};
+      const lv=k=>med(S.leagues[k].clubs.map(id=>clubLevel(C(id)))).toFixed(1);
+      const h=S.history[0]; let g2=0,n=0; for(const k of ['E1','E2','E5']){} 
+      const ps=Object.values(S.players);
+      return {y:h.year, ms:Date.now()-t, bad:bad.slice(0,5), lv:['E1','E2','E3','E4','E5','E6N','ESP','BEL'].map(k=>k+':'+lv(k)).join(' '),
+        avgOvr:(ps.reduce((s,p)=>s+p.ovr,0)/ps.length).toFixed(1), ages:[[16,20],[21,25],[26,29],[30,40]].map(([a,b])=>{const q=ps.filter(p=>p.age>=a&&p.age<=b); return a+":"+q.length+"@"+(q.reduce((s,p)=>s+p.ovr,0)/q.length).toFixed(1)}).join(" "), players:ps.length, fa:S.fa.length, sq:med(activeClubs().map(c=>c.squad.length)),
+        wageRev:med(activeClubs().map(c=>sum(c.squad,id=>P(id).wage)/c.revBase)).toFixed(2), scr95:activeClubs().map(c=>c.lastSCR||0).sort((a,b)=>a-b)[Math.floor(activeClubs().length*.95)].toFixed(2),
+        charged:S.cases.filter(k=>k.y===S.year).length, cashMed:med(activeClubs().map(c=>c.cash/c.revBase)).toFixed(2), clubs:S.clubs.length, hof:S.hof.length,
+        champs:['E1','ESP'].map(k=>C(h.L[k].champ).short).join(','), cups:['FA','LC','CC','CS'].map(k=>h.K[k]&&h.K[k].w!=null?C(h.K[k].w).short:'-').join(','),
+        loans:ps.filter(p=>p.loan).length, kb:Math.round(JSON.stringify(S).length/1024), user:me().short+' '+me().lg+' '+S.career[0].pos };
+    });
+    if (r.bad.length || s%4===3 || s===0) console.log(JSON.stringify(r).slice(0,520));
+    if (errs.length) { console.log('ERR', errs.slice(0,3)); break; }
+  }
+  await b.close(); })();
