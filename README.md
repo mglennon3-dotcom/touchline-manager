@@ -77,7 +77,9 @@ and the style that suits your players. The Squad page shows a summary and Transf
 
 **Winning over youth prospects:** scouting reveals a prospect but doesn't win him over. Interest comes from
 how your club fits his six priorities plus your relationship with him, which calls (weekly), hosting him at
-your training ground and visiting his family at home (each once), and offering a place build. A home visit
+your training ground and visiting his family at home (each once), and offering a place build. Speaking to his youth coaches (by phone, never
+any travel) narrows the potential estimate, shows his injury history before a detailed report and what he
+cares about, and nudges lads who value youth development or playing time. A home visit
 counts most with lads who want to stay near home or care about squad dynamics; hosting suits the rest.
 Trips abroad cost travel, shown on the button.
 

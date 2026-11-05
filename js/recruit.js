@@ -67,13 +67,14 @@ const grade = v => v >= .8 ? "A" : v >= .62 ? "B" : v >= .45 ? "C" : v >= .3 ? "
 
 /* What you can see depends on how much you've scouted him: potential and injury proneness as ranges out of 20. */
 function prospectView(y, val, k) {
-  const rec = S.me ? S.me.rec : 10, w = [8, 5, 3, Math.max(1, 3 - rec * .1)][y.sc] * knowWidth(prospectCountry(y));
+  // His youth coaches' view narrows the estimate on top of whatever your own scouting shows.
+  const rec = S.me ? S.me.rec : 10, w = [8, 5, 3, Math.max(1, 3 - rec * .1)][y.sc] * knowWidth(prospectCountry(y)) * (y.coach ? .6 : 1);
   let h = 0; for (const ch of y.id) h = (h * 31 + ch.charCodeAt(0)) % 9973;
   const c = val + (seedOf(h, k) - .5) * w * .8;
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
 const prospectPot = y => prospectView(y, r20(y.pot), 3);
-const prospectInj = y => y.sc >= 2 ? prospectView(y, y.ir, 5) : null;
+const prospectInj = y => y.sc >= 2 || y.coach ? prospectView(y, y.ir, 5) : null;  // his coaches know his injury history
 function shownStars(y) {
   const s = starsOf(y.pot);
   if (y.sc >= 2) return [s, s];
@@ -85,7 +86,7 @@ function contenders(y) {
 }
 
 /* ---------- actions ---------- */
-const REC_COST = { scout: 3, call: 1, visit: 5, home: 4 };
+const REC_COST = { scout: 3, call: 1, visit: 5, home: 4, coach: 2 };
 function recAct(y, act) {
   const c = me();
   if (y.commit === c.id) return "He has already committed to you.";
@@ -97,6 +98,7 @@ function recAct(y, act) {
     y.offers.push(c.id); y.rel[c.id] = (y.rel[c.id] || 0) + .05; S.rec.offers++; return `Academy place offered to ${y.name}.`;
   }
   if (act === "home" && y.sc < 1) return "Scout him at least once before visiting his family.";
+  if (act === "coach" && y.coach) return "You've already spoken to his youth coaches.";
   if (act === "home" && y.home) return "You've already visited his family.";
   const code = prospectCountry(y), cost = act === "call" ? REC_COST.call : scoutHours(REC_COST[act], code);
   if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}); that needs ${cost}.`;
@@ -105,9 +107,12 @@ function recAct(y, act) {
   // Visiting him and his family at home: worth most to lads who want to stay near home and care about the
   // people around them (close to home, squad dynamics); hosting him at your ground suits the rest better.
   if (act === "home") { payTravel(code); y.home = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + (.06 + .25 * ((y.pri.loc || 0) + (y.pri.dyn || 0))) * recMult(); }
+  // Speaking to his youth coaches (by phone, so never any travel): their view of his potential and injury
+  // history, what he cares about, and a word in his ear about your pathway if that's what he values.
+  if (act === "coach") { y.coach = true; y.known = true; y.coachT = whenLabel(); y.rel[c.id] = (y.rel[c.id] || 0) + (.02 + .06 * ((y.pri.acad || 0) + (y.pri.time || 0))) * recMult(); }
   if (act === "visit") { if (y.visit) return "He has already visited."; payTravel(code); y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16 * recMult(); }
   S.rec.hours -= cost;
-  return { scout: `Scouting report on ${y.name} updated.`, call: `You spoke with ${y.name}'s family.`, visit: `${y.name} visited your training ground.`, home: `You visited ${y.name} and his family at home.` }[act];
+  return { scout: `Scouting report on ${y.name} updated.`, call: `You spoke with ${y.name}'s family.`, visit: `${y.name} visited your training ground.`, home: `You visited ${y.name} and his family at home.`, coach: coachWord(y) }[act];
 }
 
 /* ---------- the weekly cycle ---------- */
@@ -200,4 +205,11 @@ function autoScout() {
   S.autoLast = { w: whenLabel(), y: done.y.length, p: done.p.length };
   const names = a => a.slice(0, 3).join(", ") + (a.length > 3 ? ` and ${a.length - 3} more` : "");
   if (done.y.length || done.p.length) news(`Your scouts filed reports on ${[done.y.length ? `${done.y.length} youth prospect${done.y.length > 1 ? "s" : ""} (${names(done.y)})` : "", done.p.length ? `${done.p.length} transfer target${done.p.length > 1 ? "s" : ""} (${names(done.p)})` : ""].filter(Boolean).join(" and ")}.`, false, done.p.length ? "transfer" : "youth");
+}
+
+// What his coaches say, from the (narrowed) potential estimate you now have.
+function coachWord(y) {
+  const [lo, hi] = prospectPot(y), m = (lo + hi) / 2;
+  const view = m >= 17 ? "say he's the best they've had in years" : m >= 14 ? "rate him very highly" : m >= 11 ? "think he can make a career in the game" : m >= 8 ? "think he'll need to keep working" : "aren't sure he'll make it";
+  return `${y.name}'s youth coaches ${view}. Potential estimate now ${lo === hi ? lo : lo + "–" + hi}.`;
 }
