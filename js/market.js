@@ -51,7 +51,7 @@ function transfer(p, to, fee, wage, yrs) {
   p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.pt = .5;
   refreshRegistration(to); if (from) refreshRegistration(from);
   const big = fee >= 15e6 || isUser(to) || (from && isUser(from));
-  S.tlog.unshift({ y: S.year, w: S.phase === "summer" ? "Summer" : "Wk " + (S.week + 1), pid: p.id, name: p.name, from: from ? from.id : -1, to: to.id, fee });
+  S.tlog.unshift({ y: S.year, w: whenLabel(), pid: p.id, name: p.name, from: from ? from.id : -1, to: to.id, fee });
   if (S.tlog.length > 300) S.tlog.length = 300;
   if (big) news(`${p.name} (${p.pos}, ${p.ovr}) ${from ? `moves from ${from.name}` : "signs as a free agent"} to ${to.name}${fee ? ` for ${money(fee)}` : ""}.`, isUser(to) || (from && isUser(from)), "transfer");
 }
@@ -107,7 +107,7 @@ function offerToUser(p, from, fee) {
 
 /* User-facing transfer actions */
 function canBuy(p) {
-  if (!windowOpen()) return "The transfer window is closed. It opens in the summer and in January (weeks 19–22).";
+  if (!windowOpen()) return "The transfer window is closed. It opens in preseason and in January (weeks 19–22).";
   if (p.club === S.club) return "He is already your player.";
   if (p.loan) return `He is on loan at ${C(p.club).name} from ${C(p.loan.from).name}.`;
   if (S.tried && S.tried[p.id] === S.year + ":" + S.week + ":" + S.phase + S.summerDay) return "His club has already turned you down this week.";

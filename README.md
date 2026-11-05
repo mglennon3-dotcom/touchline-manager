@@ -68,6 +68,11 @@ worst choice on the board. The Tactics page and the match card show each style's
 squads: those without a strong leaning pick possession or counter-attacking when it suits, and none of them
 switch, before or during a match, to a style their players plainly can't play.
 
+**Preseason:** every season, your first included, opens with five weeks of preseason. The transfer window is
+open throughout (buy, sell, loan, renew, register), AI clubs do business week by week, and training brings
+your squad to full fitness. Play it a week at a time, or start the season straight away. The second window
+is January, weeks 19 to 22.
+
 **Live matches** show your team on a pitch in its formation: each player's rating in his position right now
 (fitness included), fitness bars and bookings, with the bench below. Tap a player and then a substitute to
 bring him on, or two players to swap their positions; change formation from the menu above the pitch. Any of
@@ -141,7 +146,7 @@ Team of the Season. Foreign top flights name the first three. Winners get a mora
 their honours; if you win Manager of the Season the board gains 5 and you earn an extra coaching point.
 The season review shows your division's awards, and the History page browses every season and league.
 
-**Rules modelled on the English game:** 25 registered senior players, at most 17 not homegrown, changeable only in the summer and January windows,
+**Rules modelled on the English game:** 25 registered senior players, at most 17 not homegrown, changeable only in preseason and the January window,
 unlimited under-21s; homegrown means three seasons at an English club before turning 21; nine named
 substitutes and five changes; yellow-card bans at 5, 10 and 15 bookings; three games for a straight red;
 ties split on goal difference, goals scored, then head-to-head. Finances use a Squad Cost Ratio:

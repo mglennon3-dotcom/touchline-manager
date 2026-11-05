@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.14";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.15";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -221,7 +221,7 @@ const CLUB_COLORS = ["#1f4fc4","#b42323","#0d7268","#6d3fd0","#0a6aa0","#3b4a5e"
 // 38-round leagues play weekends only; 46-round leagues add eight midweek rounds.
 const CAL = {
   midweekLeague: [4, 8, 11, 15, 19, 24, 28, 33],
-  jan: [18, 19, 20, 21], summerDays: 6, lastWeek: 41,
+  jan: [18, 19, 20, 21], summerDays: 5,  /* summerDays: preseason weeks, window open throughout */ lastWeek: 41,
   // knockout schedules: one entry per round, a pair of weeks for two-legged rounds
   FA: [[2], [6], [10], [16], [20], [25], [29], [34], [38]],
   LC: [[1], [5], [9], [13], [17], [21, 23], [27]],

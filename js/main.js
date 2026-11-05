@@ -46,7 +46,9 @@ function takeClub(id, name, arch, form) {
   S.saveId = newSaveId(); S.created = Date.now(); UI.screen = null;
   const c = me(); S.formation = S.me.form; c.formation = S.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), S.formation);
   startSeason();
-  news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}.`, true, "board");
+  // Every career starts with five weeks of preseason, window open, before the first match.
+  S.phase = "summer"; S.summerDay = 0; S.firstPre = true;
+  news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}. Five weeks of preseason first, with the transfer window open.`, true, "board");
   UI.page = "home"; save(); render(); toTop();
 }
 
@@ -66,7 +68,7 @@ async function play(mode) {
       if (S.phase === "summer") {
         summerStep(); steps++;
         if (mode === "day" || S.phase === "season") break;
-        if (steps % 2 === 0) { busy(true, "Summer window…"); await nextTick(); }
+        busy(true, "Preseason…"); await nextTick();
         continue;
       }
       const day = S.days[S.di], fxs = dayFixtures(day), ufx = userFixture(fxs);
@@ -94,7 +96,7 @@ async function play(mode) {
 async function playNewSeason() {
   if (UI.busy) return;
   if (openDecisions().length) { UI.page = "home"; render(); toast("Deal with the decision waiting for you first."); return; }
-  UI.busy = true; busy(true, "Summer window…");
+  UI.busy = true; busy(true, "Preseason…");
   while (S.phase === "summer" && !openDecisions().length) { summerStep(); await nextTick(); }
   UI.busy = false; busy(false); UI.page = "home"; await save(); render();
   if (S.phase === "summer") toast("A decision needs your attention before the season starts.");

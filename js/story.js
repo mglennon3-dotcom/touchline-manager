@@ -1,6 +1,6 @@
 "use strict";
 /* Player mood, transfer requests, and the league's running storylines. */
-function addDecision(m) { m.id = S.nextMsg++; m.done = false; m.y = S.year; m.w = S.phase === "summer" ? "Summer" : "Wk " + (S.week + 1); S.inbox.unshift(m); if (S.inbox.length > 60) S.inbox.length = 60; }
+function addDecision(m) { m.id = S.nextMsg++; m.done = false; m.y = S.year; m.w = whenLabel(); S.inbox.unshift(m); if (S.inbox.length > 60) S.inbox.length = 60; }
 const openDecisions = () => S.inbox.filter(m => !m.done);
 
 function expectedShare(p, c) {

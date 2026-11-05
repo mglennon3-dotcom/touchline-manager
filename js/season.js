@@ -1,6 +1,7 @@
 "use strict";
 /* Calendar, competitions, standings, the weekly cycle and the end of season. */
-function news(t, hi, tag) { S.news.unshift({ t, hi: !!hi, tag: tag || "", y: S.year, w: S.phase === "summer" ? "Summer" : "Wk " + (S.week + 1) }); if (S.news.length > 160) S.news.length = 160; }
+const whenLabel = () => S.phase === "summer" ? "Pre-wk " + (S.summerDay + 1) : "Wk " + (S.week + 1);
+function news(t, hi, tag) { S.news.unshift({ t, hi: !!hi, tag: tag || "", y: S.year, w: whenLabel() }); if (S.news.length > 160) S.news.length = 160; }
 const seasonLabel = y => `${y}–${String((y + 1) % 100).padStart(2, "0")}`;
 
 function roundRobin(ids) {
@@ -290,7 +291,7 @@ function weekly() {
   weeklyStories();
   if (CAL.jan.includes(S.week + 1) || CAL.jan.includes(S.week)) aiTransferDay(.12);
   if (S.week === CAL.jan[0] - 1) news(`The January transfer window is now open. Until it closes after week ${CAL.jan[CAL.jan.length - 1] + 1} you can buy, sell and loan players, and change which 25 seniors are registered.`, true, "transfer");
-  if (S.week === CAL.jan[CAL.jan.length - 1]) news("The January transfer window has closed. Registrations are locked until the summer.", true, "transfer");
+  if (S.week === CAL.jan[CAL.jan.length - 1]) news("The January transfer window has closed. Registrations are locked until preseason.", true, "transfer");
 }
 const scoutCost = () => [0, 4e5, 2.5e5, 1.2e5, 6e4, 4e4, 4e4][me().tier];
 
@@ -490,7 +491,7 @@ function endSeason() {
   ageAndContracts();
   for (const c of activeClubs()) if (!isUser(c)) aiMaintain(c);
   S.phase = "summer"; S.summerDay = 0; S.seasonOverSeen = false;
-  news(`The ${seasonLabel(S.year)} season is over. The summer transfer window is open.`, true, "transfer");
+  news(`The ${seasonLabel(S.year)} season is over. Five weeks of preseason follow, with the transfer window open.`, true, "transfer");
 }
 
 function ageAndContracts() {
@@ -550,11 +551,18 @@ function aiMaintain(c) {
 }
 
 /* ---------- summer ---------- */
+/* Preseason: five weeks before every season, the first included, with the transfer window open. AI clubs
+   do business each week (.6 a week over five matches the old .5 a day over six). */
 function summerStep() {
-  aiTransferDay(.5);
-  if (S.summerDay === 2) aiLoans();
+  aiTransferDay(.6);
+  if (S.summerDay === 1) aiLoans();
+  for (const p of me().squad.map(P)) p.fit = Math.min(100, p.fit + 10);  // preseason training gets everyone fit
   S.summerDay++;
-  if (S.summerDay >= CAL.summerDays) newSeasonStart();
+  if (S.summerDay < CAL.summerDays) return;
+  if (S.firstPre) {  // a new career: the season was drawn when you took the job, so just open it
+    delete S.firstPre; S.phase = "season"; fixUserLineup();
+    news(`Preseason is over. The ${seasonLabel(S.year)} season begins. The board's target: ${expText(S.expPos, me().lg).toLowerCase()}.`, true, "board");
+  } else newSeasonStart();
 }
 function newSeasonStart() {
   for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);

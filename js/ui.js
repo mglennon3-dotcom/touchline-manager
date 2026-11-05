@@ -85,7 +85,7 @@ function render() {
   if (!S || S.club == null) { app.innerHTML = UI.screen === "landing" && SAVES.list.length ? viewLanding() : viewStart(); renderModal(); return; }
   if (S.sacked) { app.innerHTML = viewSacked(); renderModal(); return; }
   const c = me(), L = S.leagues[c.lg], pos = S.phase === "season" ? posIn(L, c.id) : S.lastPos[c.id];
-  const when = S.phase === "summer" ? `Summer window · day ${S.summerDay + 1} of ${CAL.summerDays}` : `Week ${S.week + 1}${CAL.jan.includes(S.week) ? " · window open" : ""}`;
+  const when = S.phase === "summer" ? `Preseason · week ${S.summerDay + 1} of ${CAL.summerDays}` : `Week ${S.week + 1}${CAL.jan.includes(S.week) ? " · window open" : ""}`;
   const ratio = scr(c), dec = openDecisions().length;
   app.innerHTML = `<header class="mast${UI.mastCompact ? " compact" : ""}" style="--club:${c.color}"><div class="wrap gut">
     <div class="mast-in"><div class="ident">${crest(c, 34)}<div><div class="eyebrow">${seasonLabel(S.year)} · ${leagueName(c.lg)} · ${when}</div><h1>${esc(c.name)}</h1></div></div>
@@ -103,7 +103,7 @@ function playControl() {
   const dec = openDecisions().length;
   if (dec) return `<div class="playbox"><div class="playbtn block"><button data-a="go" data-v="home">Decide (${dec})</button></div></div>`;
   let label = "Play", items = [];
-  if (S.phase === "summer") { label = "Next day"; items = [["day", "Next window day", `${CAL.summerDays - S.summerDay} left before the season starts`], ["newseason", "Start the new season", "AI clubs finish their summer business"]]; }
+  if (S.phase === "summer") { label = "Next week"; items = [["day", "Next preseason week", `${CAL.summerDays - S.summerDay} week${CAL.summerDays - S.summerDay === 1 ? "" : "s"} before the season starts`], ["newseason", "Start the season", "AI clubs finish their summer business"]]; }
   else {
     const nx = peekUserFixture();
     label = nx && nx.di === S.di ? "Play match" : "Next day";
@@ -354,13 +354,14 @@ function janCard() {
     <div class="prose"><p>Buy, sell and loan players, and change your registered 25 for the rest of the season.</p>
     <p>Registered: <b>${reg.registered}/${RULES.squadMax}</b> seniors (${reg.nonHG}/${RULES.nonHGMax} non-homegrown), ${reg.u21} under-21s always eligible.${out.length ? ` Left out: ${out.map(p => playerA(p)).join(", ")}${sulky.length ? ` <span class="warn">(${sulky.length} unhappy about it)</span>` : ""}.` : ""}</p>
     ${!reg.ok ? `<p class="bad">Your registration is invalid. Fix it before the next match.</p>` : ""}
-    ${last ? `<p class="warn">Registration locks when this week ends and stays locked until the summer.</p>` : ""}</div>
+    ${last ? `<p class="warn">Registration locks when this week ends and stays locked until preseason.</p>` : ""}</div>
     <div class="row" style="margin-top:10px"><button class="btn" data-a="go" data-v="squad">Change registrations</button><button class="btn" data-a="go" data-v="transfers">Transfer market</button></div></section>`;
 }
 function summerCard() {
   const c = me(), reg = regInfo(c), newKids = c.squad.map(P).filter(p => p.age === 16), gks = c.squad.filter(id => P(id).pos === "GK").length;
-  return `<section class="card"><div class="card-h"><h2>Summer transfer window</h2><span class="eyebrow">Day ${S.summerDay + 1} of ${CAL.summerDays}</span></div>
-    <div class="prose"><p>Buy, sell, loan and renew contracts before the new season. Each day, AI clubs do business of their own.</p>
+  const left = CAL.summerDays - S.summerDay;
+  return `<section class="card"><div class="card-h"><h2>Preseason</h2><span class="eyebrow">Week ${S.summerDay + 1} of ${CAL.summerDays} · window open</span></div>
+    <div class="prose"><p>${S.firstPre ? "Your first preseason: get to know the squad, and buy, sell and loan before the opening game." : "Buy, sell, loan and renew contracts before the new season."} Each week AI clubs do business of their own, and training brings everyone up to full fitness. The season starts in ${left} week${left === 1 ? "" : "s"}.</p>
     <p>Registration for next season: <b>${reg.registered}/${RULES.squadMax}</b> seniors registered (${reg.nonHG}/${RULES.nonHGMax} non-homegrown), ${reg.unregistered ? `<b class="warn">${reg.unregistered} left out</b>, ` : ""}${reg.u21} under-21s. Choose who's registered on the Squad page; it locks when the window closes.</p>
     ${reg.total < 20 || gks < 2 ? `<p class="bad">Your squad is thin: ${reg.total} players, ${gks} goalkeeper${gks === 1 ? "" : "s"}. Free agents cost no fee.</p>` : ""}
     ${newKids.length ? `<p>New in the academy: ${newKids.map(p => playerA(p) + ` <span class="muted small">${p.pos}</span>`).join(", ")}.</p>` : ""}</div>
@@ -531,7 +532,7 @@ function viewTransfers() {
         { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"}>Ask to loan</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
       ], pool, { empty: "No players match these filters." })}`;
   }
-  return `<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and summer'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
+  return `<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
     <div class="row" style="margin-bottom:12px"><span class="seg" role="group">${tabs.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</span></div>
     ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Ratings outside your division are estimates until you scout a player (open him, 2 hours). Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section>`;
 }
