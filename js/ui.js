@@ -369,6 +369,33 @@ function summerCard() {
 }
 
 /* ---------- squad ---------- */
+/* Team needs: strengths, weaknesses and gaps, measured against your division. compact = the Transfers
+   page version, which lists only what needs fixing. */
+function needsCard(compact) {
+  const c = me(), T = teamNeeds(c), lgN = leagueName(c.lg), f1 = v => (v >= 0 ? "+" : "") + v.toFixed(1);
+  const posStrong = T.rows.filter(r => r.grade === "strong").map(r => NEED_ROLE_NAME[r.role]), posWeak = T.rows.filter(r => r.grade === "weak").map(r => NEED_ROLE_NAME[r.role]);
+  const atStrong = T.standout.map(a => a.l.toLowerCase()), atWeak = T.lacking.map(a => a.l.toLowerCase());
+  const needs = T.rows.filter(r => r.need);
+  const find = r => `<button class="btn sm" data-a="findneed" data-v="${r.role}|${r.findMin}" title="Transfer market: ${NEED_ROLE_NAME[r.role].toLowerCase()}s rated ${r.findMin}+">Find ${r.role === "GK" ? "a keeper" : NEED_ROLE_NAME[r.role].toLowerCase()}</button>`;
+  const needText = r => r.grade === "weak" ? `starters ${r.rating.toFixed(1)} against a ${lgN} average of ${r.bench.toFixed(1)}` : r.flags.filter(x => /backup|only/.test(x)).join(", ") || "thin";
+  if (compact) return `<section class="card"><div class="card-h"><h2>Your needs</h2><button class="lnk small" data-a="go" data-v="squad">Full breakdown</button></div>
+    ${needs.length ? needs.map(r => `<div class="need-row"><span><b>${NEED_ROLE_NAME[r.role]}</b> <span class="small muted">${needText(r)}</span></span>${find(r)}</div>`).join("") : `<p class="small muted">No gaps: every position in your ${S.formation} has a starter at or above the ${lgN} average and a backup.</p>`}</section>`;
+  const on = userOn(), fits = Object.keys(MENT).filter(k => STYLE_KEYS[k].length).map(k => [k, styleFit(on, k)]).sort((a, b) => b[1] - a[1]);
+  const list = a => a.length ? a.join("; ") : "none stand out";
+  return `<section class="card needs"><div class="card-h"><h2>Team needs</h2><span class="small muted">Compared with the ${lgN} · ${S.formation}</span></div>
+    <div class="need-sum"><p><b class="good">Strengths:</b> ${list([posStrong.join(", "), atStrong.length ? "stand-out " + atStrong.join(" and ") : ""].filter(Boolean))}</p>
+      <p><b class="bad">Weaknesses:</b> ${list([posWeak.join(", "), atWeak.length ? "short on " + atWeak.join(" and ") : ""].filter(Boolean))}</p>
+      <p class="small muted">Overall your XI is ${Math.abs(T.mean) < .3 ? "about level with" : `${T.mean.toFixed(1).replace("-", "")} ${T.mean > 0 ? "above" : "below"}`} the ${lgN} average across these attributes.</p>
+      <p><b>Best style for this XI:</b> ${fits[0][1] < .12 ? `none stands out, so Neutral is the safe choice <span class="small muted">(Tactics shows every style's fit)</span>` : `${MENT[fits[0][0]].l} <span class="small muted">(${fitWord(fits[0][1])[1].toLowerCase()})</span>${fits[1] && fits[1][1] >= .12 ? `, then ${MENT[fits[1][0]].l.toLowerCase()}` : ""}`}.</p></div>
+    <div class="tbl-wrap"><table><thead><tr><th>Position</th><th>Your starters</th><th class="r">Rating</th><th class="r">Division avg</th><th class="r">Gap</th><th>Cover</th><th>Notes</th><th></th></tr></thead><tbody>
+      ${T.rows.map(r => `<tr class="need-${r.grade}"><td><b>${NEED_ROLE_NAME[r.role]}</b> <span class="tiny muted">×${r.n}</span></td><td>${r.start.map(p => playerA(p)).join(", ") || '<span class="bad">nobody</span>'}</td><td class="r num">${r.rating.toFixed(1)}</td><td class="r num muted">${r.bench.toFixed(1)}</td>
+        <td class="r num"><span class="chip need-${r.grade}">${r.start.length < r.n ? "short" : f1(r.diff)}</span></td><td class="small">${r.cover.length ? r.cover.slice(0, 3).map(p => esc(sur(p))).join(", ") + (r.cover.length > 3 ? ` +${r.cover.length - 3}` : "") : '<span class="bad">none</span>'}</td>
+        <td class="small">${r.flags.map(esc).join("; ") || '<span class="muted">—</span>'}</td><td>${r.need ? find(r) : ""}</td></tr>`).join("")}
+    </tbody></table></div>
+    <h3 style="margin:14px 0 8px">Your XI's attributes <span class="tiny muted">against the ${lgN} average XI</span></h3>
+    <div class="need-attrs">${T.attrs.map(a => { const w = Math.min(50, Math.abs(a.diff) / 3 * 50); return `<div class="need-attr"><span>${a.l}</span><span class="dbar"><i class="${a.diff >= 0 ? "pos" : "neg"}" style="${a.diff >= 0 ? "left:50%" : `left:${50 - w}%`};width:${w}%"></i></span><b class="num ${a.rel >= .4 ? "good" : a.rel <= -.4 ? "bad" : ""}">${a.v.toFixed(1)} <span class="tiny muted">(${f1(a.diff)})</span></b></div>`; }).join("")}</div>
+    <p class="hint" style="margin-top:8px">A position is a strength or weakness when your starters there are 0.75 (out of 20) above or below the average starter in your division. Bars compare your XI with the division's average XI; the stand-out and short-on attributes are measured against the rest of your own side. "Find" opens the transfer market at that position, from the rating you'd need to improve on.</p></section>`;
+}
 function viewSquad() {
   const c = me(), reg = regInfo(c);
   let ps = c.squad.map(P);
@@ -398,7 +425,7 @@ function viewSquad() {
     { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage), cls: "hide-sm" },
     { k: "val", l: "Value", r: 1, v: p => value(p), f: p => money(value(p)), cls: "hide-sm" },
   ];
-  return `<div class="stack"><section class="card"><div class="card-h"><h2>Squad</h2>
+  return `<div class="stack">${needsCard(false)}<section class="card"><div class="card-h"><h2>Squad</h2>
     <span class="chips" role="group" aria-label="Filter">${[["ALL", "Everyone"], ["SEN", "Seniors (21+)"], ["U21", "Under-21"]].map(([k, l]) => `<button data-a="sqf" data-v="${k}" aria-pressed="${UI.sqf === k}">${l}</button>`).join("")}</span></div>
     <div class="reg" style="margin-bottom:10px"><span>Registered seniors <b class="${reg.registered > RULES.squadMax ? "bad" : ""}">${reg.registered}/${RULES.squadMax}</b></span><span>Non-homegrown registered <b class="${reg.nonHG > RULES.nonHGMax ? "bad" : ""}">${reg.nonHG}/${RULES.nonHGMax}</b></span><span>Unregistered <b class="${reg.unregistered ? "warn" : ""}">${reg.unregistered}</b></span><span>Under-21s <b>${reg.u21}</b> (no limit)</span><span>Loans in <b>${reg.loansIn}/${RULES.loansIn}</b></span><span>Wage bill <b>${perWeek(sum(c.squad, id => P(id).wage))}</b></span></div>
     <div class="row" style="margin-bottom:10px">${windowOpen() ? `<button class="btn sm" data-a="regbest">Register my best 25</button><span class="small muted">Tap Registered / Not registered on a player to change it.</span>` : `<span class="small muted">Registration is locked until the transfer window opens (January, weeks 19–22, and the summer).</span>`}</div>
@@ -532,7 +559,7 @@ function viewTransfers() {
         { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"}>Ask to loan</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
       ], pool, { empty: "No players match these filters." })}`;
   }
-  return `<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
+  return `${needsCard(true)}<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
     <div class="row" style="margin-bottom:12px"><span class="seg" role="group">${tabs.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</span></div>
     ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Ratings outside your division are estimates until you scout a player (open him, 2 hours). Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section>`;
 }

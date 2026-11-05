@@ -200,6 +200,7 @@ const ACT = {
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   livespeed: v => { LIVE.speed = +v; render(); },
+  findneed: v => { const [role, min] = v.split("|"); UI.page = "transfers"; UI.tab = "search"; Object.assign(UI.tf, { pos: role, min: +min, age: 40, fee: 0, lg: "ALL" }); location.hash = "transfers"; render(); toTop(); },
   // Tapping your team pauses the match: pick a player, then a substitute (or the other way round), or two
   // players to swap their positions.
   livetap: v => {

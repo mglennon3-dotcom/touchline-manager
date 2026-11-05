@@ -424,3 +424,47 @@ function scoutHours(base, code) { return Math.max(1, Math.round(base * (code !==
 function travelCost(code) { return code === "ENG" ? 0 : Math.round([0, 6e4, 3e4, 1.5e4, 8e3, 5e3, 5e3][me().tier] * (code === "ROW" ? 2 : 1)); }
 function learnCountry(code, amt = .25) { if (S.me && S.me.know) S.me.know[code] = Math.min(20, Math.round((knowOf(code) + amt) * 100) / 100); }
 function payTravel(code) { const t = travelCost(code); if (t) { me().cash -= t; me().fin.scouting = (me().fin.scouting || 0) + t; } return t; }
+
+/* ---------- team needs ----------
+   Your squad set against your own division: for each position your formation uses, your starters'
+   rating there against the average starter at that position across the division, how many can cover,
+   and whether a starter is ageing, out of contract soon or injured; then the XI's attribute profile
+   against the division's average XI. A position is a strength or weakness 0.75 (out of 20) either side. */
+const NEED_ATTRS = [["Finishing", ["fin", "cmp"]], ["Creativity", ["pas", "vis", "tec"]], ["Dribbling", ["dri"]], ["Defending", ["tac", "mar"]], ["Aerial", ["hea"]], ["Pace", ["pac"]], ["Stamina", ["sta"]], ["Physical strength", ["str"]]];
+const NEED_ROLE_NAME = { GK: "Goalkeeper", CB: "Centre-back", FB: "Full-back", DM: "Defensive midfield", CM: "Central midfield", AM: "Attacking midfield", W: "Winger", ST: "Striker" };
+const avgOf = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0;
+function divisionBench(lg, form) {
+  const key = lg + ":" + form + ":" + S._tick; if (S._bench && S._bench.k === key) return S._bench.v;
+  const clubs = S.leagues[lg].clubs.map(C), attrs = {}, memo = {}, sl = slotsOf(form);
+  // Every club's best XI picked in your formation, so a player counts at one position only (ranking each
+  // position separately listed a midfielder as both your DM and your CM).
+  const picks = clubs.map(c => autoPick(eligibleIds(c), form));
+  const roles = role => memo[role] ??= avgOf(picks.map(xi => avgOf(xi.map((id, i) => id != null && sl[i] === role ? slotRating(P(id), role) : null).filter(v => v != null))));
+  const xis = clubs.map(c => autoPick(eligibleIds(c), c.formation).filter(x => x != null).map(P).filter(p => p.pos !== "GK"));
+  for (const [l, ks] of NEED_ATTRS) attrs[l] = avgOf(xis.map(xi => avgOf(xi.map(p => avgOf(ks.map(k => p.at[k]))))));
+  const v = { roles, attrs }; S._bench = { k: key, v }; return v;
+}
+function teamNeeds(c) {
+  fixUserLineup();
+  const form = S.formation, sl = slotsOf(form), B = divisionBench(c.lg, form), counts = {}, inXI = new Set(S.lineup);
+  for (const r of sl) counts[r] = (counts[r] || 0) + 1;
+  const rows = Object.keys(counts).sort((a, b) => ROLE_ORDER[a] - ROLE_ORDER[b]).map(role => {
+    // Your starters are your actual XI in those slots; cover is everyone else who can play there.
+    const n = counts[role], start = sl.map((r, i) => r === role ? S.players[S.lineup[i]] : null).filter(Boolean);
+    const cover = c.squad.map(P).filter(p => p && !inXI.has(p.id) && FAM[p.pos][role] >= .9 && p.age >= 17).sort((a, b) => slotRating(b, role) - slotRating(a, role)), want = role === "GK" ? 1 : n;
+    const rating = avgOf(start.map(p => slotRating(p, role))), bench = B.roles(role), diff = start.length < n ? -9 : rating - bench;
+    const flags = [];
+    if (start.length < n) flags.push(`only ${start.length} for ${n} place${n > 1 ? "s" : ""}`);
+    if (cover.length < want) flags.push(cover.length ? `${cover.length} backup` : "no backup");
+    for (const p of start) { if (p.age >= 32) flags.push(`${sur(p)} is ${p.age}`); if (p.yrs <= 1 && !p.loan) flags.push(`${sur(p)}'s contract ends this season`); if (p.inj > 0) flags.push(`${sur(p)} injured`); }
+    const grade = diff <= -.75 ? "weak" : diff >= .75 ? "strong" : "solid", need = grade === "weak" || cover.length < want || start.length < n;
+    return { role, n, start, cover, rating, bench, diff, grade, flags, need, findMin: Math.max(1, Math.round(Math.max(rating, bench))) };
+  });
+  const xi = S.lineup && isUser(c) ? S.lineup.map(id => S.players[id]).filter(p => p && p.pos !== "GK") : [];
+  const attrs = NEED_ATTRS.map(([l, ks]) => { const v = avgOf(xi.map(p => avgOf(ks.map(k => p.at[k])))); return { l, v, bench: B.attrs[l], diff: v - B.attrs[l] }; });
+  // What sets this XI apart: each attribute against the side's own average edge over the division. A good
+  // side is above average almost everywhere, so "better than the division" alone named everything.
+  const mean = avgOf(attrs.map(a => a.diff)); for (const a of attrs) a.rel = a.diff - mean;
+  const standout = attrs.filter(a => a.rel >= .4).sort((a, b) => b.rel - a.rel).slice(0, 2), lacking = attrs.filter(a => a.rel <= -.4).sort((a, b) => a.rel - b.rel).slice(0, 2);
+  return { rows, attrs, standout, lacking, mean };
+}

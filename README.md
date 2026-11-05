@@ -68,6 +68,13 @@ worst choice on the board. The Tactics page and the match card show each style's
 squads: those without a strong leaning pick possession or counter-attacking when it suits, and none of them
 switch, before or during a match, to a style their players plainly can't play.
 
+**Team needs** (top of the Squad page, and a short list on Transfers) sets your squad against your division:
+for each position in your formation, your starters' rating there against the division's average starter,
+the cover behind them, and starters who are ageing, out of contract soon or injured; then your XI's
+finishing, creativity, dribbling, defending, aerial ability, pace, stamina and physical strength against
+the division's average XI, and the style that suits your players best. Each weak or thin position has a
+Find button that opens the transfer market at that position.
+
 **Preseason:** every season, your first included, opens with five weeks of preseason. The transfer window is
 open throughout (buy, sell, loan, renew, register), AI clubs do business week by week, and training brings
 your squad to full fitness. Play it a week at a time, or start the season straight away. The second window
