@@ -739,6 +739,20 @@ function rankLabel(y) {
 }
 
 /* ---------- finances ---------- */
+/* Cup income this season: each competition you're in, how far you've got, your share of the gates and the
+   prize money (prize money for qualifying for Europe included). */
+function cupIncomeCard(c) {
+  const f = c.fin || {}, got = f.cups || {}, keys = ["FA", "LC", "CC", "CS", "CT", ...Object.keys(S.ko).filter(k => S.ko[k].kind === "po")];
+  const rows = keys.map(k => ({ k, e: got[k] || { gate: 0, prize: 0 }, prog: cupProgress(k) })).filter(r => r.prog || r.e.gate || r.e.prize);
+  const name = k => k === "FA" ? CUPS.FA.name : k === "LC" ? CUPS.LC.name : CONT[k] ? CONT[k].name : S.ko[k] ? S.ko[k].name : k;
+  const tot = rows.reduce((a, r) => ({ gate: a.gate + r.e.gate, prize: a.prize + r.e.prize }), { gate: 0, prize: 0 });
+  return `<section class="card"><div class="card-h"><h2>Cup income</h2><span class="eyebrow">${seasonLabel(S.year)}</span></div>
+    ${rows.length ? `<div class="tbl-wrap"><table><thead><tr><th>Competition</th><th>How far</th><th class="r">Gate share</th><th class="r">Prize money</th><th class="r">Total</th></tr></thead><tbody>
+      ${rows.map(r => `<tr><td>${esc(name(r.k))}</td><td class="small ${r.prog ? r.prog.cls : "muted"}">${r.prog ? r.prog.t : "—"}</td><td class="r num">${money(r.e.gate)}</td><td class="r num">${money(r.e.prize)}</td><td class="r num"><b>${money(r.e.gate + r.e.prize)}</b></td></tr>`).join("")}
+      <tr class="tot"><td><b>All cups</b></td><td></td><td class="r num"><b>${money(tot.gate)}</b></td><td class="r num"><b>${money(tot.prize)}</b></td><td class="r num"><b>${money(tot.gate + tot.prize)}</b></td></tr></tbody></table></div>
+      <p class="tiny muted" style="margin-top:6px">Domestic cup gates are shared with the other club (finals at a neutral venue too); European and play-off home gates are yours. Cup gates also count in ticket sales above, and prize money (including for qualifying for Europe) in Prize money.</p>`
+      : '<p class="small muted">No cup matches yet this season.</p>'}</section>`;
+}
 function viewFinances() {
   const c = me(), f = c.fin, ratio = scr(c);
   const mk = v => clamp(v / 1.5 * 100, 0, 100);
@@ -749,10 +763,11 @@ function viewFinances() {
     <div class="gauge" role="img" aria-label="Projected ratio ${pct(ratio)}"><span class="tick" style="left:${mk(.85)}%">85%</span><span class="tick" style="left:${mk(1.15)}%">115%</span><span class="mk" style="left:${mk(ratio)}%"><span>${pct(ratio)}</span></span></div>
     <p class="small muted">Projected for the full season at today's wage bill and income. ${c.lastSCR ? `Last season: ${pct(c.lastSCR)}.` : ""}</p></section>
     <section class="card"><div class="card-h"><h2>This season so far</h2></div><dl class="ledger">
-      <dt>Broadcast, commercial and matchday</dt><dd>${money(f.rev)}</dd><dt class="tiny" style="padding-left:12px">of which ticket sales</dt><dd class="tiny">${money(f.gate || 0)}</dd><dt class="tiny" style="padding-left:12px">of which sponsorship</dt><dd class="tiny">${money(f.spons || 0)}</dd><dt>Prize money</dt><dd>${money(f.prize + f.merit)}</dd><dt>Player sales (fees received)</dt><dd>${money(f.sold)}</dd>${f.scheme ? `<dt>Connected-party income</dt><dd>${money(f.scheme)}</dd>` : ""}
+      <dt>Broadcast, commercial and matchday</dt><dd>${money(f.rev)}</dd><dt class="tiny" style="padding-left:12px">of which ticket sales</dt><dd class="tiny">${money(f.gate || 0)}</dd>${f.cupGate ? `<dt class="tiny" style="padding-left:24px">of which cup ties</dt><dd class="tiny">${money(f.cupGate)}</dd>` : ""}<dt class="tiny" style="padding-left:12px">of which sponsorship</dt><dd class="tiny">${money(f.spons || 0)}</dd><dt>Prize money</dt><dd>${money(f.prize + f.merit)}</dd><dt>Player sales (fees received)</dt><dd>${money(f.sold)}</dd>${f.scheme ? `<dt>Connected-party income</dt><dd>${money(f.scheme)}</dd>` : ""}
       <dt>Wages</dt><dd class="bad">${money(-f.wages)}</dd><dt>Staff and running costs</dt><dd class="bad">${money(-f.ops)}</dd><dt>Transfer fees paid</dt><dd class="bad">${money(-f.bought)}</dd><dt>Agent fees</dt><dd class="bad">${money(-f.agent)}</dd>${f.stadium ? `<dt>Stadium works</dt><dd class="bad">${money(-f.stadium)}</dd>` : ""}<dt>Scouting network</dt><dd class="bad">${money(-f.scouting)}</dd>${f.levy ? `<dt>Cost-ratio levy</dt><dd class="bad">${money(-f.levy)}</dd>` : ""}
       <dt class="tot">Cash in the bank</dt><dd class="tot">${money(c.cash)}</dd></dl>
-      <p class="small muted" style="margin-top:8px">Annual income at this level: about ${money(annualIncome(c))}, of which ${money(sponsorTotal(c))} sponsorship and about ${money(matchdayEstimate(c))} ticket sales. Transfer fees are spread over the contract (amortisation: ${money(sum(c.squad, id => P(id).am ? P(id).am.per : 0))} a year).</p></section></div>
+      <p class="small muted" style="margin-top:8px">Annual income at this level: about ${money(annualIncome(c))}, of which ${money(sponsorTotal(c))} sponsorship and about ${money(matchdayEstimate(c))} ticket sales. Transfer fees are spread over the contract (amortisation: ${money(sum(c.squad, id => P(id).am ? P(id).am.per : 0))} a year).</p></section>
+    ${cupIncomeCard(c)}</div>
     <div class="stack">${sponsorCard(c)}${stadiumCard(c)}<section class="card"><div class="card-h"><h2>Scouting & academy</h2></div>
       <div class="prose"><p>Scouting network: <b>level ${S.rec.scoutLvl}</b> (${money(S.rec.scoutLvl * scoutCost())} a year) gives ${recHours()} recruiting hours a week.</p>
       <div class="row"><button class="btn sm" data-a="scout" data-v="-1" ${S.rec.scoutLvl <= 1 ? "disabled" : ""}>Reduce</button><button class="btn sm" data-a="scout" data-v="1" ${S.rec.scoutLvl >= 5 ? "disabled" : ""}>Expand</button></div>

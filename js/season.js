@@ -68,7 +68,7 @@ function setupContinental() {
     for (const key of TOP_LGS) { const ids = S.leagues[key].clubs.slice().sort((a, b) => S.lastPos[a] - S.lastPos[b]); q.CC.push(...ids.slice(0, 4)); q.CS.push(...ids.slice(4, 6)); q.CT.push(...ids.slice(6, 8)); }
   }
   S.cont = {};
-  for (const key of ["CS", "CT"]) { S.cont[key] = { key, entrants: q[key].slice() }; for (const id of q[key]) pay(id, CONT[key].prize[0]); }
+  for (const key of ["CS", "CT"]) { S.cont[key] = { key, entrants: q[key].slice() }; for (const id of q[key]) pay(id, CONT[key].prize[0], key); }
   for (const key of ["CC"]) {
     const byC = {}; for (const id of q[key]) (byC[C(id).country] ||= []).push(id);
     const codes = shuffle(Object.keys(byC)), n = codes.length, groups = Array.from({ length: 8 }, () => []);
@@ -77,7 +77,7 @@ function setupContinental() {
     const placed = new Set(groups.flat()), extra = q[key].filter(id => !placed.has(id));
     for (const g of groups) while (g.length < 4 && extra.length) g.push(extra.shift());
     S.cont[key] = { key, groups, gfix: groups.map(() => roundRobin([0, 1, 2, 3])), gres: [] };
-    for (const id of groups.flat()) pay(id, CONT[key].prize[0]);
+    for (const id of groups.flat()) pay(id, CONT[key].prize[0], key);
   }
   S.contIds = [...S.cont.CC.groups.flat(), ...S.cont.CS.entrants, ...S.cont.CT.entrants];
 }
@@ -196,7 +196,8 @@ function compLabel(fx) {
 
 /* ---------- recording results ---------- */
 const FA_PRIZE = [25e3, 50e3, 85e3, 150e3, 250e3, 400e3, 800e3, 1.5e6, 3e6], LC_PRIZE = [50e3, 75e3, 100e3, 200e3, 400e3, 800e3, 2e6];
-function pay(id, amt) { const c = C(id); c.cash += amt; c.fin.prize += amt; }
+// Prize money, filed under the competition it came from (fin.cups[key]) for the Finances page.
+function pay(id, amt, key) { const c = C(id); c.cash += amt; c.fin.prize += amt; if (key) { const e = ((c.fin.cups ||= {})[key] ||= { gate: 0, prize: 0 }); e.prize += amt; } }
 /* Gate receipts for cup ties (only league matches sold tickets before 5.19.1). Domestic cups: the gate is
    shared equally; the crowd grows round by round (75% of a league crowd early on, 125% by the final), with
    more for a bigger visitor or a derby, never above capacity. Neutral-venue semi-finals and finals draw on
@@ -205,7 +206,7 @@ function pay(id, amt) { const c = C(id); c.cash += amt; c.fin.prize += amt; }
    crowd and what each club took. */
 function cupGate(fx) {
   const H = C(fx.h), A = C(fx.a), comp = fx.comp === "K" ? S.ko[fx.key] : null, cont = fx.comp === "G" || (comp && comp.kind === "cont");
-  const late = comp ? fx.r / Math.max(1, comp.rounds.length - 1) : .3, credit = (c, x) => { x = Math.round(x); c.cash += x; if (c.fin) { c.fin.rev += x; c.fin.gate = (c.fin.gate || 0) + x; } return x; };
+  const late = comp ? fx.r / Math.max(1, comp.rounds.length - 1) : .3, credit = (c, x) => { x = Math.round(x); c.cash += x; if (c.fin) { c.fin.rev += x; c.fin.gate = (c.fin.gate || 0) + x; c.fin.cupGate = (c.fin.cupGate || 0) + x; const e = ((c.fin.cups ||= {})[fx.key] ||= { gate: 0, prize: 0 }); e.gate += x; } return x; };
   if (fx.neutral) {
     const cap = comp && fx.r === comp.rounds.length - 1 ? 75000 : 45000;
     const att = Math.round(Math.min(cap, (demandOf(H) + demandOf(A)) * (1 + late * .6) * rf(.92, 1.05)));
@@ -224,20 +225,20 @@ function recordResult(fx, M) {
   if (fx.comp === "L") { const L = S.leagues[fx.key]; (L.results[fx.round] ||= []).push({ h: fx.h, a: fx.a, hg, ag }); L.n++; att = gateFor(C(fx.h), fx.a); fansAfterMatch(C(fx.h), hg, ag, fx.a); fansAfterMatch(C(fx.a), ag, hg, fx.h); }
   let cg = null;
   if (fx.comp === "G" || fx.comp === "K") { cg = cupGate(fx); att = cg.att; }
-  if (fx.comp === "G") { S.cont[fx.key].gres.push({ g: fx.g, h: fx.h, a: fx.a, hg, ag }); if (hg !== ag) pay(hg > ag ? fx.h : fx.a, CONT[fx.key].prize[1]); }
+  if (fx.comp === "G") { S.cont[fx.key].gres.push({ g: fx.g, h: fx.h, a: fx.a, hg, ag }); if (hg !== ag) pay(hg > ag ? fx.h : fx.a, CONT[fx.key].prize[1], fx.key); }
   if (fx.comp === "K") {
     const comp = S.ko[fx.key], rd = comp.rounds[fx.r], t = rd.ties[fx.tie];
     if (t.legs === 1) { t.g1 = [hg, ag]; t.pens = M.pens; t.w = tieWinner(M); }
     else if (fx.leg === 1) t.g1 = [ag, hg];
     else { t.g2 = [hg, ag]; t.pens = M.pens; t.w = tieWinner(M); }
     if (t.w != null) {
-      if (comp.key === "FA") pay(t.w, FA_PRIZE[fx.r]); else if (comp.key === "LC") pay(t.w, LC_PRIZE[fx.r]); else if (comp.kind === "cont") pay(t.w, CONT[comp.key].prize[1] * (fx.r + 2));
+      if (comp.key === "FA") pay(t.w, FA_PRIZE[fx.r], "FA"); else if (comp.key === "LC") pay(t.w, LC_PRIZE[fx.r], "LC"); else if (comp.kind === "cont") pay(t.w, CONT[comp.key].prize[1] * (fx.r + 2), comp.key);
       if (fx.r === comp.rounds.length - 1) {
         comp.w = t.w; comp.ru = t.w === t.h ? t.a : t.h; const W = C(t.w);
         if (comp.kind === "po") news(`${W.name} beat ${C(comp.ru).name} in the ${comp.name} final and are promoted.`, Math.abs(LG[comp.lg].tier - me().tier) <= 1, "league");
         else {
           W.trophies.push({ y: S.year, t: comp.key });
-          if (comp.kind === "cont") { pay(t.w, CONT[comp.key].prize[2]); W.rep = Math.min(99, W.rep + 2); }
+          if (comp.kind === "cont") { pay(t.w, CONT[comp.key].prize[2], comp.key); W.rep = Math.min(99, W.rep + 2); }
           news(`${W.name} win the ${comp.name}, beating ${C(comp.ru).name}${M.pens ? " on penalties" : ""}.`, true, comp.kind === "cont" ? "cont" : "cup");
         }
       }
@@ -654,4 +655,22 @@ function settleFriendly(M, f) {
 function playFriendlySim() {
   const f = friendlyAt(S.summerDay); if (!f || f.played) return;
   const M = runToEnd(makeMatch(friendlyFixture(f), true)); settleFriendly(M, f);
+}
+
+/* How far your club has got in a cup this season, for the Finances page. */
+function cupProgress(key) {
+  const comp = S.ko[key], me_ = S.club;
+  if (comp) {
+    if (comp.w === me_) return { t: "Winners", cls: "good" };
+    let last = null; comp.rounds.forEach((rd, r) => (rd.ties || []).forEach(t => { if (t.h === me_ || t.a === me_) last = { rd, t, r }; }));
+    if (last) {
+      if (last.t.w == null) return { t: `In the ${last.rd.name.toLowerCase()}`, cls: "" };
+      if (last.t.w === me_) return { t: `Through the ${last.rd.name.toLowerCase()}`, cls: "" };
+      return last.r === comp.rounds.length - 1 ? { t: "Runners-up", cls: "" } : { t: `Out in the ${last.rd.name.toLowerCase()}`, cls: "muted" };
+    }
+  }
+  const cont = S.cont && S.cont[key];
+  if (cont && cont.groups && cont.groups.flat().includes(me_)) return comp && comp.rounds[0].ties && comp.rounds[0].ties.length ? { t: "Out in the group stage", cls: "muted" } : { t: "Group stage", cls: "" };
+  if (cont && cont.entrants && cont.entrants.includes(me_)) return { t: "Qualified", cls: "" };
+  return null;
 }
