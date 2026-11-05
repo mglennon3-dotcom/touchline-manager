@@ -26,7 +26,7 @@ function ratingHtml(p) { const [lo, hi] = ratingView(p); return lo === hi ? `<b 
 function attrStrip(p) {
   const lvl = scoutLevel(p);
   if (lvl === 0) return '<span class="muted tiny">Scout to see</span>';
-  return `<span class="atts">${attrKeys(p.pos).map(k => { const [lo, hi] = attrView(p, k); return `<span class="at ${aCls((lo + hi) / 2)}" title="${ATTRS[p.pos === "GK" ? "gk" : "out"].find(a => a[0] === k)[1]}">${k.toUpperCase()} ${lo === hi ? lo : lo + "–" + hi}</span>`; }).join("")}</span>`;
+  return `<span class="atts">${attrKeys(p.pos).map(k => { const [lo, hi] = attrView(p, k); return `<span class="at ${aCls((lo + hi) / 2)}" title="${ATTR_NAME[k]}">${k.toUpperCase()} ${lo === hi ? lo : lo + "–" + hi}</span>`; }).join("")}</span>`;
 }
 // Estimates of hidden ratings. For injury risk a high number is bad, so the colours run the other way.
 function rangeHtml(v, risk) {
@@ -600,10 +600,11 @@ function modalPlayer(p) {
     <div><h3 style="margin-bottom:6px">Career</h3>${table("hist-" + p.id, [{ k: "y", l: "Season", f: h => seasonLabel(h[0]) }, { k: "c", l: "Club", f: h => (S.clubs[h[2]] ? clubA(h[2], { short: true }) : h[1]) + (h[7] ? ' <span class="tiny muted">loan</span>' : "") }, { k: "a", l: "Apps", r: 1, f: h => h[3] }, { k: "g", l: "Goals", r: 1, f: h => h[4] }, { k: "as", l: "Assists", r: 1, f: h => h[5] }, { k: "r", l: "Avg", r: 1, f: h => h[6].toFixed(2) }], p.hist.slice().reverse(), { empty: "No completed seasons yet." })}</div></div>`;
 }
 function attrPanel(p) {
-  const lvl = scoutLevel(p), names = ATTRS[p.pos === "GK" ? "gk" : "out"];
-  const rows = names.map(([k, l]) => { const v = attrView(p, k); return `<div class="attr"><span>${l}</span><span class="abar">${v ? `<i style="left:${(v[0] - 1) / 19 * 100}%;width:${Math.max(2, (v[1] - v[0]) / 19 * 100)}%" class="${aCls((v[0] + v[1]) / 2)}"></i>` : ""}</span><b class="num">${v ? (v[0] === v[1] ? v[0] : v[0] + "–" + v[1]) : "?"}</b></div>`; }).join("");
+  const lvl = scoutLevel(p), main = attrKeys(p.pos), rest = allKeys(p.pos).filter(k => !main.includes(k));
+  const row = k => { const l = ATTR_NAME[k]; const v = attrView(p, k); return `<div class="attr"><span>${l}</span><span class="abar">${v ? `<i style="left:${(v[0] - 1) / 19 * 100}%;width:${Math.max(2, (v[1] - v[0]) / 19 * 100)}%" class="${aCls((v[0] + v[1]) / 2)}"></i>` : ""}</span><b class="num">${v ? (v[0] === v[1] ? v[0] : v[0] + "–" + v[1]) : "?"}</b></div>`; };
+  const rows = main.map(row).join("") + (rest.length ? `<details class="attr-more"><summary class="small muted">Other attributes (used out of position)</summary>${rest.map(row).join("")}</details>` : "");
   const need = lvl < 2 ? `<div class="row" style="margin-top:6px"><span class="small muted">${lvl === 0 ? "Not scouted: attributes unknown, rating is a rough guess." : "Partly scouted: attributes are ranges."}</span><button class="btn sm" data-a="scoutp" data-v="${p.id}">Scout him (${scoutHours(2, playerCountry(p))}h${travelCost(playerCountry(p)) ? `, ${money(travelCost(playerCountry(p)))} travel` : ""}; ${S.rec.hours}h left)</button><span class="tiny muted">Your knowledge of ${KNOW_NAME(playerCountry(p))}: ${Math.floor(knowOf(playerCountry(p)))}/20</span></div>` : "";
-  return `<div><h3 style="margin-bottom:6px">Attributes <span class="tiny muted">out of 20</span></h3><div class="attrs">${rows}</div>${need}</div>`;
+  return `<div><h3 style="margin-bottom:6px">${LINE_NAME[LINE[p.pos]]} attributes <span class="tiny muted">out of 20</span></h3><div class="attrs">${rows}</div>${need}</div>`;
 }
 function modalClub(c) {
   const L = S.leagues[c.lg], ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr);

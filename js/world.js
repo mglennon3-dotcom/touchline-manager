@@ -95,34 +95,54 @@ const eff = (p, slot, fit) => o100(slotRating(p, slot)) * (.6 + .4 * (fit ?? p.f
 
 /* ---------- attributes ---------- */
 const round1 = v => Math.round(v * 10) / 10;
-const attrKeys = pos => pos === "GK" ? ["ss", "lp", "sp"] : ["sho", "pas", "tac", "str", "pac"];
+const attrKeys = pos => LINE_ATTRS[LINE[pos]];              // the five (three for keepers) you see
+const allKeys = pos => pos === "GK" ? GK_KEYS : OUT_KEYS;    // everything he carries
+const AWL = Object.fromEntries(Object.entries(AW).map(([r, w]) => [r, Object.entries(w)]));
 // A player's rating in a role comes from his attributes; keepers can't play outfield and vice versa.
 function roleRating(p, role) {
-  const a = p.at;
-  if (role === "GK") return p.pos === "GK" ? a.ss * .7 + a.lp * .15 + a.sp * .15 : 2;
-  if (p.pos === "GK") return 4;
-  const w = AW[role]; return a.sho * w.sho + a.pas * w.pas + a.tac * w.tac + a.str * w.str + a.pac * w.pac;
+  if ((role === "GK") !== (p.pos === "GK")) return role === "GK" ? 2 : 4;
+  const a = p.at; let v = 0; for (const [k, w] of AWL[role]) v += a[k] * w; return v;
 }
 // Out of his usual role a player also loses something to unfamiliarity.
 const slotRating = (p, slot) => p.pos === slot ? roleRating(p, slot) : roleRating(p, slot) * (FAM[p.pos][slot] >= .9 ? .97 : .9);
 function setOvr(p) { p.ovr = clamp(Math.round(o100(roleRating(p, p.pos))), 30, 92); if (p.ovr > (p.peak || 0)) p.peak = p.ovr; }
 function genAttrs(pos, rr) {
-  const w = AW[pos], at = {};
-  for (const k of attrKeys(pos)) at[k] = rr + (AOFF[pos][k] || 0) + gauss() * 1.4;
-  const cur = attrKeys(pos).reduce((s, k) => s + w[k] * at[k], 0), d = rr - cur;
-  for (const k of attrKeys(pos)) at[k] = clamp(round1(at[k] + d), 1, 20);
+  const at = {};
+  for (const k of allKeys(pos)) at[k] = rr + (AOFF[pos][k] || 0) + gauss() * 1.4;
+  fitAttrs(at, pos, rr);
   return at;
+}
+// Nudge attributes so the position's rating is exactly rr (only `keys` move, if given).
+function fitAttrs(at, pos, rr, keys) {
+  for (const k of allKeys(pos)) at[k] = clamp(at[k], 1, 20);
+  for (let i = 0; i < 4; i++) {
+    const ks = (keys || allKeys(pos)).filter(k => at[k] > 1 && at[k] < 20 || i === 0), wsum = ks.reduce((s, k) => s + (AW[pos][k] || 0), 0);
+    const cur = AWL[pos].reduce((s, [k, w]) => s + at[k] * w, 0), d = rr - cur;
+    if (Math.abs(d) < .02 || !wsum) break;
+    for (const k of ks) at[k] = clamp(at[k] + d / wsum, 1, 20);
+  }
+  for (const k of allKeys(pos)) at[k] = round1(at[k]);
 }
 function setRating(p, ovr) { p.at = genAttrs(p.pos, r20(ovr)); setOvr(p); }
 /* Spread a change of `pts` (100-scale) across attributes so the role rating moves by about that much. */
 function shiftAttrs(p, pts, weights) {
-  const keys = attrKeys(p.pos), w = AW[p.pos], rr = pts / 3;
+  const keys = allKeys(p.pos), w = AW[p.pos], rr = pts / 3;
   const g = Object.fromEntries(keys.map(k => [k, weights(k)]));
-  const norm = keys.reduce((s, k) => s + w[k] * g[k], 0) || 1;
+  const norm = keys.reduce((s, k) => s + (w[k] || 0) * g[k], 0) || 1;
   for (const k of keys) p.at[k] = clamp(round1(p.at[k] + rr * g[k] / norm), 1, 20);
   setOvr(p);
 }
-const growAttrs = (p, pts) => shiftAttrs(p, pts, k => AW[p.pos][k] + R() * .3);
+/* Saves from before line attributes had Shooting, Passing, Tackling, Strength and Pace for everyone.
+   Keep what carries over (Shooting becomes Finishing), invent the rest in his position's shape, and fit
+   the new ones so his rating doesn't move. */
+function convertAttrs(p) {
+  if (p.pos === "GK" || !p.at || p.at.fin != null) return;
+  const old = p.at, rr = r20(p.ovr), at = genAttrs(p.pos, rr);
+  Object.assign(at, { fin: old.sho, pas: old.pas, tac: old.tac, str: old.str, pac: old.pac });
+  fitAttrs(at, p.pos, rr, ["dri", "hea", "cmp", "vis", "tec", "sta", "mar"]);
+  p.at = at; const peak = p.peak; setOvr(p); p.peak = Math.max(peak || 0, p.ovr);
+}
+const growAttrs = (p, pts) => shiftAttrs(p, pts, k => (AW[p.pos][k] || 0) + R() * .3);
 const declineAttrs = (p, pts) => shiftAttrs(p, -pts, k => DECLINE[k] * (.6 + R() * .8));
 
 /* ---------- what you know about a player ---------- */

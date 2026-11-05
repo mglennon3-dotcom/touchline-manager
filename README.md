@@ -36,9 +36,13 @@ Spain, Germany, Italy, France, Portugal, the Netherlands and Belgium each have t
 with three up and three down between them. You can't manage there; their results are simulated from club
 strength, and their clubs buy, sell, loan, recruit youth and play in Europe.
 
-**Players** are rated out of 20 (10 is an average professional, 20 world class). Outfield players have
-Shooting, Passing, Tackling, Strength and Pace; keepers have Shot-stopping, Long passing and Short passing.
-Each position weighs them differently, and the overall rating comes from them. Two ratings are hidden and
+**Players** are rated out of 20 (10 is an average professional, 20 world class). Each line has its own
+attributes: defenders show Tackling, Marking, Heading, Strength and Pace; midfielders Passing, Vision,
+Technique, Tackling and Stamina; attackers Finishing, Dribbling, Pace, Heading and Composure; keepers
+Shot-stopping, Long passing and Short passing. Every outfield player carries all twelve (the rest sit
+under "Other attributes" on his card) because they matter when he plays out of position. Each position
+weighs them differently, and the overall rating comes from them. In matches, Finishing and Composure
+decide shots, Heading decides the one chance in five that's a header, and Stamina sets how fast a player tires. Two ratings are hidden and
 only estimated by scouts, as a range out of 20: **potential**, and **injury proneness** (1 robust, 20 fragile;
 fragile players get injured about three times as often as robust ones, and serious injuries make a player
 more prone). Players only grow toward it with minutes, good form, a happy dressing room and

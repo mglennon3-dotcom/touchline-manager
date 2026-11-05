@@ -28,7 +28,8 @@ function makeMatch(fx, userAuto) {
   return M;
 }
 const lg = (M, type, side, text) => M.log.push({ m: M.min, type, side, text });
-const T_GOAL = ["{s} fires low into the corner", "{s} heads in at the near post", "{s} slots it past the keeper", "{s} curls one in from the edge of the box", "{s} taps in at the back post", "{s} lashes in a half-volley", "{s} converts from the penalty spot", "{s} rounds the keeper and scores"];
+const T_HEAD = ["{s} heads in at the near post", "{s} glances a header into the far corner", "{s} rises highest and powers a header home", "{s} nods in from close range"];
+const T_GOAL = ["{s} fires low into the corner", "{s} slots it past the keeper", "{s} curls one in from the edge of the box", "{s} taps in at the back post", "{s} lashes in a half-volley", "{s} converts from the penalty spot", "{s} rounds the keeper and scores"];
 const T_SAVE = ["{k} gets down well to keep out {s}", "Big save from {k} to deny {s}", "{s} tests {k}, who holds on", "{k} tips {s}'s effort over"];
 const T_MISS = ["{s} drags a shot wide", "{s} skies it over the bar", "{s} hits the post", "{s} heads over from a corner", "{s} is denied by a last-ditch block"];
 const fillT = (t, o) => t.replace(/\{(\w)\}/g, (_, k) => o[k]);
@@ -51,7 +52,7 @@ function step(M) {
   if (M.done) return;
   M.min++;
   const sd = [M.h, M.a];
-  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2));
+  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.25 - o.p.at.sta / 40)));  // stamina 10 tires at the old rate, 20 a quarter slower
   for (const s of sd) if (!s.rt || M.min % 5 === 0) s.rt = sideRatings(s.on, s.ment, s.form, s.co);
   const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
   const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
@@ -62,17 +63,21 @@ function step(M) {
   if (A.on.length && R() < .26) {
     A.shots++;
     const pg = clamp(.125 * Math.pow(rA.att / Math.max(1, rD.def), 2), .03, .4);
-    const sh = wpick(A.on, o => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[o.slot] * eff(o.p, o.slot, o.fit));
+    // About a fifth of chances are headers, from crosses and set pieces: centre-backs come up for those,
+    // and the best in the air get them. The rest go to whoever is in position, weighted by role.
+    const header = R() < .2;
+    const sh = header ? wpick(A.on, o => ({ GK: 0, CB: 1.3, FB: .4, DM: .8, CM: .8, AM: .8, W: 1.2, ST: 5 })[o.slot] * (o.p.pos === "GK" ? 0 : o.p.at.hea ** 2))
+      : wpick(A.on, o => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[o.slot] * eff(o.p, o.slot, o.fit));
     const gk = D.on.find(o => o.slot === "GK") || D.on[0], r0 = R();
-    // The shooter's finishing and the keeper's shot-stopping move each chance either way (10 is neutral).
-    const shoQ = sh.p.pos === "GK" ? 2 : sh.p.at.sho, ssQ = gk && gk.p.pos === "GK" ? gk.p.at.ss : 2;
+    // The shooter's finishing (or heading) and the keeper's shot-stopping move each chance either way (10 is neutral).
+    const shoQ = sh.p.pos === "GK" ? 2 : header ? sh.p.at.hea : sh.p.at.fin * .7 + sh.p.at.cmp * .3, ssQ = gk && gk.p.pos === "GK" ? gk.p.at.ss : 2;
     const r = r0 / ((.8 + .4 * shoQ / 20) * (1.2 - .4 * ssQ / 20));
     if (r < pg) {
       A.goals++; A.sot++;
       const others = A.on.filter(o => o !== sh);
       const as = others.length && R() < .72 ? wpick(others, o => ({ GK: .1, CB: .6, FB: 1.6, DM: 1.2, CM: 2.4, AM: 4, W: 3.4, ST: 2 })[o.slot]) : null;
       M.goals.push({ side: k, pid: sh.p.id, ast: as ? as.p.id : null, min: M.min, n: sur(sh.p) });
-      lg(M, "goal", k, "GOAL! " + fillT(pick(T_GOAL), { s: sh.p.name }) + (as ? `, set up by ${sur(as.p)}.` : "."));
+      lg(M, "goal", k, "GOAL! " + fillT(pick(header ? T_HEAD : T_GOAL), { s: sh.p.name }) + (as ? `, set up by ${sur(as.p)}.` : "."));
     } else if (r < pg + .23) { A.sot++; if (R() < .4 && gk) lg(M, "save", k, fillT(pick(T_SAVE), { s: sur(sh.p), k: sur(gk.p) }) + "."); }
     else if (R() < .25) lg(M, "miss", k, fillT(pick(T_MISS), { s: sur(sh.p) }) + ".");
   }

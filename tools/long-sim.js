@@ -12,7 +12,7 @@ const N = +process.argv[2] || 50;
   for (let s=0; s<N; s++) {
     const r = await pg.evaluate(async ()=>{ S.set.live=false; const t=Date.now(); let g=0;
       while(S.phase==='season'&&g++<600){ if(S.sacked) throw new Error('sacked despite unsackable mode');
-        if(!regInfo(me()).ok) trimSquad(me(),false); while(me().squad.length<18||(regInfo(me()).eligible<16&&me().squad.length<30)){ const p=S.fa.map(P).sort((a,b)=>b.ovr-a.ovr)[0]; S.fa=S.fa.filter(x=>x!==p.id); p.club=S.club; p.yrs=2; me().squad.push(p.id);} 
+        if(!regInfo(me()).ok) trimSquad(me(),false); while(me().squad.length<18||(regInfo(me()).eligible<16&&me().squad.length<30)){ const p=S.fa.map(P).sort((a,b)=>b.ovr-a.ovr)[0]; S.fa=S.fa.filter(x=>x!==p.id); p.club=S.club; p.yrs=2; me().squad.push(p.id); autoRegister(me(), false);} 
         for(const m of openDecisions()) resolveDecision(m,m.opts[0][0]); await play('season'); }
       let gg=0; while(S.phase==="summer"&&gg++<60){ if(S.sacked) throw new Error('sacked despite unsackable mode'); for(const m of openDecisions()) resolveDecision(m,m.opts[1]?m.opts[1][0]:m.opts[0][0]); await playNewSeason(); }
       const bad=[]; const seen={};

@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.10.1";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.11";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -213,21 +213,38 @@ const CONT = { CC: { name: "Champions Cup", short: "CC", prize: [16e6, 2.5e6, 12
 const CONT_ROUNDS = ["Round of 16", "Quarter-finals", "Semi-finals", "Final"];
 
 /* ---------- player attributes, out of 20 (10 is average, 20 world class) ---------- */
-const ATTRS = { out: [["sho", "Shooting"], ["pas", "Passing"], ["tac", "Tackling"], ["str", "Strength"], ["pac", "Pace"]], gk: [["ss", "Shot-stopping"], ["lp", "Long passing"], ["sp", "Short passing"]] };
+/* Each line of the team has its own attributes. Every outfield player carries all twelve (a centre-back
+   moved into midfield still needs his passing), but you see the five that define his line, and his rating
+   comes from the mix his position needs. */
+const ATTR_NAME = { fin: "Finishing", dri: "Dribbling", pac: "Pace", hea: "Heading", cmp: "Composure", pas: "Passing", vis: "Vision", tec: "Technique",
+  sta: "Stamina", tac: "Tackling", mar: "Marking", str: "Strength", ss: "Shot-stopping", lp: "Long passing", sp: "Short passing" };
+const OUT_KEYS = ["fin", "dri", "pac", "hea", "cmp", "pas", "vis", "tec", "sta", "tac", "mar", "str"], GK_KEYS = ["ss", "lp", "sp"];
+const LINE_NAME = { GK: "Goalkeeper", DEF: "Defender", MID: "Midfielder", ATT: "Attacker" };
+const LINE_ATTRS = { GK: GK_KEYS, DEF: ["tac", "mar", "hea", "str", "pac"], MID: ["pas", "vis", "tec", "tac", "sta"], ATT: ["fin", "dri", "pac", "hea", "cmp"] };  // keyed by LINE
 // How much each attribute counts toward a role's rating (weights sum to 1).
 const AW = {
-  CB: { sho: .05, pas: .1, tac: .4, str: .3, pac: .15 }, FB: { sho: .05, pas: .2, tac: .3, str: .15, pac: .3 },
-  DM: { sho: .05, pas: .3, tac: .35, str: .2, pac: .1 }, CM: { sho: .15, pas: .4, tac: .2, str: .1, pac: .15 },
-  AM: { sho: .3, pas: .4, tac: .05, str: .05, pac: .2 }, W: { sho: .25, pas: .25, tac: .05, str: .05, pac: .4 },
-  ST: { sho: .45, pas: .15, tac: 0, str: .2, pac: .2 }, GK: { ss: .7, lp: .15, sp: .15 },
+  CB: { tac: .25, mar: .25, hea: .2, str: .15, pac: .1, pas: .05 },
+  FB: { tac: .2, mar: .15, pac: .3, sta: .1, pas: .1, str: .05, hea: .05, dri: .05 },
+  DM: { tac: .25, pas: .2, sta: .15, mar: .1, vis: .1, str: .1, tec: .1 },
+  CM: { pas: .25, vis: .2, tec: .15, sta: .15, tac: .1, cmp: .05, fin: .05, str: .05 },
+  AM: { pas: .2, vis: .2, tec: .2, dri: .15, fin: .1, cmp: .1, pac: .05 },
+  W: { pac: .25, dri: .25, fin: .1, tec: .1, pas: .1, sta: .1, cmp: .05, vis: .05 },
+  ST: { fin: .35, cmp: .15, hea: .15, pac: .1, str: .1, dri: .1, tec: .05 },
+  GK: { ss: .7, lp: .15, sp: .15 },
 };
-// Typical shape of each position: centre-backs rarely shoot well, wingers rarely tackle.
+// Typical shape of each position: centre-backs rarely finish well, wingers rarely mark.
 const AOFF = {
-  CB: { sho: -4, pas: -1, tac: 2, str: 2, pac: -.5 }, FB: { sho: -3, pas: 0, tac: 1, str: -1, pac: 2 }, DM: { sho: -2, pas: 1, tac: 2, str: 1, pac: -1 },
-  CM: { sho: 0, pas: 2, tac: 0, str: 0, pac: 0 }, AM: { sho: 1, pas: 2, tac: -3, str: -2, pac: .5 }, W: { sho: .5, pas: .5, tac: -3, str: -2, pac: 3 },
-  ST: { sho: 2, pas: -1, tac: -4, str: 1, pac: 1 }, GK: { ss: 1, lp: -1, sp: -1 },
+  CB: { fin: -4, dri: -3, pac: -.5, hea: 2, cmp: -1, pas: -1, vis: -2, tec: -2, sta: 0, tac: 2, mar: 2, str: 2 },
+  FB: { fin: -3, dri: 0, pac: 2, hea: -1, cmp: -1, pas: 0, vis: -1, tec: -.5, sta: 1.5, tac: 1, mar: 1, str: -1 },
+  DM: { fin: -2, dri: -1, pac: -1, hea: 0, cmp: 0, pas: 1, vis: 0, tec: 0, sta: 1, tac: 2, mar: 1, str: 1 },
+  CM: { fin: -.5, dri: 0, pac: 0, hea: -1, cmp: 0, pas: 2, vis: 1.5, tec: 1, sta: 1, tac: 0, mar: -1, str: 0 },
+  AM: { fin: 1, dri: 1.5, pac: .5, hea: -2, cmp: .5, pas: 2, vis: 2, tec: 2, sta: -.5, tac: -3, mar: -3, str: -2 },
+  W: { fin: .5, dri: 2.5, pac: 3, hea: -2, cmp: 0, pas: .5, vis: 0, tec: 1, sta: 1, tac: -3, mar: -3, str: -2 },
+  ST: { fin: 2.5, dri: .5, pac: 1, hea: 1, cmp: 1.5, pas: -1, vis: -1, tec: 0, sta: -.5, tac: -4, mar: -4, str: 1 },
+  GK: { ss: 1, lp: -1, sp: -1 },
 };
-const DECLINE = { pac: 1.8, str: 1.2, tac: .8, sho: .7, pas: .5, ss: 1, lp: .8, sp: .8 };  // pace goes first, passing last
+// Pace and stamina go first with age; composure and vision last.
+const DECLINE = { pac: 1.8, sta: 1.5, str: 1.2, dri: 1.2, tac: .8, hea: .7, fin: .7, mar: .5, pas: .5, tec: .5, cmp: .3, vis: .3, ss: 1, lp: .8, sp: .8 };
 const r20 = ovr => (ovr - 30) / 3, o100 = r => 30 + 3 * r;   // internal 100-scale used by the engine and valuations
 
 /* ---------- coaches ---------- */

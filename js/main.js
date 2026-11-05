@@ -173,7 +173,7 @@ const CHG = {
   ticket: v => { me().tkt = +v; save(); render(); },
   pref: v => { S.me.formPending = v; toast(`From next season you'll prefer the ${v}.`); save(); },
   cup: v => { UI.cupK = v; render(); },
-  import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); if (d.v === 4) migrate4(d); if (d.v !== 5 || d.club == null) throw new Error("not a save"); S = d; LIVE = null; UI.page = "home"; await save(); render(); toast("Save file loaded."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
+  import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); if (d.v === 4) migrate4(d); if (d.v !== 5 || d.club == null) throw new Error("not a save"); S = d; upgradeSave(); LIVE = null; UI.page = "home"; await save(); render(); toast("Save file loaded."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
   "tf-pos": v => { UI.tf.pos = v; render(); }, "tf-age": v => { UI.tf.age = +v; render(); }, "tf-min": v => { UI.tf.min = +v; render(); }, "tf-fee": v => { UI.tf.fee = +v; render(); }, "tf-lg": v => { UI.tf.lg = v; render(); },
   "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); },
   "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); },
@@ -196,17 +196,7 @@ async function boot(data) {
   S = (data && data.S) || (DB.db ? await DB.get("career") : null);
   if (S && S.v === 4) migrate4(S);
   if (S && (S.v !== 5 || S.club == null)) S = null;
-  if (S && !S.rivalsDone) ensureRivals();
-  if (S && !S.stadiums) ensureStadiums();
-  if (S && !S.sponsors) ensureSponsors();
-  if (S && !S.dem2) ensureDemandAnchor();
-  if (S && S.me && !S.me.know) S.me.know = newKnowledge("ENG");  // saves from before league knowledge
-  if (S && !S.reg2) { for (const c of activeClubs()) autoRegister(c, false); S.reg2 = true; }
-  if (S && !S.towns2) {  // rename any club the generator gave a real club's town before the blocklist covered it
-    for (const c of S.clubs) if (TOWN_BLOCK.has(c.town)) { const t = townName(COUNTRY[c.country]), old = c.town, taken = new Set(S.clubs.filter(x => x.country === c.country).map(x => x.short)), sh = stripAcc(t).toUpperCase().slice(0, 3);
-      c.name = c.name.replace(old, t); c.town = t; if (!taken.has(sh)) c.short = sh; }
-    S.towns2 = true; }
-  if (S && !S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
+  if (S) upgradeSave();
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }
@@ -218,6 +208,20 @@ window.claude?.hot?.snapshot?.(() => ({ S }));
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 
 /* Saves from version 4 gain injury proneness, coaches' preferred formations and a preference for you. */
+function upgradeSave() {  // bring an older save up to date; runs on load and on import
+  if (!S.rivalsDone) ensureRivals();
+  if (!S.stadiums) ensureStadiums();
+  if (!S.sponsors) ensureSponsors();
+  if (!S.dem2) ensureDemandAnchor();
+  if (S.me && !S.me.know) S.me.know = newKnowledge("ENG");  // saves from before league knowledge
+  if (!S.reg2) { for (const c of activeClubs()) autoRegister(c, false); S.reg2 = true; }
+  if (!S.towns2) {  // rename any club the generator gave a real club's town before the blocklist covered it
+    for (const c of S.clubs) if (TOWN_BLOCK.has(c.town)) { const t = townName(COUNTRY[c.country]), old = c.town, taken = new Set(S.clubs.filter(x => x.country === c.country).map(x => x.short)), sh = stripAcc(t).toUpperCase().slice(0, 3);
+      c.name = c.name.replace(old, t); c.town = t; if (!taken.has(sh)) c.short = sh; }
+    S.towns2 = true; }
+  if (!S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
+  if (!S.attr2) { for (const p of Object.values(S.players)) convertAttrs(p); for (const c of S.clubs) delete c._lv; S.attr2 = true; }
+}
 function migrate4(d) {
   const keep = S; S = d;
   for (const p of Object.values(d.players)) if (p.ir == null) p.ir = clamp(Math.round(10 + gauss() * 3.2), 1, 20);
