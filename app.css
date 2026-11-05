@@ -292,3 +292,11 @@ input[type=text]{width:100%}
 .train.styles{grid-template-columns:1fr;gap:6px}
 .train.styles button{display:grid;grid-template-columns:minmax(110px,32%) 1fr;gap:10px;align-items:baseline;text-align:left;padding:8px 10px}
 .train.styles button .tiny{font-size:12.5px}
+/* Big tables (the squad list) scroll inside their own box below the sticky masthead, so the column
+   headings and the sideways scrollbar stay in view; the first column stays put when scrolling sideways.
+   Without this the headings vanished under the masthead as soon as you scrolled down. */
+.tbl-wrap.tall{overflow:auto;max-height:calc(100dvh - var(--mast-h,100px) - 24px);overscroll-behavior:contain}
+.tbl-wrap.tall thead th{position:sticky;top:0;z-index:2;background:var(--surface);box-shadow:inset 0 -1px 0 var(--line)}
+.tbl-wrap.tall th:first-child,.tbl-wrap.tall td:first-child{position:sticky;left:0;z-index:1;background:var(--surface)}
+.tbl-wrap.tall thead th:first-child{z-index:3}
+.tbl-wrap.tall td:first-child{box-shadow:1px 0 0 var(--line)}

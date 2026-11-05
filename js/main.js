@@ -189,6 +189,11 @@ document.addEventListener("click", e => {
   if (t.dataset.a === "closemodal" && t.classList.contains("scrim") && e.target !== t) return;
   ACT[t.dataset.a]?.(t.dataset.v, t, e);
 });
+/* Tall tables scroll inside a box that fits under the sticky masthead, whose height varies with screen
+   width (about 100px on a laptop, 200px on a phone). */
+function syncMastHeight() { const m = document.querySelector(".mast"); document.documentElement.style.setProperty("--mast-h", (m ? m.getBoundingClientRect().height : 0) + "px"); }
+window.addEventListener("resize", syncMastHeight);
+new MutationObserver(syncMastHeight).observe(document.getElementById("app"), { childList: true });
 document.addEventListener("change", e => { const t = e.target.closest("[data-c]"); if (t) CHG[t.dataset.c]?.(t.value, t); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) { UI.modal = null; UI.bid = null; renderModal(); render(); } });
 window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (VIEWS[h] && h !== UI.page) { UI.page = h; render(); } });
