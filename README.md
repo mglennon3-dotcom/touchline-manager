@@ -75,6 +75,12 @@ you can afford who would come, with Sign or Bid buttons. Above them, your XI's f
 dribbling, defending, aerial ability, pace, stamina and physical strength against the division's average XI,
 and the style that suits your players. The Squad page shows a summary and Transfers lists the roles to fix.
 
+**Winning over youth prospects:** scouting reveals a prospect but doesn't win him over. Interest comes from
+how your club fits his six priorities plus your relationship with him, which calls (weekly), hosting him at
+your training ground and visiting his family at home (each once), and offering a place build. A home visit
+counts most with lads who want to stay near home or care about squad dynamics; hosting suits the rest.
+Trips abroad cost travel, shown on the button.
+
 **Scouting assistant:** an on/off toggle on both Scouted lists (Youth and Transfers), off unless you
 switch it on. When on, at the end of each week it spends the scouting hours you left unused (your own
 scouting comes first) on youth prospects and transfer targets: prospects with the best potential estimates,

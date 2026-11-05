@@ -85,7 +85,7 @@ function contenders(y) {
 }
 
 /* ---------- actions ---------- */
-const REC_COST = { scout: 3, call: 1, visit: 5 };
+const REC_COST = { scout: 3, call: 1, visit: 5, home: 4 };
 function recAct(y, act) {
   const c = me();
   if (y.commit === c.id) return "He has already committed to you.";
@@ -96,13 +96,18 @@ function recAct(y, act) {
     if (S.rec.offers >= offerCap()) return `Your academy can only offer ${offerCap()} places a year. Withdraw one first.`;
     y.offers.push(c.id); y.rel[c.id] = (y.rel[c.id] || 0) + .05; S.rec.offers++; return `Academy place offered to ${y.name}.`;
   }
+  if (act === "home" && y.sc < 1) return "Scout him at least once before visiting his family.";
+  if (act === "home" && y.home) return "You've already visited his family.";
   const code = prospectCountry(y), cost = act === "call" ? REC_COST.call : scoutHours(REC_COST[act], code);
   if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}); that needs ${cost}.`;
   if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc = Math.min(3, y.sc + (knowOf(code) >= 15 ? 2 : 1)); y.scT = whenLabel(); if (y.sc >= 2) y.known = true; learnCountry(code); payTravel(code); }
   if (act === "call") { if (y.called === S.week + S.year * 100) return "You've already spoken to his family this week."; y.called = S.week + S.year * 100; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + (.045 + .03 * (y.pri.dyn + y.pri.acad)) * recMult(); }
+  // Visiting him and his family at home: worth most to lads who want to stay near home and care about the
+  // people around them (close to home, squad dynamics); hosting him at your ground suits the rest better.
+  if (act === "home") { payTravel(code); y.home = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + (.06 + .25 * ((y.pri.loc || 0) + (y.pri.dyn || 0))) * recMult(); }
   if (act === "visit") { if (y.visit) return "He has already visited."; payTravel(code); y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16 * recMult(); }
   S.rec.hours -= cost;
-  return { scout: `Scouting report on ${y.name} updated.`, call: `You spoke with ${y.name}'s family.`, visit: `${y.name} visited your training ground.` }[act];
+  return { scout: `Scouting report on ${y.name} updated.`, call: `You spoke with ${y.name}'s family.`, visit: `${y.name} visited your training ground.`, home: `You visited ${y.name} and his family at home.` }[act];
 }
 
 /* ---------- the weekly cycle ---------- */
