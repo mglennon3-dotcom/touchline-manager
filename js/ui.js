@@ -123,22 +123,28 @@ function viewStart() {
     <div class="card"><div class="card-h"><h2>Choose your club</h2>
       <label class="row small">Division <select id="start-lg" data-c="startl">${lgOpts(key, ENG_LGS)}</select></label></div>
       <p class="small muted" style="margin-bottom:10px">${leagueRules(key)}</p>
-      ${table("start-" + key, [
+      <div class="pick-cards only-narrow">${rows.map(r => { const c = r.c, h = finHealth(c); return `<div class="pick-card" style="--c:${c.color}">
+        <div class="row between"><span class="club-in">${crest(c, 26)} <span><b>${esc(c.name)}</b><br><span class="tiny muted">${esc(c.region)} · ${OWNER[c.owner].l}</span></span></span><button class="btn sm" data-a="choose" data-v="${c.id}">Manage</button></div>
+        <dl class="pick-stats"><div><dt>Squad</dt><dd>${r20(r.lvl).toFixed(1)}</dd></div><div><dt>Prestige</dt><dd>${c.rep}</dd></div><div><dt>Youth dev</dt><dd><b class="rt ${aCls(c.academy)}">${c.academy}</b></dd></div>
+          <div><dt>Ground</dt><dd>${c.cap.toLocaleString()}</dd></div><div><dt>Support</dt><dd><span class="rt ${aCls(c.support)}">${c.support}</span></dd></div><div><dt>Coach</dt><dd class="tiny">${esc(ARCH[c.coach.arch].l)}</dd></div></dl>
+        <p class="small"><b class="${h.cls}">${h.label}</b> <span class="tiny muted">· ${money(c.cash)} cash · ${money(c.revBase)} a year</span></p>
+        <p class="small">Board target: <b>${expText(r.exp, key)}</b></p></div>`; }).join("")}</div>
+      <div class="only-wide">${table("start-" + key, [
         { k: "n", l: "Club", v: r => r.c.name, f: r => `<span class="club-in">${crest(r.c, 18)} <b>${esc(r.c.name)}</b></span>` },
         { k: "reg", l: "Region", f: r => r.c.region, cls: "hide-sm" },
         { k: "lvl", l: "Squad", r: 1, v: r => r.lvl, f: r => r20(r.lvl).toFixed(1) },
         { k: "co", l: "Coach", f: r => esc(ARCH[r.c.coach.arch].l), cls: "hide-sm" },
-        { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep, cls: "hide-sm" },
+        { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep },
         { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => `<b class="rt ${aCls(r.c.academy)}">${r.c.academy}</b>` },
         { k: "fin", l: "Finances", v: r => finHealth(r.c).ratio, f: r => { const h = finHealth(r.c); return `<b class="${h.cls}">${h.label}</b><br><span class="tiny muted">${money(r.c.cash)} cash · ${money(r.c.revBase)} a year</span>`; } },
-        { k: "cap", l: "Ground", r: 1, v: r => r.c.cap, f: r => r.c.cap.toLocaleString(), cls: "hide-sm" },
-        { k: "sup", l: "Support", r: 1, v: r => r.c.support, f: r => `<span class="rt ${aCls(r.c.support)}">${r.c.support}</span>`, cls: "hide-sm" },
+        { k: "cap", l: "Ground", r: 1, v: r => r.c.cap, f: r => r.c.cap.toLocaleString() },
+        { k: "sup", l: "Support", r: 1, v: r => r.c.support, f: r => `<span class="rt ${aCls(r.c.support)}">${r.c.support}</span>` },
         { k: "own", l: "Owner", f: r => OWNER[r.c.owner].l, cls: "hide-sm" },
         { k: "exp", l: "Board target", f: r => expText(r.exp, key) },
         { k: "go", l: "", f: r => `<button class="btn sm" data-a="choose" data-v="${r.c.id}">Manage</button>` },
-      ], rows)}
+      ], rows)}</div>
       <p class="small muted" style="margin-top:10px"><b>Youth dev</b> is the academy's rating out of 20: it sets how good each summer's graduates can become and helps attract young prospects. <b>Finances</b> compare the wage bill and transfer costs with annual income: <span class="good">Healthy</span> under 75%, <span class="ok">Comfortable</span> under 85%, <span class="warn">Stretched</span> up to 100%, <span class="bad">Over the limit</span> above that, where the cost rules start to bite.</p>
-      <p class="small muted" style="margin-top:6px">All clubs and players are fictional. Your career saves in this browser; export a save file from the History page to keep a backup.</p></div></div>`;
+      <p class="small muted" style="margin-top:6px">All clubs and players are fictional. Your career saves in this browser; export a save file from the History page to keep a backup. Version ${APP_VERSION}.</p></div></div>`;
   S = keep; return html;
 }
 /* A club's finances at a glance: squad costs (wages plus transfer amortisation) against annual income. */

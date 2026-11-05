@@ -131,4 +131,5 @@ without the page shell, for publishing as a Claude artifact.
 `tools/long-sim.js` simulates many seasons headlessly and checks the world stays consistent.
 Run it after changing the economy or development code: a 50-season run takes about two minutes.
 
-When you change any game file, bump `VERSION` in `sw.js` so installed copies pick up the update.
+When you change any game file, bump `VERSION` in `sw.js` and `APP_VERSION` in `js/data.js`. Installed copies fetch fresh files whenever
+they're online and fall back to the cache offline, so updates show on the next open.

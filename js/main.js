@@ -189,7 +189,9 @@ async function boot(data) {
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }
-  try { if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && window.top === window) navigator.serviceWorker.register("sw.js").catch(() => { }); } catch (e) { }
+  try { if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol) && window.top === window) navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(r => r.update()).catch(() => { });
+    // When a new version takes over, reload once so you are never left looking at the old one.
+    let reloaded = false; navigator.serviceWorker.addEventListener("controllerchange", () => { if (reloaded || LIVE || UI.busy) return; reloaded = true; location.reload(); }); } catch (e) { }
 }
 window.claude?.hot?.snapshot?.(() => ({ S }));
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});

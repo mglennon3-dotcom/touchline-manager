@@ -272,3 +272,13 @@ input[type=text]{width:100%}
 .chip.rival{border:1px solid var(--loss);color:var(--loss)}
 .chip.rival.r3{background:var(--loss);color:#fff}
 .derby{border:1px solid var(--loss);border-radius:8px;padding:8px 10px;font-size:13px;margin:0 0 10px;background:color-mix(in srgb,var(--loss) 7%,var(--surface))}
+
+/* club picker: a table on wide screens, a card per club on phones */
+.only-narrow{display:none}
+.pick-cards{gap:10px}
+.pick-card{border:1px solid var(--line);border-left:4px solid var(--c);border-radius:var(--r);padding:12px;display:grid;gap:8px;background:var(--surface)}
+.pick-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px 10px;margin:0}
+.pick-stats div{display:grid;gap:1px}
+.pick-stats dt{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:var(--muted)}
+.pick-stats dd{margin:0;font-family:var(--f-mono);font-weight:600}
+@media (max-width:760px){.only-wide{display:none}.only-narrow{display:grid}}
