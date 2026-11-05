@@ -233,10 +233,15 @@ function benchFor(c, xi) {
   const mine = isUser(c) && S.bench ? S.bench.filter(id => elig.has(id) && !used.has(id) && S.players[id] && avail(P(id))).slice(0, RULES.benchSize) : [];
   mine.forEach(id => used.add(id));
   const no = new Set(isUser(c) ? S.benchNo || [] : []);  // subs you've dropped aren't brought back automatically
-  const rest = [...elig].map(P).filter(p => avail(p) && !used.has(p.id) && !no.has(p.id)).sort((a, b) => b.ovr * b.fit - a.ovr * a.fit);
-  const out = [], gk = mine.some(id => P(id).pos === "GK") ? null : rest.find(p => p.pos === "GK");
+  // You can switch off the automatic substitute keeper (S.set.benchGK false): the fill then skips keepers
+  // altogether, though you can still pick one yourself.
+  const noGK = isUser(c) && S.set && S.set.benchGK === false;
+  const rest = [...elig].map(P).filter(p => avail(p) && !used.has(p.id) && !no.has(p.id) && !(noGK && p.pos === "GK")).sort((a, b) => b.ovr * b.fit - a.ovr * a.fit);
+  const out = [], gk = noGK || mine.some(id => P(id).pos === "GK") ? null : rest.find(p => p.pos === "GK");
   if (gk && mine.length < RULES.benchSize) out.push(gk);
-  for (const p of rest) { if (mine.length + out.length >= RULES.benchSize) break; if (p !== gk) out.push(p); }
+  // One keeper on the bench is enough: the fill adds no more once there is one (you can still pick a second).
+  const haveGK = () => gk || mine.some(id => P(id).pos === "GK");
+  for (const p of rest) { if (mine.length + out.length >= RULES.benchSize) break; if (p !== gk && !(p.pos === "GK" && isUser(c) && haveGK())) out.push(p); }
   return [...mine, ...out.map(p => p.id)];
 }
 function fixUserLineup() {

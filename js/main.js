@@ -246,6 +246,7 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  benchgk: (v, el) => { S.set.benchGK = el.checked; save(); render(); toast(el.checked ? "A substitute goalkeeper will always be named." : "No automatic substitute goalkeeper. If your keeper goes off, an outfielder goes in goal."); },
   benchadd: v => { if (v) ACT.benchtoggle(v); },
   autoscout: (v, el) => { S.set.autoScout = el.checked; delete S.set.autoAbroad; save(); render(); toast(el.checked ? "Scouting assistant on: spare hours, England only, no cost." : "Scouting assistant off."); },
   liveform: v => { livePause(); changeForm(LIVE.M, LIVE.k, v); if (LIVE.M.min === 0) savePreMatch(LIVE.k ? LIVE.M.a : LIVE.M.h); UI.lsel = null; render(); },
