@@ -169,6 +169,7 @@ const ACT = {
   "loan-to": v => { const [pid, cid] = v.split("|").map(Number), p = P(pid), d = C(cid); if (!windowOpen()) return toast("Loans can only be agreed while the window is open."); startLoan(p, d); UI.loanPick = null; fixUserLineup(); UI.modal = null; save(); render(); toast(`${p.name} joins ${d.name} on loan.`); },
   "ask-loan-old": v => { const p = P(+v), d = loanDestinations(p)[0]; if (!d) return toast(`No club suitable for ${p.name} has room for a loan right now.`); UI.confirm = { id: p.id, act: "loan", to: d.id, msg: `Loan ${p.name} to ${d.name} (${leagueName(d.lg)}) for the season? He'd be a regular starter there.`, yes: "Agree the loan" }; renderModal(); },
   export: () => { try { const blob = new Blob([JSON.stringify(S)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `touchline-${me().short}-${S.year}.json`; document.body.appendChild(a); a.click(); a.remove(); toast("Save file exported."); } catch (e) { toast("Export isn't available here."); } },
+  needfind: v => { UI.tf = { pos: v, age: 40, min: 0, fee: 0, lg: "ALL" }; UI.tab = "search"; UI.page = "transfers"; location.hash = "transfers"; render(); toTop(); },
   bid: v => { UI.modal = { t: "bid", id: +v }; UI.bid = null; renderModal(); },
   submitbid: v => { const p = P(+v), b = UI.bid; const r = userBid(p, p.club >= 0 ? b.fee : 0, b.yrs); b.msg = r.msg; b.ok = r.ok; save(); if (r.ok) { toast(r.msg); render(); } renderModal(); },
   rec: v => { const [id, act] = v.split("|"); const y = S.prospects.find(x => x.id === id); const r = recAct(y, act); toast(r); save(); render(); },
@@ -200,7 +201,6 @@ const ACT = {
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   livespeed: v => { LIVE.speed = +v; render(); },
-  findneed: v => { const [role, min] = v.split("|"); UI.page = "transfers"; UI.tab = "search"; Object.assign(UI.tf, { pos: role, min: +min, age: 40, fee: 0, lg: "ALL" }); location.hash = "transfers"; render(); toTop(); },
   // Tapping your team pauses the match: pick a player, then a substitute (or the other way round), or two
   // players to swap their positions.
   livetap: v => {

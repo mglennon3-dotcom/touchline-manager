@@ -354,11 +354,28 @@ body{padding-top:env(safe-area-inset-top,0px)}
 .lv-feed{grid-area:feed}.lv-team{grid-area:team}.lv-stats{grid-area:stats}.lv-ctrl{grid-area:ctrl}
 @media (min-width:1100px){.live-grid{grid-template-areas:"feed team ctrl" "feed team stats";grid-template-columns:minmax(0,1.15fr) minmax(320px,380px) minmax(0,1fr)}}
 @media (max-width:860px){.live-grid{grid-template-areas:"ctrl" "team" "feed" "stats";grid-template-columns:minmax(0,1fr)}}
+
 /* team needs */
-.need-sum p{margin:2px 0}
-.chip.need-strong{background:color-mix(in srgb,var(--win) 22%,transparent);color:var(--win)}
-.chip.need-weak{background:color-mix(in srgb,var(--loss) 20%,transparent);color:var(--loss)}
-.chip.need-solid{background:var(--surface-2);color:var(--muted)}
+.grid2.needs{grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr))}
+.need{border-left:4px solid var(--line)}
+.need.bad{border-left-color:var(--loss)} .need.warn{border-left-color:var(--accent)} .need.good{border-left-color:var(--win)}
+.need-bars{display:grid;gap:6px}
+.need-bars>div{display:grid;grid-template-columns:150px minmax(0,1fr) 40px;align-items:center;gap:8px}
+.need-bars .num{text-align:right}
+.nbar{position:relative;display:block;height:9px;border-radius:5px;background:var(--surface-2);border:1px solid var(--line);overflow:visible}
+.nbar i{display:block;height:100%;border-radius:5px}
+.nbar i.you{background:var(--ink)} .need.bad .nbar i.you{background:var(--loss)} .need.warn .nbar i.you{background:var(--accent)} .need.good .nbar i.you{background:var(--win)}
+.nbar i.ref{background:var(--muted);opacity:.55} .nbar i.ref.lo{opacity:.3}
+.nbar .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);transform:translateX(-1px)}
+.need-flags{margin:8px 0 0;padding-left:18px;font-size:13px}
+.need-t{margin-top:12px;display:grid;gap:6px}
+.need-sum{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.need-chip{border:1px solid var(--line);font-weight:600}
+.need-chip span{font-weight:800;margin-right:2px}
+.need-chip.bad{background:var(--loss);color:#fff;border-color:var(--loss)} .need-chip.warn{border-color:var(--accent-ink);color:var(--accent-ink)} .need-chip.good{color:var(--win);border-color:var(--win)}
+@media (max-width:560px){.need-bars>div{grid-template-columns:112px minmax(0,1fr) 34px}}
+/* team needs: XI attribute profile and the Squad/Transfers summaries */
+.need-overview p{margin:2px 0}
 .need-attrs{display:grid;gap:6px;max-width:560px}
 .need-attr{display:grid;grid-template-columns:128px 1fr 92px;gap:10px;align-items:center;font-size:14px}
 .dbar{position:relative;height:8px;background:var(--surface-2);border-radius:4px}

@@ -3,7 +3,7 @@
 const UI = { page: "home", sel: null, modal: null, sort: {}, menu: false, busy: false, toastT: 0,
   lg: null, cupK: "FA", tab: "search", tf: { pos: "ALL", age: 40, min: 0, fee: 0, lg: "ALL" }, sqf: "ALL",
   yf: { reg: "ENG", pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5, awY: null, awL: null };
-const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
+const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["needs", "Team Needs"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
 
 /* ---------- atoms ---------- */
 function crest(c, sz = 40) {
@@ -369,32 +369,32 @@ function summerCard() {
 }
 
 /* ---------- squad ---------- */
-/* Team needs: strengths, weaknesses and gaps, measured against your division. compact = the Transfers
-   page version, which lists only what needs fixing. */
-function needsCard(compact) {
-  const c = me(), T = teamNeeds(c), lgN = leagueName(c.lg), f1 = v => (v >= 0 ? "+" : "") + v.toFixed(1);
-  const posStrong = T.rows.filter(r => r.grade === "strong").map(r => NEED_ROLE_NAME[r.role]), posWeak = T.rows.filter(r => r.grade === "weak").map(r => NEED_ROLE_NAME[r.role]);
-  const atStrong = T.standout.map(a => a.l.toLowerCase()), atWeak = T.lacking.map(a => a.l.toLowerCase());
-  const needs = T.rows.filter(r => r.need);
-  const find = r => `<button class="btn sm" data-a="findneed" data-v="${r.role}|${r.findMin}" title="Transfer market: ${NEED_ROLE_NAME[r.role].toLowerCase()}s rated ${r.findMin}+">Find ${r.role === "GK" ? "a keeper" : NEED_ROLE_NAME[r.role].toLowerCase()}</button>`;
-  const needText = r => r.grade === "weak" ? `starters ${r.rating.toFixed(1)} against a ${lgN} average of ${r.bench.toFixed(1)}` : r.flags.filter(x => /backup|only/.test(x)).join(", ") || "thin";
-  if (compact) return `<section class="card"><div class="card-h"><h2>Your needs</h2><button class="lnk small" data-a="go" data-v="squad">Full breakdown</button></div>
-    ${needs.length ? needs.map(r => `<div class="need-row"><span><b>${NEED_ROLE_NAME[r.role]}</b> <span class="small muted">${needText(r)}</span></span>${find(r)}</div>`).join("") : `<p class="small muted">No gaps: every position in your ${S.formation} has a starter at or above the ${lgN} average and a backup.</p>`}</section>`;
+/* Team needs, outside its own page. Squad: a summary (biggest needs, strong roles, the XI's stand-out and
+   short-on attributes, best style) linking to the Team Needs tab. Transfers: the roles to fix. Both use
+   teamNeeds() for positions, so they always agree with the tab. */
+function bestStyleLine() {
   const on = userOn(), fits = Object.keys(MENT).filter(k => STYLE_KEYS[k].length).map(k => [k, styleFit(on, k)]).sort((a, b) => b[1] - a[1]);
-  const list = a => a.length ? a.join("; ") : "none stand out";
-  return `<section class="card needs"><div class="card-h"><h2>Team needs</h2><span class="small muted">Compared with the ${lgN} · ${S.formation}</span></div>
-    <div class="need-sum"><p><b class="good">Strengths:</b> ${list([posStrong.join(", "), atStrong.length ? "stand-out " + atStrong.join(" and ") : ""].filter(Boolean))}</p>
-      <p><b class="bad">Weaknesses:</b> ${list([posWeak.join(", "), atWeak.length ? "short on " + atWeak.join(" and ") : ""].filter(Boolean))}</p>
-      <p class="small muted">Overall your XI is ${Math.abs(T.mean) < .3 ? "about level with" : `${T.mean.toFixed(1).replace("-", "")} ${T.mean > 0 ? "above" : "below"}`} the ${lgN} average across these attributes.</p>
-      <p><b>Best style for this XI:</b> ${fits[0][1] < .12 ? `none stands out, so Neutral is the safe choice <span class="small muted">(Tactics shows every style's fit)</span>` : `${MENT[fits[0][0]].l} <span class="small muted">(${fitWord(fits[0][1])[1].toLowerCase()})</span>${fits[1] && fits[1][1] >= .12 ? `, then ${MENT[fits[1][0]].l.toLowerCase()}` : ""}`}.</p></div>
-    <div class="tbl-wrap"><table><thead><tr><th>Position</th><th>Your starters</th><th class="r">Rating</th><th class="r">Division avg</th><th class="r">Gap</th><th>Cover</th><th>Notes</th><th></th></tr></thead><tbody>
-      ${T.rows.map(r => `<tr class="need-${r.grade}"><td><b>${NEED_ROLE_NAME[r.role]}</b> <span class="tiny muted">×${r.n}</span></td><td>${r.start.map(p => playerA(p)).join(", ") || '<span class="bad">nobody</span>'}</td><td class="r num">${r.rating.toFixed(1)}</td><td class="r num muted">${r.bench.toFixed(1)}</td>
-        <td class="r num"><span class="chip need-${r.grade}">${r.start.length < r.n ? "short" : f1(r.diff)}</span></td><td class="small">${r.cover.length ? r.cover.slice(0, 3).map(p => esc(sur(p))).join(", ") + (r.cover.length > 3 ? ` +${r.cover.length - 3}` : "") : '<span class="bad">none</span>'}</td>
-        <td class="small">${r.flags.map(esc).join("; ") || '<span class="muted">—</span>'}</td><td>${r.need ? find(r) : ""}</td></tr>`).join("")}
-    </tbody></table></div>
-    <h3 style="margin:14px 0 8px">Your XI's attributes <span class="tiny muted">against the ${lgN} average XI</span></h3>
-    <div class="need-attrs">${T.attrs.map(a => { const w = Math.min(50, Math.abs(a.diff) / 3 * 50); return `<div class="need-attr"><span>${a.l}</span><span class="dbar"><i class="${a.diff >= 0 ? "pos" : "neg"}" style="${a.diff >= 0 ? "left:50%" : `left:${50 - w}%`};width:${w}%"></i></span><b class="num ${a.rel >= .4 ? "good" : a.rel <= -.4 ? "bad" : ""}">${a.v.toFixed(1)} <span class="tiny muted">(${f1(a.diff)})</span></b></div>`; }).join("")}</div>
-    <p class="hint" style="margin-top:8px">A position is a strength or weakness when your starters there are 0.75 (out of 20) above or below the average starter in your division. Bars compare your XI with the division's average XI; the stand-out and short-on attributes are measured against the rest of your own side. "Find" opens the transfer market at that position, from the rating you'd need to improve on.</p></section>`;
+  return fits[0][1] < .12 ? `none stands out, so Neutral is the safe choice` : `${MENT[fits[0][0]].l} <span class="small muted">(${fitWord(fits[0][1])[1].toLowerCase()})</span>${fits[1] && fits[1][1] >= .12 ? `, then ${MENT[fits[1][0]].l.toLowerCase()}` : ""}`;
+}
+function needsCard(compact) {
+  const c = me(), N = teamNeeds(), pri = N.filter(n => n.status[1] !== "good"), strong = N.filter(n => n.status[1] === "good");
+  if (compact) return `<section class="card"><div class="card-h"><h2>Your needs</h2><button class="lnk small" data-a="go" data-v="needs">Team Needs</button></div>
+    ${pri.length ? pri.map(n => `<div class="need-row"><span><span class="chip need-chip ${n.status[1]}"><span>${n.role}</span> ${n.status[0]}</span> <span class="small muted">weakest starter ${n.weakest.toFixed(1)}, top-four standard ${n.topStd.toFixed(1)}</span></span><span class="row" style="gap:6px"><button class="btn sm" data-a="go" data-v="needs">Upgrades</button><button class="btn sm" data-a="needfind" data-v="${n.role}">Search</button></span></div>`).join("") : `<p class="small muted">Every role in your ${S.formation} matches the strongest teams in the ${leagueName(c.lg)}, with cover.</p>`}</section>`;
+  const X = xiProfile(c), list = a => a.length ? a.join(", ") : "none stand out";
+  return `<section class="card"><div class="card-h"><h2>Team needs</h2><button class="btn sm" data-a="go" data-v="needs">Full breakdown and upgrades</button></div>
+    <div class="need-overview"><p><b class="bad">Needs:</b> ${pri.length ? pri.slice(0, 4).map(n => `<span class="chip need-chip ${n.status[1]}"><span>${n.role}</span> ${n.status[0]}</span>`).join(" ") : "none: every role matches the division's top four"}</p>
+      <p><b class="good">Strong:</b> ${list(strong.map(n => ROLE_NAME[n.role]))}${X.standout.length ? `; stand-out ${X.standout.map(a => a.l.toLowerCase()).join(" and ")}` : ""}</p>
+      ${X.lacking.length ? `<p><b class="warn">Short on:</b> ${X.lacking.map(a => a.l.toLowerCase()).join(" and ")}</p>` : ""}
+      <p><b>Best style for this XI:</b> ${bestStyleLine()}.</p></div></section>`;
+}
+// The XI's attribute profile, for the Team Needs page.
+function needsAttrCard() {
+  const c = me(), X = xiProfile(c), lgN = leagueName(c.lg), f1 = v => { const t = (Math.abs(v) < .05 ? 0 : v).toFixed(1); return (t[0] === "-" ? "" : "+") + t; };
+  return `<section class="card"><div class="card-h"><h2>Your XI's attributes</h2><span class="small muted">against the ${lgN} average XI</span></div>
+    <div class="need-overview"><p>${X.standout.length ? `Stand-out: <b class="good">${X.standout.map(a => a.l.toLowerCase()).join(" and ")}</b>. ` : ""}${X.lacking.length ? `Short on: <b class="bad">${X.lacking.map(a => a.l.toLowerCase()).join(" and ")}</b>. ` : ""}Overall ${Math.abs(X.mean) < .3 ? "about level with" : `${Math.abs(X.mean).toFixed(1)} ${X.mean > 0 ? "above" : "below"}`} the division average.</p>
+      <p><b>Best style for this XI:</b> ${bestStyleLine()}.</p></div>
+    <div class="need-attrs" style="margin-top:8px">${X.attrs.map(a => { const w = Math.min(50, Math.abs(a.diff) / 3 * 50); return `<div class="need-attr"><span>${a.l}</span><span class="dbar"><i class="${a.diff >= 0 ? "pos" : "neg"}" style="${a.diff >= 0 ? "left:50%" : `left:${50 - w}%`};width:${w}%"></i></span><b class="num ${a.rel >= .4 ? "good" : a.rel <= -.4 ? "bad" : ""}">${a.v.toFixed(1)} <span class="tiny muted">(${f1(a.diff)})</span></b></div>`; }).join("")}</div>
+    <p class="hint" style="margin-top:8px">Bars compare your XI with the division's average XI; stand-out and short-on are measured against the rest of your own side.</p></section>`;
 }
 function viewSquad() {
   const c = me(), reg = regInfo(c);
@@ -433,6 +433,95 @@ function viewSquad() {
     <p class="hint" style="margin-top:8px"><b>Attack</b> averages Finishing, Dribbling, Technique, Vision, Passing and Composure; <b>Defence</b> Tackling, Marking and Heading; Pace, Stamina and Strength are shown as they are. For keepers, Attack is distribution and Defence is shot-stopping.</p>
     <p class="hint" style="margin-top:6px">Squads can be any size, but only 25 seniors (21 and over, at most 17 not homegrown) can be registered; under-21s are always eligible. Unregistered players can't play, grow unhappy, may ask to leave, and several of them sulking unsettles the dressing room. Ratings are out of 20: 10 is average, 20 world class. Potential is your scouts' estimate, not a promise: it depends on minutes, form, happiness and your Development rating. Homegrown (HG) means three seasons at an English club before turning 21.</p></section>
     <section class="card"><div class="card-h"><h2>Out on loan</h2></div>${table("loanout", [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "c", l: "At", f: p => clubA(p.club, { flag: 1 }) }, { k: "app", l: "Apps", r: 1, f: p => p.s.app }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "pt", l: "Minutes", f: p => `<span class="bar"><i style="width:${p.pt * 100}%"></i></span>` }], out, { empty: "Nobody is out on loan. Young players develop faster when they play: loan them out from their profile during a window." })}</section></div>`;
+}
+
+/* ---------- team needs ---------- */
+/* For each role in your shape: how your starters compare with the strongest sides in your division,
+   whether there's cover behind them, and who on the market would be a real upgrade. */
+function bestAt(c, role, n, skip) {
+  return c.squad.map(P).filter(p => !(skip && skip.has(p.id)) && !p.inj && FAM[p.pos][role] >= .62).map(p => ({ p, r: slotRating(p, role) })).sort((a, b) => b.r - a.r).slice(0, n);
+}
+function teamNeeds() {
+  const c = me(), f = S.formation, sl = slotsOf(f), lg = S.leagues[c.lg];
+  const others = lg.clubs.map(C).filter(x => x.id !== c.id && !x.gone).sort((a, b) => clubLevel(b) - clubLevel(a));
+  const top = others.slice(0, 4), xiIds = new Set(S.lineup.filter(id => id != null));
+  const avgOf = (clubs, role, n) => sum(clubs, x => { const b = bestAt(x, role, n); return b.length ? sum(b, y => y.r) / b.length : 0; }) / Math.max(1, clubs.length);
+  const out = [];
+  for (const role of [...new Set(sl)].sort((a, b) => ROLE_ORDER[a] - ROLE_ORDER[b])) {
+    const n = roleSlots(f, role);
+    // Starters: who is actually in your XI in those slots, filled from the squad if a slot is empty.
+    let st = S.lineup.map((id, i) => id != null && sl[i] === role ? P(id) : null).filter(Boolean).map(p => ({ p, r: slotRating(p, role) }));
+    if (st.length < n) st = st.concat(bestAt(c, role, n - st.length, new Set([...xiIds, ...st.map(s => s.p.id)])));
+    st.sort((a, b) => b.r - a.r);
+    const used = new Set([...xiIds, ...st.map(s => s.p.id)]);
+    const weakest = st.length ? st[st.length - 1].r : 0, avg = st.length ? sum(st, s => s.r) / st.length : 0;
+    const bench = bestAt(c, role, 4, used), coverNeed = Math.max(1, Math.ceil(n / 2));
+    const cover = bench.filter(b => b.r >= weakest - 2.5), topStd = avgOf(top, role, n), lgStd = avgOf(others, role, n);
+    const flags = [];
+    if (st.length < n) flags.push(["Not enough players for this role", "bad"]);
+    for (const s of st) {
+      if (s.p.age >= 31) flags.push([`${s.p.name} is ${s.p.age}`, "warn"]);
+      if (s.p.yrs <= 1 && !s.p.loan) flags.push([`${s.p.name}'s contract ends this season`, "warn"]);
+      if (s.p.loan) flags.push([`${s.p.name} is only here on loan`, "warn"]);
+      if (s.p.req) flags.push([`${s.p.name} wants to leave`, "bad"]);
+      if (s.p.pos !== role && FAM[s.p.pos][role] < .9) flags.push([`${s.p.name} is playing out of position`, "warn"]);
+    }
+    if (cover.length < coverNeed) flags.push([cover.length ? "Thin cover behind the starters" : "No real cover if a starter is out", "warn"]);
+    const gap = topStd - weakest;
+    const score = Math.max(0, gap) * 1.6 + Math.max(0, lgStd - weakest) + (coverNeed - Math.min(cover.length, coverNeed)) * 1.2 + flags.filter(x => x[1] === "warn").length * .5 + flags.filter(x => x[1] === "bad").length * 2;
+    const status = gap >= 2 || flags.some(x => x[1] === "bad") ? ["Upgrade needed", "bad"] : gap >= .8 ? ["Worth strengthening", "warn"] : cover.length < coverNeed ? ["Needs depth", "warn"] : ["Strong", "good"];
+    out.push({ role, n, st, bench, cover, coverNeed, weakest, avg, topStd, lgStd, gap, flags, score, status });
+  }
+  return out.sort((a, b) => b.score - a.score);
+}
+function needTargets(role, floor, k = 3) {
+  const c = me(), budget = c.cash / 1.05, picks = [];
+  for (const p of Object.values(S.players)) {
+    if (p.club === S.club || p.loan || p.age < 18 || p.age > 31 || FAM[p.pos][role] < .9 || p.retiring === 1) continue;
+    const k = p.pos === role ? 1 : .97, rm = ratingMid(p) * k;
+    if (ratingView(p)[0] * k < floor + 1) continue;  // even the cautious end of the scouting estimate must be an upgrade
+    const fee = p.club >= 0 ? askingPrice(p) : 0;
+    if (fee > budget) continue;
+    picks.push({ p, rm, fee });
+  }
+  picks.sort((a, b) => b.rm - a.rm || a.fee - b.fee);
+  const res = [];
+  for (const x of picks) { if (res.length >= k) break; const w = willingness(x.p, c); if (w < .45) continue; x.w = w; res.push(x); }
+  return res;
+}
+function viewNeeds() {
+  const c = me(), needs = teamNeeds(), open = windowOpen(), r1 = v => v.toFixed(1);
+  const pri = needs.filter(n => n.status[1] !== "good");
+  const lead = pri.length ? `Biggest need: <b>${ROLE_NAME[pri[0].role]}</b>${pri[1] ? `, then ${ROLE_NAME[pri[1].role].toLowerCase()}` : ""}${pri[2] ? ` and ${ROLE_NAME[pri[2].role].toLowerCase()}` : ""}.` : "Every role in your side matches the strongest teams in your division.";
+  const scale = 20, pctOf = v => clamp(v / scale * 100, 0, 100);
+  const card = (n, i) => {
+    const showTargets = n.status[1] !== "good", t = showTargets ? needTargets(n.role, n.weakest) : [];
+    return `<section class="card need ${n.status[1]}"><div class="card-h"><h2><span class="pos">${n.role}</span> ${ROLE_NAME[n.role]}${n.n > 1 ? ` <span class="small muted">× ${n.n}</span>` : ""}</h2><b class="${n.status[1]}">${i < 3 && n.status[1] !== "good" ? `#${i + 1} · ` : ""}${n.status[0]}</b></div>
+      <div class="need-bars">
+        <div><span class="small">Your weakest starter</span><span class="nbar"><i class="you" style="width:${pctOf(n.weakest)}%"></i><b class="tick" style="left:${pctOf(n.topStd)}%" title="Top-4 standard"></b></span><b class="num">${r1(n.weakest)}</b></div>
+        <div><span class="small muted">Top-4 standard</span><span class="nbar"><i class="ref" style="width:${pctOf(n.topStd)}%"></i></span><b class="num">${r1(n.topStd)}</b></div>
+        <div><span class="small muted">Division average</span><span class="nbar"><i class="ref lo" style="width:${pctOf(n.lgStd)}%"></i></span><b class="num">${r1(n.lgStd)}</b></div>
+      </div>
+      <p class="small" style="margin-top:8px"><b>Starting:</b> ${n.st.map(s => `${playerA(s.p)} <span class="num muted">${r1(s.r)}</span>`).join(", ") || '<span class="bad">nobody</span>'}<br>
+        <b>Cover:</b> ${n.bench.length ? n.bench.slice(0, 3).map(s => `${playerA(s.p)} <span class="num ${n.cover.includes(s) ? "muted" : "bad"}">${r1(s.r)}</span>`).join(", ") : '<span class="bad">none</span>'}</p>
+      ${n.flags.length ? `<ul class="need-flags">${n.flags.map(([t, k]) => `<li class="${k}">${esc(t)}</li>`).join("")}</ul>` : ""}
+      ${showTargets ? `<div class="need-t"><div class="eyebrow">Upgrades you can afford who'd come</div>${t.length ? table("nt-" + n.role, [
+        { k: "n", l: "Player", f: x => playerA(x.p) },
+        { k: "age", l: "Age", r: 1, f: x => x.p.age },
+        { k: "ovr", l: "Rating", r: 1, f: x => ratingHtml(x.p) },
+        { k: "club", l: "Club", f: x => x.p.club >= 0 ? clubA(x.p.club, { short: true, flag: 1 }) : '<span class="muted">Free</span>' },
+        { k: "ask", l: "Asking", r: 1, f: x => x.p.club >= 0 ? money(x.fee) : "Free" },
+        { k: "w", l: "Interest", f: x => { const [l, k] = willingLabel(x.w); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
+        { k: "b", l: "", f: x => `<button class="btn sm" data-a="bid" data-v="${x.p.id}" ${open ? "" : "disabled"}>${x.p.club >= 0 ? "Bid" : "Sign"}</button>` },
+      ], t) : `<p class="small muted">No affordable player rated above ${r1(n.weakest + 1)} is interested right now. Scouting abroad widens the pool.</p>`}
+      <button class="lnk small" data-a="needfind" data-v="${n.role}">Search all ${ROLE_NAME[n.role].toLowerCase()}s</button></div>` : ""}</section>`;
+  };
+  return `<div class="stack"><section class="card"><div class="card-h"><h2>Team needs</h2><span class="small">${S.formation} · Cash <b class="num">${money(c.cash)}</b> · ${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b>'}</span></div>
+      <p>${lead}</p>
+      <div class="need-sum">${needs.map(n => `<span class="chip need-chip ${n.status[1]}"><span>${n.role}</span> ${n.status[0]}</span>`).join("")}</div>
+      <p class="hint" style="margin-top:8px">Each role compares the weakest player in your current XI there with the best players at that role in your division's four strongest squads, out of 20. Ratings use the player's fit for the slot, so someone out of position counts for less. Targets are players whose rating, even at the low end of your scouts' estimate, is at least one point above your weakest starter, within your cash, and at least open to joining.</p></section>
+    ${needsAttrCard()}
+    <div class="grid2 needs">${needs.map(card).join("")}</div></div>`;
 }
 
 /* ---------- tactics ---------- */
@@ -818,4 +907,4 @@ function viewManager() {
     <section class="card"><div class="card-h"><h2>Career</h2></div>${S.career.length ? table("career-m", [{ k: "y", l: "Season", f: r => seasonLabel(r.year) }, { k: "c", l: "Club", f: r => clubA(r.club) }, { k: "l", l: "League", f: r => leagueName(r.lg) }, { k: "p", l: "Finish", r: 1, f: r => ord(r.pos) }, { k: "e", l: "Target", r: 1, f: r => ord(r.exp) }, { k: "t", l: "Trophies", f: r => r.trophies.map(trophyName).join(", ") || "—" }], S.career) : '<p class="muted">Finish a season to start your record.</p>'}</section></div>
     <section class="card"><div class="card-h"><h2>Rival coaches</h2><span class="small muted">${leagueName(c.lg)}</span></div>${table("rivalco", [{ k: "c", l: "Club", f: x => clubA(x.id, { short: true }) }, { k: "n", l: "Coach", f: x => esc(x.coach.name) + `<br><span class="tiny muted">${ARCH[x.coach.arch].l}</span>` }, { k: "f", l: "System", f: x => x.coach.form }, ...COACH_KEYS.map(([k, l]) => ({ k, l: l.slice(0, 3), r: 1, f: x => x.coach[k] }))], rivals)}</section></div>`;
 }
-const VIEWS = { manager: viewManager, home: viewHome, squad: viewSquad, tactics: viewTactics, fixtures: viewFixtures, league: viewLeague, cups: viewCups, transfers: viewTransfers, youth: viewYouth, finances: viewFinances, news: viewNews, history: viewHistory };
+const VIEWS = { manager: viewManager, home: viewHome, squad: viewSquad, needs: viewNeeds, tactics: viewTactics, fixtures: viewFixtures, league: viewLeague, cups: viewCups, transfers: viewTransfers, youth: viewYouth, finances: viewFinances, news: viewNews, history: viewHistory };
