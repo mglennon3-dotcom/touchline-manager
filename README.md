@@ -54,6 +54,13 @@ estimates. You pick an archetype (or balanced) and a preferred formation when yo
 spend every season. Every AI club has its own coach, and a
 sacked coach is replaced by a new one with a different style.
 
+**Rivals:** every club's nearest neighbour is a rival, as is its nearest club in the same division, and some
+clubs have a rival of similar standing too. Intensity runs from rivalry to local derby to fierce derby, by
+distance. Derbies bring more cards, a stronger home crowd and bigger swings in board confidence, supporter
+mood and gate money. Rival clubs charge each other more and fierce rivals won't sell to each other at all;
+players are reluctant to cross the divide; and signing from or selling to a rival costs you some goodwill.
+Head-to-head records are kept for every rivalry.
+
 **Injuries** range from knocks of a week or two, through tears that take months, to rare season-ending
 injuries and very rare career-ending ones. **Retirements** start from age 30: some players announce at the
 start of the season that it will be their last, others surprise you at the end.

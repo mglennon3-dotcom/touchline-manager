@@ -23,7 +23,7 @@ function makeSide(c, opp, home, auto) {
 function makeMatch(fx, userAuto) {
   const H = C(fx.h), A = C(fx.a);
   const M = { fx, h: makeSide(H, A, !fx.neutral, userAuto), a: makeSide(A, H, false, userAuto), min: 0, end: 90, et: false, pens: null,
-    log: [], goals: [], inj: [], reds: [], cards: [], fit: {}, done: false };
+    log: [], goals: [], inj: [], reds: [], cards: [], fit: {}, done: false, riv: rivalry(fx.h, fx.a) };
   if (isUser(H) || isUser(A)) { const u = isUser(H) ? M.h : M.a; u.auto = !!userAuto; }
   return M;
 }
@@ -53,7 +53,7 @@ function step(M) {
   const sd = [M.h, M.a];
   for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2));
   for (const s of sd) if (!s.rt || M.min % 5 === 0) s.rt = sideRatings(s.on, s.ment, s.form, s.co);
-  const hb = M.fx.neutral ? 1 : 1.035;
+  const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
   const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
   const ph = rh.mid ** 2 / (rh.mid ** 2 + ra.mid ** 2), k = R() < ph ? 0 : 1, A = sd[k], D = sd[1 - k], rA = k ? ra : rh, rD = k ? rh : ra;
   A.poss++;
@@ -76,7 +76,7 @@ function step(M) {
   }
   for (let i = 0; i < 2; i++) {
     const s = sd[i], outf = s.on.filter(o => o.slot !== "GK");
-    if (outf.length && R() < .021) {
+    if (outf.length && R() < .021 * (1 + .15 * M.riv)) {  // derbies are feistier
       const o = pick(outf);
       if (s.yel[o.p.id]) sendOff(M, i, o, "Second yellow", RULES.secondYellow);
       else { s.yel[o.p.id] = 1; M.cards.push(o.p.id); lg(M, "card", i, `Yellow card for ${o.p.name}.`); }

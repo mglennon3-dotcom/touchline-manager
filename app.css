@@ -267,3 +267,8 @@ tr.z-po td:first-child{box-shadow:inset 3px 0 var(--zone-po)} tr.z-down td:first
 .train.arch{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 input[type=text]{width:100%}
 .rt.est{font-weight:600;border:1px dashed var(--line)}
+
+/* rivalries */
+.chip.rival{border:1px solid var(--loss);color:var(--loss)}
+.chip.rival.r3{background:var(--loss);color:#fff}
+.derby{border:1px solid var(--loss);border-radius:8px;padding:8px 10px;font-size:13px;margin:0 0 10px;background:color-mix(in srgb,var(--loss) 7%,var(--surface))}

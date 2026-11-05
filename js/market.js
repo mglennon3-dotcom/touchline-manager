@@ -1,10 +1,12 @@
 "use strict";
 /* Transfers, contracts and the Squad Cost Ratio. */
 function squadRank(p, c) { return c.squad.map(P).filter(x => x.id !== p.id && x.ovr > p.ovr).length; }
-function askingPrice(p) {
+function askingPrice(p, buyer) {
   if (p.club < 0) return 0;
   const c = C(p.club);
+  buyer = buyer || (S.club != null ? me() : null);
   let v = value(p) * (squadRank(p, c) < 3 ? 1.4 : squadRank(p, c) < 11 ? 1.15 : 1);
+  if (buyer) v *= 1 + .25 * rivalry(c.id, buyer.id);  // nobody sells cheaply to a rival
   if (p.req || p.listed) v *= .8;
   if (p.joined === S.year && !p.req && !p.listed) v *= 1.3;   // clubs rarely sell someone they just signed
   const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(v)) - 1));
@@ -22,6 +24,7 @@ function willingness(p, b) {
   w -= Math.max(0, p.ovr - clubLevel(b) - 5) * .05;  // good players won't drop far below their level
   if (cur && (p.req || p.mood < 35)) w += .25;
   if (cur && p.loy > .75 && !p.req) w -= .15;
+  if (cur && !p.req) w -= .12 * rivalry(cur.id, b.id);  // crossing the divide is a big step for a player
   return clamp(w, 0, 1);
 }
 const willingLabel = w => w >= .7 ? ["Keen", "good"] : w >= .45 ? ["Open", "ok"] : w >= .3 ? ["Reluctant", "warn"] : ["Not interested", "bad"];
@@ -81,15 +84,15 @@ function aiTransferDay(intensity) {
       const p = all[Math.floor(R() * all.length)];
       if (!p || p.club === c.id || FAM[p.pos][role] < .9 || p.age > 31 || p.ovr < lvl - 1 || p.ovr > lvl + 8) continue;
       if (p.club >= 0 && C(p.club).rep > c.rep + 8 && !p.req) continue;
-      const fee = askingPrice(p); if (fee > budget * .6) continue;
+      const fee = askingPrice(p, c); if (fee > budget * .6) continue;
       const sc = p.ovr - fee / 4e6 + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1;
       if (sc > bs) { bs = sc; best = p; }
     }
     if (!best) continue;
-    const fee = askingPrice(best), w = willingness(best, c);
+    const fee = askingPrice(best, c), w = willingness(best, c);
     if (w < .3) continue;
     if (best.club === S.club) { if (best.listed || best.req || R() < .25) offerToUser(best, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); continue; }
-    if (best.club >= 0) { const seller = C(best.club); if (seller.squad.filter(id => FAM[P(id).pos][best.pos] >= .9).length <= 2) continue; }
+    if (best.club >= 0) { const seller = C(best.club); if (seller.squad.filter(id => FAM[P(id).pos][best.pos] >= .9).length <= 2 || rivalry(seller.id, c.id) >= 2) continue; }
     transfer(best, c, fee, contractDemand(best, c, w), ri(2, 5));
     if (regInfo(c).seniors > RULES.squadMax || regInfo(c).nonHG > RULES.nonHGMax) trimSquad(c, false);
   }
@@ -118,8 +121,9 @@ function userBid(p, fee, yrs) {
     if (!ok) { (S.tried ||= {})[p.id] = S.year + ":" + S.week + ":" + S.phase + S.summerDay; return { ok: false, msg: `${C(p.club).name} reject ${money(fee)}. They want around ${money(ask)}.` }; }
   }
   if (w < .3) return { ok: false, msg: `${p.name} doesn't want to join. ${whyNot(p, c)}` };
-  const wage = contractDemand(p, c, w);
+  const wage = contractDemand(p, c, w), fromRival = p.club >= 0 ? rivalry(p.club, c.id) : 0, rivalClub = p.club >= 0 ? C(p.club) : null;
   transfer(p, c, fee, wage, yrs);
+  if (fromRival) { S.board = clamp(S.board - fromRival, 0, 100); news(`Signing ${p.name} from ${rivalClub.name} divides opinion. Some supporters will never accept a player from across the divide.`, true, "transfer"); }
   fixUserLineup();
   return { ok: true, msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}.` };
 }

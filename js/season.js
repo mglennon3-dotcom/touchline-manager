@@ -211,6 +211,7 @@ function recordResult(fx, M) {
       }
     }
   }
+  recordRivalry(fx.h, fx.a, hg, ag);
   if (fx.h === S.club || fx.a === S.club) {
     S.myRes.push({ w: S.week, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, sc: M.goals.map(g => [g.side, g.n, g.min]) });
     afterUserMatch(fx, M);
@@ -224,7 +225,7 @@ function quickLeagueRound(key, r) {
   for (const [h, a] of L.fixtures[r]) {
     const H = C(h), A = C(a), d = (clubLevel(H) - clubLevel(A)) * .085;
     const hg = pois(1.32 * Math.exp(d) * 1.1), ag = pois(1.32 * Math.exp(-d) / 1.1);
-    rd.push({ h, a, hg, ag }); L.n++;
+    rd.push({ h, a, hg, ag }); L.n++; recordRivalry(h, a, hg, ag);
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
       const xi = autoPick(c.squad, c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
       for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - clubLevel(c)) / 25 + gauss() * .3, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
@@ -293,6 +294,7 @@ function afterUserMatch(fx, M) {
   else if (pts === 0 && clubLevel(opp) < clubLevel(me()) - 6) delta = -3;
   else if (pts === 3 && clubLevel(opp) > clubLevel(me()) + 4) delta = 2;
   if (me().cash < 0) delta -= 2;
+  delta += derbyAftermath(fx, M, pts);
   S.board = clamp(S.board + delta, 0, 100);
   const word = pts === 3 ? "Win" : pts === 1 ? "Draw" : "Defeat";
   news(`${word} ${fx.neutral ? "against" : home ? "at home to" : "away at"} ${opp.name}, ${mine.goals}–${them.goals}${M.pens ? ` (${M.pens[home ? 0 : 1]}–${M.pens[home ? 1 : 0]} pens)` : ""}. ${compLabel(fx)}.${delta ? ` Board ${delta > 0 ? "+" : ""}${delta}.` : ""}`, pts === 3, "result");
@@ -374,11 +376,11 @@ function endSeason() {
   for (const key of ["E2", "E3", "E4", "E5", "E6N", "E6S"]) for (const id of ups[key]) move(id, LG_ABOVE[key], "up");
   // the bottom of step two drops out of the game; new clubs come up from the regional leagues
   for (const key of ["E6N", "E6S"]) for (const id of downs[key]) {
-    const c = C(id); c.gone = true; c.goneYear = S.year; S.leagues[key].clubs = S.leagues[key].clubs.filter(x => x !== id);
+    const c = C(id); c.gone = true; c.goneYear = S.year; dropRivals(c); S.leagues[key].clubs = S.leagues[key].clubs.filter(x => x !== id);
     for (const pid of c.squad.slice()) { const p = P(pid); if (!p) continue; if (p.loan) { endLoan(p); continue; } if (p.age < 31 && R() < .6) toFreeAgent(p); else retirePlayer(p); }
     c.squad = [];
     if (isUser(c)) { S.sacked = true; S.sackReason = `${c.name} dropped out of the National Division.`; }
-    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id);
+    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n);
     n.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
     moves.push([n.id, "new", null, key]);
   }

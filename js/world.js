@@ -278,6 +278,7 @@ function newWorld() {
     S.leagues[key] = { key, clubs: ids };
   }
   for (const c of S.clubs) genSquad(c);
+  ensureRivals();
   for (const c of S.clubs) setupFinances(c);
   // Income scale per division, anchored to reputation the same way wages are anchored to ability (≈6% per point).
   S.revK = {};

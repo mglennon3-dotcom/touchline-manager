@@ -10,6 +10,8 @@ function crest(c, sz = 40) {
   return `<svg class="crest" width="${sz}" height="${Math.round(sz * 1.15)}" viewBox="0 0 40 46" aria-hidden="true"><path d="M20 1.5 L38 7 V22 C38 34 30 41 20 44.5 C10 41 2 34 2 22 V7 Z" fill="${c.color}" stroke="var(--crest-edge)" stroke-width="1.5"/>${sz >= 24 ? `<path d="M9 33 L20 38 L31 33" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2"/><text x="20" y="25" text-anchor="middle" font-family="Saira Condensed,Arial Narrow,sans-serif" font-weight="800" font-size="13" fill="#fff">${c.short}</text>` : ""}</svg>`;
 }
 const clubA = (id, opt = {}) => { if (id == null) return "—"; const c = C(id); return `<span class="club-in">${opt.crest !== false ? crest(c, 16) : ""}<button class="lnk" data-a="club" data-v="${id}">${esc(opt.short ? c.short : c.name)}</button>${opt.flag && c.country !== HOME ? ` <span class="tiny muted">${c.country}</span>` : ""}</span>`; };
+const rivalChip = id => { const n = S && S.club != null && id !== S.club ? rivalry(S.club, id) : 0; return n ? ` <span class="chip rival r${n}" title="${RIVAL_WORD[n]}">${n >= 2 ? "DERBY" : "RIVAL"}</span>` : ""; };
+const recStr = r => `W${r[0]} D${r[1]} L${r[2]}`;
 const playerA = p => `<button class="lnk" data-a="player" data-v="${p.id}">${esc(p.name)}</button>`;
 const formChips = f => `<span class="form">${(f || []).slice(-5).map(x => `<i class="${x}">${x}</i>`).join("") || '<span class="muted tiny">—</span>'}</span>`;
 const fitColor = f => f >= 85 ? "var(--win)" : f >= 70 ? "var(--accent)" : "var(--loss)";
@@ -167,19 +169,25 @@ function viewHome() {
   const L = S.leagues[c.lg], t = standings(L), i = t.findIndex(r => r.id === c.id), lo = clamp(i - 3, 0, t.length - 7);
   const side = `<section class="card"><div class="card-h"><h2>${leagueName(L.key)}</h2><button class="lnk small" data-a="go" data-v="league">Full table</button></div>
       ${miniTable(L, t.slice(lo, lo + 7), lo)}</section>
+    ${rivalsCard()}
     <section class="card"><div class="card-h"><h2>Board</h2><span class="num">${S.board}/100</span></div><p>Target: <b>${expText(S.expPos, c.lg)}</b> (${ord(S.expPos)} or better).</p><p class="small muted" style="margin-top:6px">Each league result is judged against what the board expected from that fixture. Relegation, cost-rule breaches and early cup exits to weaker sides hurt. At zero you are dismissed.</p></section>
     <section class="card"><div class="card-h"><h2>News</h2><button class="lnk small" data-a="go" data-v="news">All news</button></div><ul class="news">${S.news.slice(0, 10).map(newsItem).join("")}</ul></section>`;
   return `<div class="grid2"><div class="stack">${parts.join("")}</div><div class="stack">${side}</div></div>`;
+}
+function rivalsCard() {
+  const c = me(), ids = Object.keys(c.rivals || {}).map(Number).filter(id => !C(id).gone).sort((a, b) => rivalry(S.club, b) - rivalry(S.club, a));
+  if (!ids.length) return "";
+  return `<section class="card"><div class="card-h"><h2>Rivals</h2></div>${ids.map(id => { const o = C(id), n = rivalry(S.club, id); return `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span>${clubA(id)} <span class="chip rival r${n}">${RIVAL_WORD[n]}</span><br><span class="tiny muted">${leagueName(o.lg)}${o.lg === c.lg && S.phase === "season" ? " · " + ord(posIn(S.leagues[o.lg], id)) : ""}</span></span><span class="num small">${recStr(h2hOf(c, id))}</span></div>`; }).join("")}<p class="tiny muted" style="margin-top:6px">Head-to-head in all competitions since this save began. Derby results move the board, the fans and the dressing room more than other games. Rival clubs charge you more and won't sell to a fierce rival at all.</p></section>`;
 }
 const newsItem = n => `<li class="${n.hi ? "hi" : ""}">${esc(n.t)}<small>${seasonLabel(n.y)} · ${n.w}</small></li>`;
 function resultRow(r) {
   const mine = r.h === S.club ? r.hg : r.ag, th = r.h === S.club ? r.ag : r.hg;
   let x = mine > th ? "W" : mine < th ? "L" : "D"; if (r.pens) { const mp = r.h === S.club ? r.pens[0] : r.pens[1], tp = r.h === S.club ? r.pens[1] : r.pens[0]; x = mp > tp ? "W" : "L"; }
   return `<div class="res"><span class="h">${clubA(r.h, { flag: 1 })}</span><span class="sc">${r.hg}–${r.ag}${r.et ? " aet" : ""}</span><span>${clubA(r.a, { flag: 1 })}</span>
-    <span class="tiny muted" style="grid-column:1/-1;text-align:center"><span class="form"><i class="${x}">${x}</i></span> ${esc(r.label)}${r.pens ? ` · ${r.pens[0]}–${r.pens[1]} pens` : ""}${r.sc.length ? " · " + r.sc.map(([s, n, m]) => `${esc(n)} ${m}′`).join(", ") : ""}</span></div>`;
+    <span class="tiny muted" style="grid-column:1/-1;text-align:center"><span class="form"><i class="${x}">${x}</i></span>${rivalry(r.h, r.a) ? ` <b>${rivalry(r.h, r.a) >= 2 ? "Derby" : "Rivalry"}</b> ·` : ""} ${esc(r.label)}${r.pens ? ` · ${r.pens[0]}–${r.pens[1]} pens` : ""}${r.sc.length ? " · " + r.sc.map(([s, n, m]) => `${esc(n)} ${m}′`).join(", ") : ""}</span></div>`;
 }
 function miniTable(L, rows, offset) {
-  return `<div class="tbl-wrap"><table><thead><tr><th class="r">#</th><th>Club</th><th class="r">P</th><th class="r">GD</th><th class="r">Pts</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.id === S.club ? "me" : ""} ${zoneCls(L.key, offset + i + 1)}"><td class="r num">${offset + i + 1}</td><td>${clubA(r.id)}${r.ded ? ` <span class="chip req" title="Points deducted">−${r.ded}</span>` : ""}</td><td class="r num">${r.p}</td><td class="r num">${r.gf - r.ga > 0 ? "+" : ""}${r.gf - r.ga}</td><td class="r num"><b>${r.pts}</b></td></tr>`).join("")}</tbody></table></div>`;
+  return `<div class="tbl-wrap"><table><thead><tr><th class="r">#</th><th>Club</th><th class="r">P</th><th class="r">GD</th><th class="r">Pts</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.id === S.club ? "me" : ""} ${zoneCls(L.key, offset + i + 1)}"><td class="r num">${offset + i + 1}</td><td>${clubA(r.id)}${rivalChip(r.id)}${r.ded ? ` <span class="chip req" title="Points deducted">−${r.ded}</span>` : ""}</td><td class="r num">${r.p}</td><td class="r num">${r.gf - r.ga > 0 ? "+" : ""}${r.gf - r.ga}</td><td class="r num"><b>${r.pts}</b></td></tr>`).join("")}</tbody></table></div>`;
 }
 function zoneCls(key, pos) {
   const L = LG[key];
@@ -203,6 +211,7 @@ function nextMatchCard() {
   const tired = xi.filter(p => p.fit < 70).length, oop = S.lineup.filter((id, i) => id != null && FAM[P(id).pos][sl[i]] < .9).length, reg = regInfo(c);
   const team = T => `<div class="team">${crest(T, 46)}<b>${esc(T.name)}</b><span class="tiny muted">${T.country !== HOME ? COUNTRY[T.country].name + " · " : ""}${leagueName(T.lg)}</span>${formChips(formOf(T.id))}</div>`;
   return `<section class="card" style="--club:${c.color}"><div class="card-h"><h2>Next match</h2><span class="eyebrow">${esc(compLabel(fx))} · Week ${nx.day.w + 1}${fx.neutral ? " · Neutral venue" : fx.h === S.club ? " · Home" : " · Away"}</span></div>
+    ${rivalry(S.club, opp.id) ? `<p class="derby"><span class="chip rival r${rivalry(S.club, opp.id)}">${RIVAL_WORD[rivalry(S.club, opp.id)].toUpperCase()}</span> ${esc(rivalName(S.club, opp.id).replace(/^the /, "The "))} · your record ${recStr(h2hOf(c, opp.id))}. Win and the board, the fans and the dressing room will love it; lose and they won't forget.</p>` : ""}
     ${fx.ko ? `<p class="small muted" style="text-align:center">First leg: ${C(fx.a).short} ${fx.ko.aggA}–${fx.ko.aggH} ${C(fx.h).short}</p>` : ""}
     <div class="fixture">${team(H)}<div class="vs">v</div>${team(A)}</div>
     <div class="row small muted between"><span>Your XI · ${ARCH[S.me.arch].l}</span><span>${esc(opp.short)}'s likely XI · ${esc(coachOf(opp).name)}, ${ARCH[coachOf(opp).arch].l.toLowerCase()}</span></div>
@@ -313,7 +322,7 @@ function viewLeague() {
   const rows = t.map((r, i) => ({ ...r, pos: i + 1 }));
   const cols = [
     { k: "pos", l: "#", r: 1, v: r => r.pos, f: r => r.pos },
-    { k: "n", l: "Club", v: r => C(r.id).name, f: r => clubA(r.id) + (r.ded ? ` <span class="chip req" title="Points deducted">−${r.ded}</span>` : "") },
+    { k: "n", l: "Club", v: r => C(r.id).name, f: r => clubA(r.id) + rivalChip(r.id) + (r.ded ? ` <span class="chip req" title="Points deducted">−${r.ded}</span>` : "") },
     { k: "p", l: "P", r: 1, v: r => r.p, f: r => r.p }, { k: "w", l: "W", r: 1, v: r => r.w, f: r => r.w }, { k: "d", l: "D", r: 1, v: r => r.d, f: r => r.d }, { k: "l", l: "L", r: 1, v: r => r.l, f: r => r.l },
     { k: "gf", l: "GF", r: 1, v: r => r.gf, f: r => r.gf, cls: "hide-sm" }, { k: "ga", l: "GA", r: 1, v: r => r.ga, f: r => r.ga, cls: "hide-sm" },
     { k: "gd", l: "GD", r: 1, v: r => r.gf - r.ga, f: r => (r.gf - r.ga > 0 ? "+" : "") + (r.gf - r.ga) },
@@ -536,6 +545,7 @@ function modalClub(c) {
       <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · prefers ${coachOf(c).form} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
       <div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
     ${c.hist.length ? `<p class="small">Recent finishes: ${c.hist.slice(-6).reverse().map(h => `${seasonLabel(h.y)} ${ord(h.pos)} in ${leagueName(h.lg)}`).join(" · ")}</p>` : ""}
+    ${Object.keys(c.rivals || {}).length ? `<p class="small">Rivals: ${Object.entries(c.rivals).filter(([id]) => !C(+id).gone).map(([id, n]) => `${clubA(+id, { crest: false })} (${RIVAL_WORD[n].toLowerCase()}, ${recStr(h2hOf(c, +id))})`).join(" · ")}</p>` : ""}
     ${c.trophies.length ? `<p class="small">Honours: ${c.trophies.slice(-12).reverse().map(t => `${trophyName(t.t)} ${seasonLabel(t.y)}`).join(", ")}</p>` : ""}
     ${table("club-" + c.id, [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], ps)}</div>`;
 }

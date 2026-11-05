@@ -176,6 +176,7 @@ async function boot(data) {
   S = (data && data.S) || (DB.db ? await DB.get("career") : null);
   if (S && S.v === 4) migrate4(S);
   if (S && (S.v !== 5 || S.club == null)) S = null;
+  if (S && !S.rivalsDone) ensureRivals();
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }

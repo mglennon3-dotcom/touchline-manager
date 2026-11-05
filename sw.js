@@ -1,8 +1,8 @@
 /* Offline support: the game's own files are served from cache and refreshed in the background,
    so it opens with no connection and picks up new versions the next time it is online. */
-const VERSION = "touchline-5.0.0";
+const VERSION = "touchline-5.1.0";
 const FILES = ["./", "index.html", "app.css", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png",
-  "js/data.js", "js/world.js", "js/engine.js", "js/season.js", "js/market.js", "js/recruit.js", "js/story.js", "js/ui.js", "js/main.js"];
+  "js/data.js", "js/world.js", "js/engine.js", "js/season.js", "js/market.js", "js/recruit.js", "js/story.js", "js/rivals.js", "js/ui.js", "js/main.js"];
 const FONTS = "touchline-fonts";
 
 self.addEventListener("install", e => e.waitUntil(caches.open(VERSION).then(c => c.addAll(FILES)).then(() => self.skipWaiting())));
