@@ -1,11 +1,11 @@
 "use strict";
 /* Minute-by-minute match engine. */
-function sideRatings(on, ment, form) {
+function sideRatings(on, ment, form, co) {
   const N = FNORM[form];
   let a = 0, m = 0, d = 0;
   for (const o of on) { const e = eff(o.p, o.slot, o.fit), w = WT[o.slot]; a += e * w[0]; m += e * w[1]; d += e * w[2]; }
-  const k = MENT[ment].m;
-  return { att: a / N[0] * k[0], mid: m / N[1] * k[1], def: d / N[2] * k[2] };
+  const k = MENT[ment].m, ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1;
+  return { att: a / N[0] * k[0] * ca, mid: m / N[1] * k[1], def: d / N[2] * k[2] * cd };
 }
 function aiMent(c, opp, home) { const d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5); return d < -4 ? "def" : d > 4 ? "att" : "bal"; }
 
@@ -16,7 +16,7 @@ function makeSide(c, opp, home, auto) {
   const sl = slotsOf(f);
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));
-  return { club: c.id, form: f, ment, auto, on, bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, yel: {}, mins: {}, rt: null,
+  return { club: c.id, form: f, ment, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
 }
 /* fx: { comp, neutral, ko: {aggH, aggA} | null, needWinner } */
@@ -52,7 +52,7 @@ function step(M) {
   M.min++;
   const sd = [M.h, M.a];
   for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2));
-  for (const s of sd) if (!s.rt || M.min % 5 === 0) s.rt = sideRatings(s.on, s.ment, s.form);
+  for (const s of sd) if (!s.rt || M.min % 5 === 0) s.rt = sideRatings(s.on, s.ment, s.form, s.co);
   const hb = M.fx.neutral ? 1 : 1.035;
   const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
   const ph = rh.mid ** 2 / (rh.mid ** 2 + ra.mid ** 2), k = R() < ph ? 0 : 1, A = sd[k], D = sd[1 - k], rA = k ? ra : rh, rD = k ? rh : ra;
@@ -61,7 +61,10 @@ function step(M) {
     A.shots++;
     const pg = clamp(.135 * Math.pow(rA.att / Math.max(1, rD.def), 2), .03, .4);
     const sh = wpick(A.on, o => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[o.slot] * eff(o.p, o.slot, o.fit));
-    const gk = D.on.find(o => o.slot === "GK") || D.on[0], r = R();
+    const gk = D.on.find(o => o.slot === "GK") || D.on[0], r0 = R();
+    // The shooter's finishing and the keeper's shot-stopping move each chance either way (10 is neutral).
+    const shoQ = sh.p.pos === "GK" ? 2 : sh.p.at.sho, ssQ = gk && gk.p.pos === "GK" ? gk.p.at.ss : 2;
+    const r = r0 / ((.8 + .4 * shoQ / 20) * (1.2 - .4 * ssQ / 20));
     if (r < pg) {
       A.goals++; A.sot++;
       const others = A.on.filter(o => o !== sh);
@@ -153,5 +156,5 @@ function applyMatch(M) {
     if (league) { p.yc++; for (const [n, before, ban] of RULES.yellowBans) if (p.yc === n && frac < before) { p.sus += ban; if (isUser(C(p.club))) news(`${p.name} has reached ${n} yellow cards and is banned for ${ban} match${ban > 1 ? "es" : ""}.`); } }
   }
   for (const [id, games] of M.reds) { const p = P(id); p.s.rc++; p.sus += games; }
-  for (const id of M.inj) { const p = P(id); p.inj = R() < .1 ? ri(8, 20) : ri(1, 5); }
+  for (const id of M.inj) { const p = P(id); if (p) injure(p); }
 }

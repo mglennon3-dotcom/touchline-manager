@@ -87,25 +87,30 @@ const RULES = {
 /* ---------- the English pyramid you manage in, and the foreign top flights you compete with ---------- */
 const HOME = "ENG";
 const LG = {
-  E1:  { name: "Premier Division", c: "ENG", tier: 1, size: 20, rep: [92, 1.9], up: 0, down: 3, po: null },
-  E2:  { name: "First Division", c: "ENG", tier: 2, size: 24, rep: [62, .8], up: 2, down: 3, po: { type: "c", from: 3, to: 8 } },
-  E3:  { name: "Second Division", c: "ENG", tier: 3, size: 24, rep: [50, .7], up: 2, down: 4, po: { type: "std", from: 3, to: 6 } },
-  E4:  { name: "Third Division", c: "ENG", tier: 4, size: 24, rep: [40, .6], up: 3, down: 2, po: { type: "std", from: 4, to: 7 } },
-  E5:  { name: "National Division", c: "ENG", tier: 5, size: 24, rep: [32, .5], up: 1, down: 4, po: { type: "nl", from: 2, to: 7 } },
-  E6N: { name: "National Division North", c: "ENG", tier: 6, size: 24, rep: [25, .5], up: 1, down: 4, po: { type: "nl", from: 2, to: 7 }, half: "N" },
-  E6S: { name: "National Division South", c: "ENG", tier: 6, size: 24, rep: [25, .5], up: 1, down: 4, po: { type: "nl", from: 2, to: 7 }, half: "S" },
-  ESP: { name: "Primera", c: "ESP", tier: 1, size: 20, rep: [92, 1.9], foreign: true },
-  GER: { name: "Erste Liga", c: "GER", tier: 1, size: 20, rep: [91, 1.9], foreign: true },
-  ITA: { name: "Serie Prima", c: "ITA", tier: 1, size: 20, rep: [91, 1.9], foreign: true },
-  FRA: { name: "Division Une", c: "FRA", tier: 1, size: 20, rep: [87, 1.8], foreign: true },
-  POR: { name: "Primeira Divisão", c: "POR", tier: 1, size: 20, rep: [81, 2], foreign: true },
-  NED: { name: "Hoofdklasse", c: "NED", tier: 1, size: 20, rep: [80, 2], foreign: true },
-  BEL: { name: "Pro Division", c: "BEL", tier: 1, size: 20, rep: [75, 2], foreign: true },
+  E1:  { name: "Premier Division", c: "ENG", tier: 1, size: 20, rep: [81, 1.3], up: 0, down: 3, po: null },
+  E2:  { name: "First Division", c: "ENG", tier: 2, size: 24, rep: [56, .5], up: 2, down: 3, po: { type: "c", from: 3, to: 8 } },
+  E3:  { name: "Second Division", c: "ENG", tier: 3, size: 24, rep: [41, .45], up: 2, down: 4, po: { type: "std", from: 3, to: 6 } },
+  E4:  { name: "Third Division", c: "ENG", tier: 4, size: 24, rep: [31, .3], up: 3, down: 2, po: { type: "std", from: 4, to: 7 } },
+  E5:  { name: "National Division", c: "ENG", tier: 5, size: 24, rep: [24, .3], up: 1, down: 4, po: { type: "nl", from: 2, to: 7 } },
+  E6N: { name: "National Division North", c: "ENG", tier: 6, size: 24, rep: [17, .3], up: 1, down: 4, po: { type: "nl", from: 2, to: 7 }, half: "N" },
+  E6S: { name: "National Division South", c: "ENG", tier: 6, size: 24, rep: [17, .3], up: 1, down: 4, po: { type: "nl", from: 2, to: 7 }, half: "S" },
 };
+// Foreign countries: three simulated divisions of 20, three up and three down between each.
+const FOREIGN_DEF = { ESP: ["Primera", "Segunda", "Tercera", 80], GER: ["Erste Liga", "Zweite Liga", "Dritte Liga", 79], ITA: ["Serie Prima", "Serie Seconda", "Serie Terza", 79],
+  FRA: ["Division Une", "Division Deux", "Division Trois", 75], POR: ["Primeira Divisão", "Segunda Divisão", "Terceira Divisão", 70], NED: ["Hoofdklasse", "Eerste Klasse", "Tweede Klasse", 69], BEL: ["Pro Division", "Challenger Division", "Nationale Division", 64] };
+for (const [c, [n1, n2, n3, top]] of Object.entries(FOREIGN_DEF)) {
+  LG[c + "1"] = { name: n1, c, tier: 1, size: 20, rep: [top, 1.3], up: 0, down: 3, foreign: true };
+  LG[c + "2"] = { name: n2, c, tier: 2, size: 20, rep: [top - 28, .5], up: 3, down: 3, foreign: true };
+  LG[c + "3"] = { name: n3, c, tier: 3, size: 20, rep: [top - 40, .4], up: 3, down: 0, foreign: true };
+}
 const ENG_LGS = ["E1", "E2", "E3", "E4", "E5", "E6N", "E6S"];
 const FOREIGN_LGS = Object.keys(LG).filter(k => LG[k].foreign);
+const TOP_LGS = ["E1", ...Object.keys(FOREIGN_DEF).map(c => c + "1")];
 const LG_ABOVE = { E2: "E1", E3: "E2", E4: "E3", E5: "E4", E6N: "E5", E6S: "E5" };
 const LG_BELOW = { E1: "E2", E2: "E3", E3: "E4", E4: "E5" };
+for (const c of Object.keys(FOREIGN_DEF)) { LG_ABOVE[c + "2"] = c + "1"; LG_ABOVE[c + "3"] = c + "2"; LG_BELOW[c + "1"] = c + "2"; LG_BELOW[c + "2"] = c + "3"; }
+// Squad strength follows reputation: Premier Division stars reach 17–19 out of 20; the bottom of the pyramid sits around 5.
+const lvlForRep = rep => 45.5 + rep * .42;  // calibrated so the average professional rates about 10
 const roundsOf = k => (LG[k].size - 1) * 2;
 
 const COUNTRIES = [
@@ -185,12 +190,58 @@ const CAL = {
   FA: [[2], [6], [10], [16], [20], [25], [29], [34], [38]],
   LC: [[1], [5], [9], [13], [17], [21, 23], [27]],
   contGroups: [3, 7, 10, 12, 14, 18],
-  contKO: [[22, 24], [26, 28], [30, 32], [39]],
+  contKO: { CC: [[22, 24], [26, 28], [30, 32], [39]], CS: [[9, 12], [22, 24], [30, 32], [39]], CT: [[11, 14], [23, 25], [31, 33], [40]] },
   po: { c: [[38], [39, 40], [41]], std: [[39, 40], [41]], nl: [[38], [39], [41]] },
 };
 const CUPS = {
   FA: { name: "National Cup", rounds: ["Fourth qualifying round", "First round", "Second round", "Third round", "Fourth round", "Fifth round", "Quarter-finals", "Semi-finals", "Final"] },
   LC: { name: "League Cup", rounds: ["First round", "Second round", "Third round", "Fourth round", "Quarter-finals", "Semi-finals", "Final"] },
 };
-const CONT = { CC: { name: "Champions Cup", short: "CC", prize: [16e6, 2.5e6, 12e6] }, CS: { name: "Continental Shield", short: "CS", prize: [5e6, 1e6, 5e6] } };
+const CONT = { CC: { name: "Champions Cup", short: "CC", prize: [16e6, 2.5e6, 12e6] }, CS: { name: "Continental Shield", short: "CS", prize: [5e6, 1e6, 5e6] }, CT: { name: "Continental Trophy", short: "CT", prize: [2e6, .5e6, 2e6] } };
 const CONT_ROUNDS = ["Round of 16", "Quarter-finals", "Semi-finals", "Final"];
+
+/* ---------- player attributes, out of 20 (10 is average, 20 world class) ---------- */
+const ATTRS = { out: [["sho", "Shooting"], ["pas", "Passing"], ["tac", "Tackling"], ["str", "Strength"], ["pac", "Pace"]], gk: [["ss", "Shot-stopping"], ["lp", "Long passing"], ["sp", "Short passing"]] };
+// How much each attribute counts toward a role's rating (weights sum to 1).
+const AW = {
+  CB: { sho: .05, pas: .1, tac: .4, str: .3, pac: .15 }, FB: { sho: .05, pas: .2, tac: .3, str: .15, pac: .3 },
+  DM: { sho: .05, pas: .3, tac: .35, str: .2, pac: .1 }, CM: { sho: .15, pas: .4, tac: .2, str: .1, pac: .15 },
+  AM: { sho: .3, pas: .4, tac: .05, str: .05, pac: .2 }, W: { sho: .25, pas: .25, tac: .05, str: .05, pac: .4 },
+  ST: { sho: .45, pas: .15, tac: 0, str: .2, pac: .2 }, GK: { ss: .7, lp: .15, sp: .15 },
+};
+// Typical shape of each position: centre-backs rarely shoot well, wingers rarely tackle.
+const AOFF = {
+  CB: { sho: -4, pas: -1, tac: 2, str: 2, pac: -.5 }, FB: { sho: -3, pas: 0, tac: 1, str: -1, pac: 2 }, DM: { sho: -2, pas: 1, tac: 2, str: 1, pac: -1 },
+  CM: { sho: 0, pas: 2, tac: 0, str: 0, pac: 0 }, AM: { sho: 1, pas: 2, tac: -3, str: -2, pac: .5 }, W: { sho: .5, pas: .5, tac: -3, str: -2, pac: 3 },
+  ST: { sho: 2, pas: -1, tac: -4, str: 1, pac: 1 }, GK: { ss: 1, lp: -1, sp: -1 },
+};
+const DECLINE = { pac: 1.8, str: 1.2, tac: .8, sho: .7, pas: .5, ss: 1, lp: .8, sp: .8 };  // pace goes first, passing last
+const r20 = ovr => (ovr - 30) / 3, o100 = r => 30 + 3 * r;   // internal 100-scale used by the engine and valuations
+
+/* ---------- coaches ---------- */
+const COACH_KEYS = [["off", "Attack"], ["def", "Defence"], ["rec", "Recruitment"], ["dev", "Development"]];
+const ARCH = {
+  bal: { l: "Balanced", key: null, d: "Even across all four." },
+  off: { l: "Attacking coach", key: "off", d: "Teams create and finish more chances." },
+  def: { l: "Defensive organiser", key: "def", d: "Teams concede fewer and better chances." },
+  rec: { l: "Recruiter", key: "rec", d: "More recruiting hours, sharper scouting, stronger relationships with prospects." },
+  dev: { l: "Developer", key: "dev", d: "Young players improve faster and get closer to their potential." },
+};
+const COACH_EFFECT = {
+  off: "Each point above 10 adds about 0.8% to your attack; below 10 takes it away.",
+  def: "Each point above 10 adds about 0.8% to your defence.",
+  rec: "Adds recruiting hours, sharpens potential estimates and builds relationships faster.",
+  dev: "Raises the weekly chance that players improve, from 0.6× at 1 to 1.4× at 20.",
+};
+
+/* ---------- injuries ---------- */
+// [cumulative share, min weeks, max weeks, examples]. Season-ending is rare; career-ending rarer still.
+const INJURIES = [
+  [.70, 1, 3, ["tight hamstring", "dead leg", "ankle knock", "groin strain", "calf strain", "back spasm"]],
+  [.90, 4, 7, ["torn hamstring", "ankle ligament damage", "calf tear", "thigh strain"]],
+  [.979, 8, 24, ["knee ligament damage", "fractured foot", "dislocated shoulder", "broken wrist", "torn adductor"]],
+  [.9992, 30, 45, ["ruptured cruciate ligament", "broken leg", "ruptured Achilles tendon"]],
+  [1, 0, 0, ["career-ending knee injury"]],
+];
+// Chance a player decides this is his last season, by age.
+const RETIRE_AGE = { 30: .03, 31: .05, 32: .08, 33: .14, 34: .22, 35: .32, 36: .45, 37: .6, 38: .75, 39: .9 };

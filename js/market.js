@@ -148,6 +148,7 @@ function releasePlayer(p) {
 }
 function renewTerms(p) {
   const c = me();
+  if (p.retiring === 1) return { happy: false, wage: p.wage, reason: "He has decided to retire at the end of the season." };
   const happy = p.mood >= 45 && !p.req;
   const wage = Math.round(wageDemand(p, c.rep) * (p.mood < 60 ? 1.25 : 1.05) / 1000) * 1000;
   return { happy, wage, reason: happy ? "" : p.req ? "He has asked to leave and won't discuss a new deal." : "He is unhappy and won't commit his future right now. More minutes or better results might change that." };
@@ -164,7 +165,8 @@ function assessSCR() {
       if (R() < s.risk) { schemeBad = true; s.found = true; news(`The league rules ${c.name}'s ${s.what} was not at fair market value. ${money(s.amt)} is struck from their accounts.`, isUser(c) || c.lg === me().lg || c.lg === "E1", "finance"); }
     }
     const adj = schemeBad ? cost / Math.max(1, rev - sum(c.schemes.filter(s => s.y === S.year && s.found), s => s.amt)) : ratio;
-    if (adj > RULES.scrSporting) {
+    // Points deductions are an English-league sanction; foreign clubs only pay the levy.
+    if (adj > RULES.scrSporting && !isForeign(c)) {
       const pts = Math.min(15, 6 + Math.floor((adj - RULES.scrSporting) / .05) + (schemeBad ? 2 : 0));
       S.cases.push({ club: c.id, ratio: adj, pts, hearing: ri(6, 20), status: "charged", y: S.year + 1 });
       if (!isForeign(c)) news(`${c.name} charged with breaching the Squad Cost Ratio (${pct(adj)} against a ${pct(RULES.scrLimit)} limit). A hearing will follow next season.`, true, "finance");

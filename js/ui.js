@@ -3,7 +3,7 @@
 const UI = { page: "home", sel: null, modal: null, sort: {}, menu: false, busy: false, toastT: 0,
   lg: null, cupK: "FA", tab: "search", tf: { pos: "ALL", age: 40, min: 0, fee: 0, lg: "ALL" }, sqf: "ALL",
   yf: { reg: "ENG", pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5 };
-const PAGES = [["home", "Home"], ["squad", "Squad"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
+const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
 
 /* ---------- atoms ---------- */
 function crest(c, sz = 40) {
@@ -18,9 +18,19 @@ const moodWord = m => m >= 70 ? ["Happy", "good"] : m >= 50 ? ["Content", ""] : 
 const moodTag = p => { const [w, k] = moodWord(p.mood); return `<span class="${k}">${w}</span>`; };
 const starHtml = (lo, hi) => `<span class="stars" title="${lo === hi ? lo : lo + "–" + hi} stars">${"★".repeat(lo)}${"<span class='muted'>★</span>".repeat(hi - lo)}<span class="un">${"★".repeat(5 - hi)}</span></span>`;
 const trophyName = t => LG[t] ? leagueName(t) : t === "FA" ? CUPS.FA.name : t === "LC" ? CUPS.LC.name : CONT[t] ? CONT[t].name : t;
+/* Ratings out of 20. Exact for players you know; a range for everyone else until scouted. */
+const aCls = v => v >= 17 ? "a4" : v >= 13 ? "a3" : v >= 8 ? "a2" : "a1";
+function ratingHtml(p) { const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="Not fully scouted">${lo}–${hi}</span>`; }
+function attrStrip(p) {
+  const lvl = scoutLevel(p);
+  if (lvl === 0) return '<span class="muted tiny">Scout to see</span>';
+  return `<span class="atts">${attrKeys(p.pos).map(k => { const [lo, hi] = attrView(p, k); return `<span class="at ${aCls((lo + hi) / 2)}" title="${ATTRS[p.pos === "GK" ? "gk" : "out"].find(a => a[0] === k)[1]}">${k.toUpperCase()} ${lo === hi ? lo : lo + "–" + hi}</span>`; }).join("")}</span>`;
+}
+function potHtml(p) { const s = potStars(p); return s == null ? '<span class="muted tiny">?</span>' : starHtml(s, s); }
 function statusChips(p, c) {
   let s = "";
-  if (p.inj) s += `<span class="chip inj">INJ ${p.inj}w</span> `;
+  if (p.inj) s += `<span class="chip inj" title="${esc(p.injT || "Injured")}">${p.inj >= 30 ? "OUT FOR SEASON" : p.inj >= 8 ? "INJ " + Math.round(p.inj / 4.3) + "m" : "INJ " + p.inj + "w"}</span> `;
+  if (p.retiring === 1) s += `<span class="chip hg" title="Retiring at the end of the season">RETIRING</span> `;
   if (p.sus) s += `<span class="chip sus">BAN ${p.sus}</span> `;
   if (p.loan) s += `<span class="chip list" title="On loan from ${esc(C(p.loan.from).name)}">LOAN</span> `;
   if (p.req) s += `<span class="chip req">WANTS OUT</span> `;
@@ -97,7 +107,7 @@ function viewStart() {
   const key = UI.startL, L = S.leagues[key];
   const rows = L.clubs.map(C).map(c => ({ c, lvl: clubLevel(c) })).sort((a, b) => b.lvl - a.lvl);
   rows.forEach((r, i) => r.exp = i + 1);
-  const html = `<div class="wrap gut"><section class="hero"><div class="eyebrow">Seven English divisions · 164 clubs · seven foreign leagues to trade with and play in Europe</div>
+  const html = `<div class="wrap gut"><section class="hero"><div class="eyebrow">Seven English divisions · 164 clubs · seven foreign countries with three divisions each</div>
     <h1>Touchline <span>Manager</span></h1>
     <p>Take any club in the English pyramid, from the Premier Division down to the National Division North and South. Win promotion, survive the cost rules, recruit fifteen-year-olds against academies across Europe, and keep the board on side for fifty seasons.</p></section>
     <div class="card"><div class="card-h"><h2>Choose your club</h2>
@@ -106,20 +116,21 @@ function viewStart() {
       ${table("start-" + key, [
         { k: "n", l: "Club", v: r => r.c.name, f: r => `<span class="club-in">${crest(r.c, 18)} <b>${esc(r.c.name)}</b></span>` },
         { k: "reg", l: "Region", f: r => r.c.region, cls: "hide-sm" },
-        { k: "lvl", l: "Squad", r: 1, v: r => r.lvl, f: r => r.lvl.toFixed(1) },
+        { k: "lvl", l: "Squad", r: 1, v: r => r.lvl, f: r => r20(r.lvl).toFixed(1) },
+        { k: "co", l: "Coach", f: r => esc(ARCH[r.c.coach.arch].l), cls: "hide-sm" },
         { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep },
         { k: "cash", l: "Cash", r: 1, v: r => r.c.cash, f: r => money(r.c.cash), cls: "hide-sm" },
         { k: "acad", l: "Academy", r: 1, v: r => r.c.academy, f: r => r.c.academy + "/10", cls: "hide-sm" },
         { k: "own", l: "Owner", f: r => OWNER[r.c.owner].l, cls: "hide-sm" },
         { k: "exp", l: "Board target", f: r => expText(r.exp, key) },
-        { k: "go", l: "", f: r => `<button class="btn sm" data-a="pick" data-v="${r.c.id}">Manage</button>` },
+        { k: "go", l: "", f: r => `<button class="btn sm" data-a="choose" data-v="${r.c.id}">Manage</button>` },
       ], rows)}
       <p class="small muted" style="margin-top:10px">All clubs and players are fictional. Your career saves in this browser; export a save file from the History page to keep a backup.</p></div></div>`;
   S = keep; return html;
 }
 function leagueRules(key) {
   const L = LG[key];
-  if (L.foreign) return `${L.size} clubs. Results are simulated from club strength; the top four go to the Champions Cup and the next four to the Continental Shield.`;
+  if (L.foreign) return `${L.size} clubs, simulated from club strength. ` + (L.tier === 1 ? "Top four reach the Champions Cup, 5th and 6th the Continental Shield, 7th and 8th the Continental Trophy; bottom three relegated." : L.tier === 2 ? "Top three promoted, bottom three relegated." : "Top three promoted.");
   const po = L.po ? { c: `${ord(3)} and ${ord(4)} go straight to two-legged semi-finals; ${ord(5)}–${ord(8)} play one-off quarter-finals`, std: `${ord(L.po.from)}–${ord(L.po.to)} play two-legged semi-finals`, nl: `${ord(2)} and ${ord(3)} host one-off semi-finals; ${ord(4)}–${ord(7)} play one-off quarter-finals` }[L.po.type] + ", final at a neutral ground" : "";
   return `${L.size} clubs, ${roundsOf(key)} matches. ` + (L.tier === 1 ? `Top four reach the Champions Cup; bottom ${L.down} relegated.` : `Top ${L.up} promoted automatically; ${po}. Bottom ${L.down} ${L.tier === 6 ? "drop out to the regional leagues" : "relegated"}.`);
 }
@@ -165,12 +176,12 @@ function miniTable(L, rows, offset) {
 }
 function zoneCls(key, pos) {
   const L = LG[key];
-  if (L.tier === 1) return pos <= 4 ? "z-cc" : (pos <= (L.foreign ? 8 : 6)) ? "z-cs" : !L.foreign && pos > L.size - L.down ? "z-down" : "";
+  if (L.tier === 1) return pos <= 4 ? "z-cc" : pos <= (L.foreign ? 8 : 6) ? "z-cs" : pos > L.size - L.down ? "z-down" : "";
   return pos <= L.up ? "z-cc" : L.po && pos >= L.po.from && pos <= L.po.to ? "z-po" : pos > L.size - L.down ? "z-down" : "";
 }
 function zoneLegend(key) {
   const L = LG[key];
-  if (L.tier === 1) return `<span><i style="background:var(--zone-cc)"></i>Champions Cup</span><span><i style="background:var(--zone-cs)"></i>Continental Shield${L.foreign ? "" : " (cup winners also qualify)"}</span>${L.foreign ? "" : '<span><i style="background:var(--zone-down)"></i>Relegation</span>'}`;
+  if (L.tier === 1) return `<span><i style="background:var(--zone-cc)"></i>Champions Cup</span><span><i style="background:var(--zone-cs)"></i>Shield and Trophy${L.foreign ? "" : " (the two cup winners also qualify)"}</span><span><i style="background:var(--zone-down)"></i>Relegation</span>`;
   return `<span><i style="background:var(--zone-cc)"></i>Automatic promotion</span><span><i style="background:var(--zone-po)"></i>Play-offs (one more promoted)</span><span><i style="background:var(--zone-down)"></i>${L.tier === 6 ? "Drop out of the game" : "Relegation"}</span>`;
 }
 function nextMatchCard() {
@@ -179,7 +190,7 @@ function nextMatchCard() {
   const fx = nx.fx, H = C(fx.h), A = C(fx.a), opp = fx.h === S.club ? A : H;
   const formOf = id => { const r = standings(S.leagues[C(id).lg]).find(x => x.id === id); return r ? r.form : []; };
   const mr = previewRatings(c, opp, fx.h === S.club), orr = previewRatings(opp, c, fx.a === S.club);
-  const cmp = (l, x, y) => `<div class="cmp-row"><span class="lab eyebrow">${l}</span><span class="num">${x.toFixed(1)}</span><span class="split"><span class="a" style="width:${x / (x + y) * 100}%"></span><span class="b" style="width:${y / (x + y) * 100}%"></span></span><span class="num" style="text-align:right">${y.toFixed(1)}</span></div>`;
+  const cmp = (l, x, y) => `<div class="cmp-row"><span class="lab eyebrow">${l}</span><span class="num">${r20(x).toFixed(1)}</span><span class="split"><span class="a" style="width:${x / (x + y) * 100}%"></span><span class="b" style="width:${y / (x + y) * 100}%"></span></span><span class="num" style="text-align:right">${r20(y).toFixed(1)}</span></div>`;
   fixUserLineup();
   const xi = S.lineup.map(id => S.players[id]).filter(Boolean), sl = slotsOf(S.formation);
   const tired = xi.filter(p => p.fit < 70).length, oop = S.lineup.filter((id, i) => id != null && FAM[P(id).pos][sl[i]] < .9).length, reg = regInfo(c);
@@ -187,7 +198,7 @@ function nextMatchCard() {
   return `<section class="card" style="--club:${c.color}"><div class="card-h"><h2>Next match</h2><span class="eyebrow">${esc(compLabel(fx))} · Week ${nx.day.w + 1}${fx.neutral ? " · Neutral venue" : fx.h === S.club ? " · Home" : " · Away"}</span></div>
     ${fx.ko ? `<p class="small muted" style="text-align:center">First leg: ${C(fx.a).short} ${fx.ko.aggA}–${fx.ko.aggH} ${C(fx.h).short}</p>` : ""}
     <div class="fixture">${team(H)}<div class="vs">v</div>${team(A)}</div>
-    <div class="row small muted between"><span>Your XI</span><span>${esc(opp.short)}'s likely XI</span></div>
+    <div class="row small muted between"><span>Your XI · ${ARCH[S.me.arch].l}</span><span>${esc(opp.short)}'s likely XI · ${esc(coachOf(opp).name)}, ${ARCH[coachOf(opp).arch].l.toLowerCase()}</span></div>
     <div class="cmp">${cmp("Attack", mr.att, orr.att)}${cmp("Midfield", mr.mid, orr.mid)}${cmp("Defence", mr.def, orr.def)}</div>
     <div class="row between" style="margin-bottom:10px"><label class="row small">Formation <select id="nx-form" data-c="form">${FORM_KEYS.map(f => `<option ${f === S.formation ? "selected" : ""}>${f}</option>`).join("")}</select></label>
       <span class="seg" role="group" aria-label="Mentality">${Object.entries(MENT).map(([k, v]) => `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}">${v.l}</button>`).join("")}</span></div>
@@ -195,7 +206,7 @@ function nextMatchCard() {
     ${tired ? `<p class="warn small">${tired} of your XI ${tired > 1 ? "are" : "is"} below 70 fitness.</p>` : ""}${oop ? `<p class="warn small">${oop} player${oop > 1 ? "s are" : " is"} out of position.</p>` : ""}
     <div class="row" style="margin-top:6px"><button class="btn primary" data-a="play" data-v="match">${nx.di === S.di ? (S.set.live ? "Kick off" : "Play match") : "Play to match day"}</button><button class="btn" data-a="go" data-v="tactics">Pick the team</button></div></section>`;
 }
-function previewRatings(c, opp, home) { const s = makeSide(c, opp, home, true); return sideRatings(s.on, s.ment, s.form); }
+function previewRatings(c, opp, home) { const s = makeSide(c, opp, home, true); return sideRatings(s.on, s.ment, s.form, s.co); }
 function seasonReview() {
   const o = S.seasonOver, c = me();
   const tro = o.won.map(trophyName);
@@ -203,7 +214,7 @@ function seasonReview() {
     <div class="big" style="margin:8px 0 6px">${ord(o.pos)} in the ${leagueName(o.lg)}</div>
     <div class="prose"><p>The board's target was ${expText(o.exp, o.lg).toLowerCase()} (${ord(o.exp)}). ${tro.length ? `Trophies: <b>${tro.join(", ")}</b>.` : ""}</p>
     ${o.moved === "up" ? `<p class="good"><b>Promoted!</b> Next season you play in the ${leagueName(o.to)}. Income rises sharply.</p>` : o.moved === "down" ? `<p class="bad"><b>Relegated</b> to the ${leagueName(o.to)}. Income falls; relegation clauses cut some wages.</p>` : ""}
-    <p>Board reaction: <b class="${o.board >= 0 ? "good" : "bad"}">${o.board >= 0 ? "+" : ""}${o.board}</b>. ${S.qual.CC.includes(S.club) ? "You qualify for the Champions Cup." : S.qual.CS.includes(S.club) ? "You qualify for the Continental Shield." : ""}</p>
+    <p>Board reaction: <b class="${o.board >= 0 ? "good" : "bad"}">${o.board >= 0 ? "+" : ""}${o.board}</b>. You earned <b>${o.earned || 1} coaching point${(o.earned || 1) > 1 ? "s" : ""}</b> to spend on the Manager page. ${S.qual.CC.includes(S.club) ? "You qualify for the Champions Cup." : S.qual.CS.includes(S.club) ? "You qualify for the Continental Shield." : S.qual.CT.includes(S.club) ? "You qualify for the Continental Trophy." : ""}</p>
     <p class="small muted">Over the summer players aged a year, veterans retired, loans ended and your youth recruits joined the academy. Contracts that ran out have ended.</p></div>
     <div class="row" style="margin-top:12px"><button class="btn" data-a="seenreview">Got it</button><button class="btn" data-a="go" data-v="history">History</button></div></section>`;
 }
@@ -228,8 +239,9 @@ function viewSquad() {
     { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>${xi.has(p.id) ? ' <span class="chip xi">XI</span>' : ""}` },
     { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
     { k: "nat", l: "Nat", v: p => p.nat, f: p => p.nat, cls: "hide-sm" },
-    { k: "ovr", l: "Ovr", r: 1, v: p => p.ovr, f: p => `<b>${p.ovr}</b>` },
-    { k: "pot", l: "Pot", r: 1, v: p => p.pot, f: p => `<span class="muted">${p.pot}</span>` },
+    { k: "ovr", l: "Rating", r: 1, v: p => p.ovr, f: p => ratingHtml(p) },
+    { k: "pot", l: "Potential", v: p => potStars(p) || 0, f: p => potHtml(p), cls: "hide-sm" },
+    { k: "att", l: "Attributes", f: p => attrStrip(p), cls: "hide-sm" },
     { k: "fit", l: "Fit", v: p => p.fit, f: p => fitBar(p.fit) },
     { k: "mood", l: "Mood", v: p => p.mood, f: p => moodTag(p) },
     { k: "app", l: "Apps", r: 1, v: p => p.s.app, f: p => p.s.app },
@@ -244,8 +256,8 @@ function viewSquad() {
     <span class="chips" role="group" aria-label="Filter">${[["ALL", "Everyone"], ["SEN", "Seniors (21+)"], ["U21", "Under-21"]].map(([k, l]) => `<button data-a="sqf" data-v="${k}" aria-pressed="${UI.sqf === k}">${l}</button>`).join("")}</span></div>
     <div class="reg" style="margin-bottom:10px"><span>Registered seniors <b class="${reg.seniors > RULES.squadMax ? "bad" : ""}">${reg.seniors}/${RULES.squadMax}</b></span><span>Non-homegrown <b class="${reg.nonHG > RULES.nonHGMax ? "bad" : ""}">${reg.nonHG}/${RULES.nonHGMax}</b></span><span>Under-21s <b>${reg.u21}</b> (no limit)</span><span>Loans in <b>${reg.loansIn}/${RULES.loansIn}</b></span><span>Wage bill <b>${perWeek(sum(c.squad, id => P(id).wage))}</b></span></div>
     ${table("squad", cols, ps, { sort: { k: "pos", d: 1 } })}
-    <p class="hint" style="margin-top:8px">Homegrown (HG) means three seasons at an English club before turning 21. Open a player to renew, loan out, list, sell or release him.</p></section>
-    <section class="card"><div class="card-h"><h2>Out on loan</h2></div>${table("loanout", [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Ovr", r: 1, f: p => `<b>${p.ovr}</b>` }, { k: "c", l: "At", f: p => clubA(p.club, { flag: 1 }) }, { k: "app", l: "Apps", r: 1, f: p => p.s.app }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "pt", l: "Minutes", f: p => `<span class="bar"><i style="width:${p.pt * 100}%"></i></span>` }], out, { empty: "Nobody is out on loan. Young players develop faster when they play: loan them out from their profile during a window." })}</section></div>`;
+    <p class="hint" style="margin-top:8px">Ratings are out of 20: 10 is average, 20 world class. Potential is your scouts' estimate, not a promise: it depends on minutes, form, happiness and your Development rating. Homegrown (HG) means three seasons at an English club before turning 21.</p></section>
+    <section class="card"><div class="card-h"><h2>Out on loan</h2></div>${table("loanout", [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "c", l: "At", f: p => clubA(p.club, { flag: 1 }) }, { k: "app", l: "Apps", r: 1, f: p => p.s.app }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "pt", l: "Minutes", f: p => `<span class="bar"><i style="width:${p.pt * 100}%"></i></span>` }], out, { empty: "Nobody is out on loan. Young players develop faster when they play: loan them out from their profile during a window." })}</section></div>`;
 }
 
 /* ---------- tactics ---------- */
@@ -256,7 +268,7 @@ function viewTactics() {
     const p = S.players[S.lineup[i]], sel = UI.sel && UI.sel.slot === i;
     if (!p) return `<button class="slot empty ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}"><span class="disc">${role}</span><span class="nm">Empty</span></button>`;
     const f = FAM[p.pos][role];
-    return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(p.ovr * f)}</span><span class="nm">${esc(sur(p))}</span><span class="fb"><i style="width:${p.fit}%;background:${fitColor(p.fit)}"></i></span></button>`;
+    return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(slotRating(p, role))}</span><span class="nm">${esc(sur(p))}</span><span class="fb"><i style="width:${p.fit}%;background:${fitColor(p.fit)}"></i></span></button>`;
   }).join("");
   const lines = `<svg class="lines" viewBox="0 0 68 96" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="var(--chalk)" stroke-width=".4"><rect x="2" y="2" width="64" height="92"/><line x1="2" y1="48" x2="66" y2="48"/><circle cx="34" cy="48" r="7"/><rect x="16" y="2" width="36" height="14"/><rect x="26" y="2" width="16" height="5"/><rect x="16" y="80" width="36" height="14"/><rect x="26" y="89" width="16" height="5"/></svg>`;
   const ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
@@ -268,8 +280,8 @@ function viewTactics() {
     <div class="card"><h3 style="margin-bottom:8px">Training focus</h3><div class="train">${Object.entries(TRAIN).map(([k, t]) => `<button data-a="train" data-v="${k}" aria-pressed="${S.training === k}"><b>${t.l}</b><span class="tiny muted">${t.d}</span></button>`).join("")}</div>
       <p class="hint" style="margin-top:8px">A full match costs an outfield player about 18 fitness. Midweek rounds and cup ties mean rotating.</p></div></div>
     <section class="card"><div class="card-h"><h2>Selection</h2><span class="small muted">XI, then the nine on the bench (5 substitutions allowed)</span></div>
-    <div class="tbl-wrap"><table><thead><tr><th></th><th>Pos</th><th>Name</th><th class="r">Age</th><th class="r">Ovr</th><th>Fit</th><th>Mood</th></tr></thead><tbody>
-    ${ps.map(p => `<tr class="click ${UI.sel && UI.sel.pid === p.id ? "sel" : ""}" data-a="pick-p" data-v="${p.id}"><td>${xi.has(p.id) ? '<span class="chip xi">XI</span>' : bench.has(p.id) ? '<span class="chip hg">SUB</span>' : ""}</td><td><span class="pos">${p.pos}</span></td><td>${esc(p.name)} ${statusChips(p)}</td><td class="r num">${p.age}</td><td class="r num"><b>${p.ovr}</b></td><td>${fitBar(p.fit)} <span class="tiny num">${Math.round(p.fit)}</span></td><td>${moodTag(p)}</td></tr>`).join("")}
+    <div class="tbl-wrap"><table><thead><tr><th></th><th>Pos</th><th>Name</th><th class="r">Age</th><th class="r">Rating</th><th>Fit</th><th>Mood</th></tr></thead><tbody>
+    ${ps.map(p => `<tr class="click ${UI.sel && UI.sel.pid === p.id ? "sel" : ""}" data-a="pick-p" data-v="${p.id}"><td>${xi.has(p.id) ? '<span class="chip xi">XI</span>' : bench.has(p.id) ? '<span class="chip hg">SUB</span>' : ""}</td><td><span class="pos">${p.pos}</span></td><td>${esc(p.name)} ${statusChips(p)}</td><td class="r num">${p.age}</td><td class="r num">${ratingHtml(p)}</td><td>${fitBar(p.fit)} <span class="tiny num">${Math.round(p.fit)}</span></td><td>${moodTag(p)}</td></tr>`).join("")}
     </tbody></table></div></section></div>`;
 }
 
@@ -324,12 +336,12 @@ function koRounds(comp) {
   return comp.rounds.map(rd => rd.ties ? `<div><h3 style="margin-bottom:6px">${rd.name}${rd.legs === 2 ? ' <span class="tiny muted">two legs</span>' : ""}</h3><div class="ties">${rd.ties.map(tieHtml).join("")}</div></div>` : "").join("") || '<p class="muted">Not drawn yet.</p>';
 }
 function viewCups() {
-  const keys = ["FA", "LC", "CC", "CS", ...Object.keys(S.ko).filter(k => k.startsWith("PO"))];
+  const keys = ["FA", "LC", "CC", "CS", "CT", ...Object.keys(S.ko).filter(k => k.startsWith("PO"))];
   const k = keys.includes(UI.cupK) ? UI.cupK : "FA", comp = S.ko[k];
-  const about = { FA: "All seven divisions. Non-league clubs start in the fourth qualifying round, the Second and Third Divisions join in the first round, and the top two divisions in the third. One match per tie, extra time and penalties, neutral final. The winner earns a Continental Shield place, passing to the runner-up if the winner already qualifies.", LC: "The top four divisions. Clubs in Europe join in the third round. Two-legged semi-finals. The winner earns a Continental Shield place if not already qualified.", CC: "The top four from England and seven other leagues. Eight groups of four, no two clubs from the same country in a group. Group winners meet runners-up in a two-legged round of 16; one-off final.", CS: "Each country's next four clubs, plus England's two domestic cup winners. Same format as the Champions Cup." }[k] || leagueRules(comp.lg);
+  const about = { FA: "All seven divisions. Non-league clubs start in the fourth qualifying round, the Second and Third Divisions join in the first round, and the top two divisions in the third. One match per tie, extra time and penalties, neutral final. The winner earns a Continental Shield place, passing to the runner-up if the winner already qualifies.", LC: "The top four divisions. Clubs in Europe join in the third round. Two-legged semi-finals. The winner earns a Continental Shield place if not already qualified.", CC: "The top four from England and seven other leagues. Eight groups of four, no two clubs from the same country in a group. Group winners meet runners-up in a two-legged round of 16; one-off final.", CS: "Sixteen clubs: 5th and 6th from each top division, with England's 5th-place spot going to the National Cup winner (or runner-up, if the winner already qualifies). Two-legged knockout rounds, one-off final.", CT: "The third tier of European football: 7th and 8th from each top division, with England's spot going to the League Cup winner (or runner-up). Two-legged knockout rounds, one-off final." }[k] || leagueRules(comp.lg);
   let body = "";
-  if (comp.kind === "cont") { const K = S.cont[k]; body = `<div class="rounds">${K.groups.map((g, gi) => `<div><h3 style="margin-bottom:6px">Group ${"ABCDEFGH"[gi]}</h3>${table(`g${k}${gi}`, [{ k: "n", l: "Club", f: r => clubA(r.id, { flag: 1 }) }, { k: "p", l: "P", r: 1, f: r => r.p }, { k: "gd", l: "GD", r: 1, f: r => r.gf - r.ga }, { k: "pts", l: "Pts", r: 1, f: r => `<b>${r.pts}</b>` }], groupTable(k, gi), { rowCls: r => r.id === S.club ? "me" : "" })}</div>`).join("")}</div><div class="rounds" style="margin-top:14px">${comp.rounds.some(r => r.ties) ? koRounds(comp) : ""}</div>`; }
-  else body = `<div class="rounds">${koRounds(comp)}</div>`;
+  if (k === "CC") { const K = S.cont[k]; body = `<div class="rounds">${K.groups.map((g, gi) => `<div><h3 style="margin-bottom:6px">Group ${"ABCDEFGH"[gi]}</h3>${table(`g${k}${gi}`, [{ k: "n", l: "Club", f: r => clubA(r.id, { flag: 1 }) }, { k: "p", l: "P", r: 1, f: r => r.p }, { k: "gd", l: "GD", r: 1, f: r => r.gf - r.ga }, { k: "pts", l: "Pts", r: 1, f: r => `<b>${r.pts}</b>` }], groupTable(k, gi), { rowCls: r => r.id === S.club ? "me" : "" })}</div>`).join("")}</div><div class="rounds" style="margin-top:14px">${comp.rounds.some(r => r.ties) ? koRounds(comp) : ""}</div>`; }
+  else body = `${comp.kind === "cont" && !comp.rounds[0].ties ? `<p class="small" style="margin-bottom:8px">Entrants: ${S.cont[k].entrants.map(id => clubA(id, { flag: 1 })).join(", ")}</p>` : ""}<div class="rounds">${koRounds(comp)}</div>`;
   return `<section class="card"><div class="card-h"><h2>${esc(comp.name)}</h2><select id="cup-sel" data-c="cup" aria-label="Competition">${keys.map(x => `<option value="${x}" ${x === k ? "selected" : ""}>${esc(S.ko[x].name)}</option>`).join("")}</select></div>
     <p class="small muted" style="margin-bottom:12px">${about}</p>${body}${comp.w != null ? `<p style="margin-top:12px">Winner: <b>${clubA(comp.w, { flag: 1 })}</b></p>` : ""}</section>`;
 }
@@ -340,27 +352,27 @@ function viewTransfers() {
   const open = windowOpen();
   let body;
   if (UI.tab === "log") body = table("tlog", [{ k: "w", l: "When", f: t => `${seasonLabel(t.y)} · ${t.w}` }, { k: "n", l: "Player", f: t => S.players[t.pid] ? playerA(S.players[t.pid]) : esc(t.name) }, { k: "f", l: "From", f: t => t.from >= 0 ? clubA(t.from, { flag: 1 }) : "Free agent" }, { k: "t", l: "To", f: t => clubA(t.to, { flag: 1 }) }, { k: "fee", l: "Fee", r: 1, v: t => t.fee, f: t => t.fee ? money(t.fee) : "Free" }], S.tlog, { limit: 150, empty: "No transfers yet." });
-  else if (UI.tab === "mine") body = table("tmine", [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => p.pos }, { k: "ovr", l: "Ovr", r: 1, f: p => p.ovr }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], c.squad.map(P).filter(p => p.listed || p.req), { empty: "None of your players are listed. List a player from his profile and clubs will start bidding during transfer windows." });
+  else if (UI.tab === "mine") body = table("tmine", [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => p.pos }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], c.squad.map(P).filter(p => p.listed || p.req), { empty: "None of your players are listed. List a player from his profile and clubs will start bidding during transfer windows." });
   else {
     const f = UI.tf;
     let pool = UI.tab === "fa" ? S.fa.map(P) : Object.values(S.players).filter(p => p.club >= 0 && p.club !== S.club && p.age >= 17 && !p.loan);
     if (UI.tab === "listed") pool = pool.filter(p => p.listed || p.req);
     if (UI.tab === "loans") pool = pool.filter(p => loanable(p) && !wouldStart(p, C(p.club)));
-    pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && p.ovr >= f.min && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
+    pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && ratingMid(p) >= f.min && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
     if (f.fee && UI.tab !== "loans") pool = pool.filter(p => askingPrice(p) <= f.fee);
-    pool.sort((a, b) => b.ovr - a.ovr); pool = pool.slice(0, 200);
+    pool.sort((a, b) => ratingMid(b) - ratingMid(a)); pool = pool.slice(0, 200);
     const loans = UI.tab === "loans";
     body = `<div class="filters"><label class="f">Position<select id="tf-pos" data-c="tf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Max age<select id="tf-age" data-c="tf-age">${[40, 30, 27, 24, 21].map(a => `<option value="${a}" ${f.age === a ? "selected" : ""}>${a === 40 ? "Any" : a}</option>`).join("")}</select></label>
-      <label class="f">Min rating<select id="tf-min" data-c="tf-min">${[0, 50, 55, 60, 65, 70, 75, 80].map(a => `<option value="${a}" ${f.min === a ? "selected" : ""}>${a || "Any"}</option>`).join("")}</select></label>
+      <label class="f">Min rating<select id="tf-min" data-c="tf-min">${[0, 6, 8, 10, 12, 14, 16].map(a => `<option value="${a}" ${f.min === a ? "selected" : ""}>${a ? a + "+" : "Any"}</option>`).join("")}</select></label>
       ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
       ${UI.tab !== "fa" ? `<label class="f">League<select id="tf-lg" data-c="tf-lg"><option value="ALL">All leagues</option><option value="ABROAD" ${f.lg === "ABROAD" ? "selected" : ""}>All foreign leagues</option>${lgOpts(f.lg)}</select></label>` : ""}</div>
       ${table("t-" + UI.tab, [
         { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) },
         { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>` },
         { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
-        { k: "ovr", l: "Ovr", r: 1, v: p => p.ovr, f: p => `<b>${p.ovr}</b>` },
-        { k: "pot", l: "Pot", r: 1, v: p => p.pot, f: p => p.pot },
+        { k: "ovr", l: "Rating", r: 1, v: p => ratingMid(p), f: p => ratingHtml(p) },
+        { k: "sc", l: "Scouted", v: p => scoutLevel(p), f: p => ["—", "Partly", "Fully"][scoutLevel(p)], cls: "hide-sm" },
         { k: "club", l: "Club", v: p => p.club >= 0 ? C(p.club).name : "", f: p => p.club >= 0 ? clubA(p.club, { short: true, flag: 1 }) : '<span class="muted">Free</span>' },
         loans ? { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage) } : { k: "ask", l: "Asking", r: 1, v: p => askingPrice(p), f: p => p.club >= 0 ? money(askingPrice(p)) : "Free" },
         { k: "w", l: "Interest", v: p => willingness(p, c), f: p => { const [l, k] = willingLabel(willingness(p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
@@ -369,7 +381,7 @@ function viewTransfers() {
   }
   return `<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and summer'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
     <div class="row" style="margin-bottom:12px"><span class="seg" role="group">${tabs.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</span></div>
-    ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section>`;
+    ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Ratings outside your division are estimates until you scout a player (open him, 2 hours). Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section>`;
 }
 
 /* ---------- youth recruitment ---------- */
@@ -442,8 +454,8 @@ function viewHistory() {
   const c = me(), award = a => a ? `${S.players[a[0]] ? playerA(S.players[a[0]]) : esc(a[1])} <span class="tiny muted">${esc(a[2])} · ${a[3]}</span>` : "—";
   const seasons = S.history.slice(0, UI.histN).map(h => `<section class="card"><div class="card-h"><h2>${seasonLabel(h.year)}</h2></div><div class="tbl-wrap"><table><thead><tr><th>League</th><th>Champions</th><th>Promoted / relegated</th><th class="hide-sm">Golden boot</th><th class="hide-sm">Player of the season</th></tr></thead><tbody>
     ${ENG_LGS.map(k => { const l = h.L[k]; if (!l) return ""; return `<tr><td>${leagueName(k)}</td><td>${clubA(l.champ)}</td><td class="small">${l.up && l.up.length ? "↑ " + l.up.map(id => C(id).short).join(", ") : ""} ${l.down && l.down.length ? "↓ " + l.down.map(id => C(id).short).join(", ") : ""}</td><td class="hide-sm">${award(l.top)}</td><td class="hide-sm">${award(l.poty)}</td></tr>`; }).join("")}</tbody></table></div>
-    <p class="small" style="margin-top:8px">${["FA", "LC", "CC", "CS"].filter(k => h.K[k] && h.K[k].w != null).map(k => `${trophyName(k)}: ${clubA(h.K[k].w, { flag: 1 })}`).join(" · ")}</p>
-    <p class="small muted" style="margin-top:4px">Abroad: ${FOREIGN_LGS.filter(k => h.L[k]).map(k => `${COUNTRY[LG[k].c].name} ${C(h.L[k].champ).short}`).join(" · ")}</p></section>`).join("");
+    <p class="small" style="margin-top:8px">${["FA", "LC", "CC", "CS", "CT"].filter(k => h.K[k] && h.K[k].w != null).map(k => `${trophyName(k)}: ${clubA(h.K[k].w, { flag: 1 })}`).join(" · ")}</p>
+    <p class="small muted" style="margin-top:4px">Abroad: ${TOP_LGS.slice(1).filter(k => h.L[k]).map(k => `${COUNTRY[LG[k].c].name} ${C(h.L[k].champ).short}`).join(" · ")}</p></section>`).join("");
   const hof = S.hof.slice(0, 40);
   return `<div class="stack"><section class="card"><div class="card-h"><h2>Your career</h2></div>${S.career.length ? table("career", [{ k: "y", l: "Season", f: r => seasonLabel(r.year) }, { k: "c", l: "Club", f: r => clubA(r.club) }, { k: "l", l: "League", f: r => leagueName(r.lg) }, { k: "p", l: "Finish", r: 1, f: r => ord(r.pos) }, { k: "e", l: "Target", r: 1, f: r => ord(r.exp) }, { k: "t", l: "Trophies", f: r => r.trophies.map(trophyName).join(", ") || "—" }], S.career) : '<p class="muted">Finish a season to start your record.</p>'}
     <p class="small" style="margin-top:8px">${esc(c.name)} honours: ${c.trophies.length ? c.trophies.map(t => `${trophyName(t.t)} ${seasonLabel(t.y)}`).join(", ") : "none yet"}.</p></section>
@@ -457,12 +469,13 @@ function viewHistory() {
 /* ---------- modals ---------- */
 function renderModal() {
   const el = document.getElementById("modal"); if (!el) return;
-  if (!UI.modal || !S) { el.innerHTML = ""; return; }
+  if (!UI.modal || (!S && UI.modal.t !== "coach")) { el.innerHTML = ""; return; }
   const m = UI.modal; let html = "";
   if (m.t === "player" && S.players[m.id]) html = modalPlayer(S.players[m.id]);
   else if (m.t === "club") html = modalClub(C(m.id));
   else if (m.t === "prospect") html = modalProspect(S.prospects.find(y => y.id === m.id));
   else if (m.t === "bid" && S.players[m.id]) html = modalBid(S.players[m.id]);
+  else if (m.t === "coach") html = modalCoach(m);
   else { UI.modal = null; el.innerHTML = ""; return; }
   el.innerHTML = `<div class="scrim" data-a="closemodal"><div class="modal" role="dialog" aria-modal="true" data-stop="1">${html}</div></div>`;
 }
@@ -488,25 +501,34 @@ function modalPlayer(p) {
     actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>Ask to loan</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;
   }
   return mHead(esc(p.name), `${ROLE_NAME[p.pos]} · ${NAT_NAME[p.nat] || p.nat} · ${p.age}`, c ? c.color : "var(--muted)", c ? crest(c, 36) : "") + `<div class="modal-b">
-    <dl class="facts"><div><dt>Rating</dt><dd class="num">${p.ovr} <span class="muted">/ pot ${mine || onLoanFromMe || loanedIn || !c ? p.pot : "~" + (Math.round(p.pot / 5) * 5)}</span></dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
+    <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)}</dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
       <div><dt>Value</dt><dd class="num">${money(value(p))}</dd></div><div><dt>Wage</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Contract</dt><dd>${c ? p.yrs + " yr" + (p.yrs === 1 ? "" : "s") : "—"}</dd></div>
       <div><dt>Fitness</dt><dd>${fitBar(p.fit)} ${Math.round(p.fit)}</dd></div><div><dt>Mood</dt><dd>${moodTag(p)}</dd></div><div><dt>Homegrown</dt><dd>${Object.entries(p.yt).filter(([, v]) => v >= RULES.hgYears).map(([k]) => COUNTRY[k] ? COUNTRY[k].name : k).join(", ") || "No"}</dd></div>
       <div><dt>Season</dt><dd class="num">${p.s.app} apps · ${p.s.g} g · ${p.s.a} a</dd></div><div><dt>Avg rating</dt><dd class="num">${avg}</dd></div><div><dt>Career</dt><dd class="num">${p.tot[0] + p.s.app} apps · ${p.tot[1] + p.s.g} g</dd></div></dl>
+    ${attrPanel(p)}
+    ${p.inj ? `<p class="small bad">${esc(p.injT ? p.injT.charAt(0).toUpperCase() + p.injT.slice(1) : "Injured")}: out for ${injLength(p.inj)}.</p>` : ""}
     ${statusChips(p, c) ? `<div>${statusChips(p, c)}</div>` : ""}
     ${reasons.length ? `<div class="small">${reasons.map(([t, s]) => `<span class="${s > 0 ? "good" : s < 0 ? "bad" : ""}">● ${esc(t)}</span>`).join("&nbsp;&nbsp; ")}</div>` : ""}
     ${(p.awards || []).length ? `<p class="small"><b>Honours:</b> ${p.awards.map(esc).join("; ")}</p>` : ""}
     ${actions}
     <div><h3 style="margin-bottom:6px">Career</h3>${table("hist-" + p.id, [{ k: "y", l: "Season", f: h => seasonLabel(h[0]) }, { k: "c", l: "Club", f: h => (S.clubs[h[2]] ? clubA(h[2], { short: true }) : h[1]) + (h[7] ? ' <span class="tiny muted">loan</span>' : "") }, { k: "a", l: "Apps", r: 1, f: h => h[3] }, { k: "g", l: "Goals", r: 1, f: h => h[4] }, { k: "as", l: "Assists", r: 1, f: h => h[5] }, { k: "r", l: "Avg", r: 1, f: h => h[6].toFixed(2) }], p.hist.slice().reverse(), { empty: "No completed seasons yet." })}</div></div>`;
 }
+function attrPanel(p) {
+  const lvl = scoutLevel(p), names = ATTRS[p.pos === "GK" ? "gk" : "out"];
+  const rows = names.map(([k, l]) => { const v = attrView(p, k); return `<div class="attr"><span>${l}</span><span class="abar">${v ? `<i style="left:${(v[0] - 1) / 19 * 100}%;width:${Math.max(2, (v[1] - v[0]) / 19 * 100)}%" class="${aCls((v[0] + v[1]) / 2)}"></i>` : ""}</span><b class="num">${v ? (v[0] === v[1] ? v[0] : v[0] + "–" + v[1]) : "?"}</b></div>`; }).join("");
+  const need = lvl < 2 ? `<div class="row" style="margin-top:6px"><span class="small muted">${lvl === 0 ? "Not scouted: attributes unknown, rating is a rough guess." : "Partly scouted: attributes are ranges."}</span><button class="btn sm" data-a="scoutp" data-v="${p.id}">Scout him (2 hours, ${S.rec.hours} left)</button></div>` : "";
+  return `<div><h3 style="margin-bottom:6px">Attributes <span class="tiny muted">out of 20</span></h3><div class="attrs">${rows}</div>${need}</div>`;
+}
 function modalClub(c) {
   const L = S.leagues[c.lg], ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr);
   return mHead(esc(c.name), `${leagueName(c.lg)} · ${esc(c.region)}, ${COUNTRY[c.country].name}${c.gone ? ` · dropped out ${seasonLabel(c.goneYear)}` : ""}`, c.color, crest(c, 40)) + `<div class="modal-b">
-    <dl class="facts">${c.gone ? "" : `<div><dt>Position</dt><dd>${ord(posIn(L, c.id))}</dd></div>`}<div><dt>Squad level</dt><dd class="num">${clubLevel(c).toFixed(1)}</dd></div><div><dt>Prestige</dt><dd class="num">${c.rep}</dd></div>
+    <dl class="facts">${c.gone ? "" : `<div><dt>Position</dt><dd>${ord(posIn(L, c.id))}</dd></div>`}<div><dt>Squad level</dt><dd class="num">${r20(clubLevel(c)).toFixed(1)} / 20</dd></div><div><dt>Prestige</dt><dd class="num">${c.rep}</dd></div>
       <div><dt>Formation</dt><dd>${c.formation}</dd></div><div><dt>Academy</dt><dd>${c.academy}/10</dd></div><div><dt>Owner</dt><dd>${OWNER[c.owner].l}</dd></div>
+      <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
       <div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
     ${c.hist.length ? `<p class="small">Recent finishes: ${c.hist.slice(-6).reverse().map(h => `${seasonLabel(h.y)} ${ord(h.pos)} in ${leagueName(h.lg)}`).join(" · ")}</p>` : ""}
     ${c.trophies.length ? `<p class="small">Honours: ${c.trophies.slice(-12).reverse().map(t => `${trophyName(t.t)} ${seasonLabel(t.y)}`).join(", ")}</p>` : ""}
-    ${table("club-" + c.id, [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Ovr", r: 1, f: p => `<b>${p.ovr}</b>` }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], ps)}</div>`;
+    ${table("club-" + c.id, [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], ps)}</div>`;
 }
 function modalProspect(y) {
   if (!y) return "";
@@ -514,7 +536,7 @@ function modalProspect(y) {
   const best = cs[0] ? cs[0].s : 1;
   return mHead(esc(y.name), `${ROLE_NAME[y.pos]} · age 15 · ${esc(y.region)}${y.country === "ENG" ? "" : " (abroad)"}`, "var(--accent)") + `<div class="modal-b">
     <dl class="facts"><div><dt>Rating</dt><dd>${starHtml(...shownStars(y))}</dd></div><div><dt>Scouted</dt><dd>${["Not yet", "Once", "Twice", "Fully"][y.sc]}</dd></div>
-      ${y.sc >= 3 ? `<div><dt>Now / potential</dt><dd class="num">${y.ovr} / ${y.pot}</dd></div>` : ""}<div><dt>Distance</dt><dd class="num">${Math.round(f.d)} km</dd></div>
+      ${y.sc >= 3 ? `<div><dt>Current rating</dt><dd class="num">${Math.round(r20(y.ovr))} / 20</dd></div>` : ""}<div><dt>Distance</dt><dd class="num">${Math.round(f.d)} km</dd></div>
       <div><dt>Open to moving</dt><dd>${y.known ? (y.open > .66 ? "Very" : y.open > .4 ? "Somewhat" : "Prefers to stay near home") : "Unknown"}</dd></div><div><dt>Status</dt><dd>${y.commit != null ? "Committed to " + clubA(y.commit) : y.offers.length + " offer" + (y.offers.length === 1 ? "" : "s")}</dd></div></dl>
     ${y.commit != null && y.commit !== c.id ? `<p class="small">He has committed elsewhere, but nothing is signed until the end of the season. Make an offer and keep building the relationship: if your club clearly suits him better, he may change his mind.</p>` : ""}
     <div><h3 style="margin-bottom:4px">How your club looks to him</h3>
@@ -523,12 +545,21 @@ function modalProspect(y) {
     <div><h3 style="margin-bottom:4px">Clubs in the running</h3>${cs.length ? cs.map(x => `<div class="row between" style="padding:4px 0;border-top:1px solid var(--line)"><span>${clubA(x.c.id, { flag: 1 })} ${x.offer ? '<span class="chip hg">offer made</span>' : ""}${y.commit === x.c.id ? ' <span class="chip xi">committed</span>' : ""}</span><span class="bar"><i style="width:${clamp(x.s / best, 0, 1) * 100}%"></i></span></div>`).join("") : '<p class="muted small">Nobody has approached him yet.</p>'}</div>
     ${y.commit !== c.id && !y.signed ? `<div class="row"><button class="btn sm" data-a="rec" data-v="${y.id}|scout" ${y.sc >= 3 ? "disabled" : ""}>Scout (3h)</button><button class="btn sm" data-a="rec" data-v="${y.id}|call">Call family (1h)</button><button class="btn sm" data-a="rec" data-v="${y.id}|visit" ${y.visit ? "disabled" : ""}>Host a visit (5h)</button><button class="btn sm" data-a="rec" data-v="${y.id}|offer">${y.offers.includes(c.id) ? "Withdraw offer" : "Offer a place"}</button><span class="small muted">${S.rec.hours}h left this week</span></div>` : ""}</div>`;
 }
+function modalCoach(m) {
+  const c = DRAFT.clubs[m.club], arch = m.arch || "bal", co = newManager("", arch);
+  return mHead("Your manager", `Taking over ${esc(c.name)} · ${leagueName(c.lg)}`, c.color, crest(c, 36)) + `<div class="modal-b">
+    <label class="f">Name<input type="text" id="coach-name" maxlength="28" value="${esc(m.name || "")}" placeholder="Your name"></label>
+    <div><h3 style="margin-bottom:6px">Style</h3><div class="train arch">${Object.entries(ARCH).map(([k, a]) => `<button data-a="arch" data-v="${k}" aria-pressed="${arch === k}"><b>${a.l}</b><span class="tiny muted">${a.d}</span></button>`).join("")}</div></div>
+    <div class="attrs">${COACH_KEYS.map(([k, l]) => `<div class="attr"><span>${l}</span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b></div>`).join("")}</div>
+    <p class="small muted">You start as an average coach: 40 points across four ratings out of 20. A specialist puts 14 in one area and gives a point up elsewhere. You earn more points every season, and extra for beating the board's target, winning trophies and promotion.</p>
+    <div class="row"><button class="btn primary" data-a="startcareer">Start the career</button><button class="btn" data-a="closemodal">Back</button></div></div>`;
+}
 function modalBid(p) {
   const c = me(), ask = askingPrice(p), w = willingness(p, c), [wl, wk] = willingLabel(w), wage = contractDemand(p, c, w);
   const b = UI.bid && UI.bid.id === p.id ? UI.bid : (UI.bid = { id: p.id, fee: ask, yrs: p.age >= 31 ? 2 : 4, msg: "" });
   const after = scr(c, wage + (b.fee ? b.fee / b.yrs : 0) + b.fee * .05);
   const fees = p.club >= 0 ? [.85, .95, 1, 1.1, 1.25].map(k => Math.round(ask * k / 1e4) * 1e4) : [0];
-  return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · ${p.ovr}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
+  return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · rated ${ratingView(p).join("–").replace(/^(\d+)–\1$/, "$1")}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
     <dl class="facts"><div><dt>Asking price</dt><dd class="num">${p.club >= 0 ? money(ask) : "None"}</dd></div><div><dt>His interest</dt><dd class="${wk === "ok" ? "" : wk}">${wl}</dd></div><div><dt>Wants</dt><dd class="num">${perWeek(wage)}</dd></div><div><dt>Your cash</dt><dd class="num">${money(c.cash)}</dd></div></dl>
     ${w < .45 ? `<p class="small">${esc(whyNot(p, c) || "He isn't convinced by the move.")}</p>` : ""}
     <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === ask ? " (asking)" : ""}</option>`).join("")}</select></label>` : ""}
@@ -553,7 +584,7 @@ function viewLive() {
     <label>Mentality<span class="seg" role="group">${Object.entries(MENT).map(([x, v]) => `<button data-a="liveme" data-v="${x}" aria-pressed="${mine.ment === x}">${v.l}</button>`).join("")}</span></label>
     ${LIVE.paused ? `<div class="ctrl" style="gap:8px;border-top:1px solid var(--line);padding-top:12px"><span class="eyebrow">Substitutions · ${RULES.subs - mine.subs} left</span>
       ${mine.subs < RULES.subs && b.length ? `<label>Off<select id="sub-off">${mine.on.map((o, i) => `<option value="${i}">${o.slot} · ${esc(o.p.name)} · fit ${Math.round(o.fit)}</option>`).join("")}</select></label>
-      <label>On<select id="sub-on">${b.map(p => `<option value="${p.id}">${p.pos} · ${esc(p.name)} · ${p.ovr} · fit ${Math.round(p.fit)}</option>`).join("")}</select></label>
+      <label>On<select id="sub-on">${b.map(p => `<option value="${p.id}">${p.pos} · ${esc(p.name)} · ${Math.round(r20(p.ovr))} · fit ${Math.round(p.fit)}</option>`).join("")}</select></label>
       <button class="btn" data-a="livesub">Make substitution</button>` : '<span class="small muted">No substitutions left.</span>'}</div>` : '<p class="small muted">Pause to make substitutions.</p>'}`;
   }
   return `<section style="--hc:${H.color};--ac:${A.color}"><div class="board"><span class="comp eyebrow">${esc(compLabel(M.fx))}${M.fx.ko ? ` · 1st leg ${M.fx.ko.aggA}–${M.fx.ko.aggH}` : ""}</span><div class="t">${crest(H, 40)}<b>${esc(H.name)}</b></div>
@@ -564,4 +595,14 @@ function viewLive() {
     <div class="stack"><div class="card"><table class="stats"><tbody>${stat("Shots", M.h.shots, M.a.shots)}${stat("On target", M.h.sot, M.a.sot)}${stat("Subs", M.h.subs, M.a.subs)}</tbody></table></div><div class="card ctrl">${ctrl}</div></div></div></section>`;
 }
 
-const VIEWS = { home: viewHome, squad: viewSquad, tactics: viewTactics, fixtures: viewFixtures, league: viewLeague, cups: viewCups, transfers: viewTransfers, youth: viewYouth, finances: viewFinances, news: viewNews, history: viewHistory };
+function viewManager() {
+  const co = S.me, c = me();
+  const row = ([k, l]) => `<div class="attr"><span><b>${l}</b><br><span class="tiny muted">${COACH_EFFECT[k]}</span></span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b>${co.pts > 0 && co[k] < 20 ? `<button class="btn sm" data-a="coachpt" data-v="${k}">+1</button>` : ""}</div>`;
+  const rivals = S.leagues[c.lg].clubs.filter(id => id !== c.id).map(C).sort((a, b) => sum(COACH_KEYS, ([k]) => b.coach[k]) - sum(COACH_KEYS, ([k]) => a.coach[k])).slice(0, 8);
+  return `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2>${esc(co.name)}</h2><span class="eyebrow">${ARCH[co.arch].l} · ${co.seasons} season${co.seasons === 1 ? "" : "s"} · ${esc(c.name)}</span></div>
+    <div class="attrs coach">${COACH_KEYS.map(row).join("")}</div>
+    <p class="small" style="margin-top:10px">${co.pts ? `<b>${co.pts} point${co.pts > 1 ? "s" : ""} to spend.</b> ` : ""}You earn a point every season, plus one for finishing above the board's target, up to two for trophies, and one for promotion. Ratings are out of 20.</p></section>
+    <section class="card"><div class="card-h"><h2>Career</h2></div>${S.career.length ? table("career-m", [{ k: "y", l: "Season", f: r => seasonLabel(r.year) }, { k: "c", l: "Club", f: r => clubA(r.club) }, { k: "l", l: "League", f: r => leagueName(r.lg) }, { k: "p", l: "Finish", r: 1, f: r => ord(r.pos) }, { k: "e", l: "Target", r: 1, f: r => ord(r.exp) }, { k: "t", l: "Trophies", f: r => r.trophies.map(trophyName).join(", ") || "—" }], S.career) : '<p class="muted">Finish a season to start your record.</p>'}</section></div>
+    <section class="card"><div class="card-h"><h2>Rival coaches</h2><span class="small muted">${leagueName(c.lg)}</span></div>${table("rivalco", [{ k: "c", l: "Club", f: x => clubA(x.id, { short: true }) }, { k: "n", l: "Coach", f: x => esc(x.coach.name) + `<br><span class="tiny muted">${ARCH[x.coach.arch].l}</span>` }, ...COACH_KEYS.map(([k, l]) => ({ k, l: l.slice(0, 3), r: 1, f: x => x.coach[k] }))], rivals)}</section></div>`;
+}
+const VIEWS = { manager: viewManager, home: viewHome, squad: viewSquad, tactics: viewTactics, fixtures: viewFixtures, league: viewLeague, cups: viewCups, transfers: viewTransfers, youth: viewYouth, finances: viewFinances, news: viewNews, history: viewHistory };

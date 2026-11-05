@@ -24,7 +24,7 @@ function buildDays() {
     add(w, { k: "lg", rounds, mid }, mid ? 2 : 3);
   }
   for (const [key, comp] of Object.entries(S.ko)) comp.sched.forEach((weeks, r) => weeks.forEach((w, li) => add(w, { k: "ko", comp: key, r, leg: li + 1 }, 1)));
-  for (const key of ["CC", "CS"]) CAL.contGroups.forEach((w, md) => add(w, { k: "grp", comp: key, md }, 0));
+  CAL.contGroups.forEach((w, md) => add(w, { k: "grp", comp: "CC", md }, 0));
   return d.sort((a, b) => a.w - b.w || a.ord - b.ord);
 }
 
@@ -44,11 +44,13 @@ function startSeason() {
   S.ko = {
     FA: newKO("FA", "cup", CUPS.FA.name, CUPS.FA.rounds, CAL.FA),
     LC: newKO("LC", "cup", CUPS.LC.name, CUPS.LC.rounds, CAL.LC),
-    CC: newKO("CC", "cont", CONT.CC.name, CONT_ROUNDS, CAL.contKO),
-    CS: newKO("CS", "cont", CONT.CS.name, CONT_ROUNDS, CAL.contKO),
+    CC: newKO("CC", "cont", CONT.CC.name, CONT_ROUNDS, CAL.contKO.CC),
+    CS: newKO("CS", "cont", CONT.CS.name, CONT_ROUNDS, CAL.contKO.CS),
+    CT: newKO("CT", "cont", CONT.CT.name, CONT_ROUNDS, CAL.contKO.CT),
   };
   for (const k of ENG_LGS) { const po = LG[k].po; if (!po) continue; const names = { c: ["Quarter-finals", "Semi-finals", "Final"], std: ["Semi-finals", "Final"], nl: ["Quarter-finals", "Semi-finals", "Final"] }[po.type]; S.ko["PO" + k] = newKO("PO" + k, "po", leagueName(k) + " play-offs", names, CAL.po[po.type], { lg: k }); }
   setupContinental();
+  planRetirements();
   S.days = buildDays();
   newProspectClass();
   S.expPos = expectedPos(me());
@@ -58,11 +60,12 @@ function startSeason() {
 function setupContinental() {
   let q = S.qual;
   if (!q) {
-    q = { CC: [], CS: [] };
-    for (const key of ["E1", ...FOREIGN_LGS]) { const ids = S.leagues[key].clubs.slice().sort((a, b) => S.lastPos[a] - S.lastPos[b]); q.CC.push(...ids.slice(0, 4)); q.CS.push(...ids.slice(4, 8)); }
+    q = { CC: [], CS: [], CT: [] };
+    for (const key of TOP_LGS) { const ids = S.leagues[key].clubs.slice().sort((a, b) => S.lastPos[a] - S.lastPos[b]); q.CC.push(...ids.slice(0, 4)); q.CS.push(...ids.slice(4, 6)); q.CT.push(...ids.slice(6, 8)); }
   }
   S.cont = {};
-  for (const key of ["CC", "CS"]) {
+  for (const key of ["CS", "CT"]) { S.cont[key] = { key, entrants: q[key].slice() }; for (const id of q[key]) pay(id, CONT[key].prize[0]); }
+  for (const key of ["CC"]) {
     const byC = {}; for (const id of q[key]) (byC[C(id).country] ||= []).push(id);
     const codes = shuffle(Object.keys(byC)), n = codes.length, groups = Array.from({ length: 8 }, () => []);
     // Pot k holds each country's k-th qualifier; the offsets keep every group to four different countries.
@@ -70,9 +73,9 @@ function setupContinental() {
     const placed = new Set(groups.flat()), extra = q[key].filter(id => !placed.has(id));
     for (const g of groups) while (g.length < 4 && extra.length) g.push(extra.shift());
     S.cont[key] = { key, groups, gfix: groups.map(() => roundRobin([0, 1, 2, 3])), gres: [] };
-    for (const id of groups.flat()) { const c = C(id); c.cash += CONT[key].prize[0]; c.fin.prize += CONT[key].prize[0]; }
+    for (const id of groups.flat()) pay(id, CONT[key].prize[0]);
   }
-  S.contIds = ["CC", "CS"].flatMap(k => S.cont[k].groups.flat());
+  S.contIds = [...S.cont.CC.groups.flat(), ...S.cont.CS.entrants, ...S.cont.CT.entrants];
 }
 function groupTable(key, gi) {
   const K = S.cont[key], rows = K.groups[gi].map(id => ({ id, p: 0, w: 0, d: 0, l: 0, gf: 0, ga: 0, pts: 0 })), by = Object.fromEntries(rows.map(r => [r.id, r]));
@@ -108,6 +111,13 @@ function pairUp(ids, legs, neutral) {
   for (let i = 0; i + 1 < ids.length; i += 2) ties.push({ h: ids[i], a: ids[i + 1], legs, neutral, g1: null, g2: null, pens: null, w: null });
   return ties;
 }
+/* Avoid same-country ties in the first knockout round where the draw allows it. */
+function pairUpApart(ids) {
+  let best = null, bestN = 99;
+  for (let t = 0; t < 40 && bestN > 0; t++) { shuffle(ids); let n = 0; for (let i = 0; i + 1 < ids.length; i += 2) if (C(ids[i]).country === C(ids[i + 1]).country) n++; if (n < bestN) { bestN = n; best = ids.slice(); } }
+  const ties = []; for (let i = 0; i + 1 < best.length; i += 2) ties.push({ h: best[i], a: best[i + 1], legs: 2, neutral: false, g1: null, g2: null, pens: null, w: null });
+  return ties;
+}
 const winnersOf = rd => rd && rd.ties && rd.ties.every(t => t.w != null) ? rd.ties.map(t => t.w) : null;
 function drawKO(comp, r) {
   const rd = comp.rounds[r]; if (rd.ties) return rd.ties;
@@ -128,7 +138,8 @@ function drawKO(comp, r) {
     rd.ties = pairUp([...prev, ...add], rd.legs, rd.neutral);
   } else if (comp.kind === "cont") {
     const K = S.cont[comp.key];
-    if (r === 0) {
+    if (r === 0 && comp.key !== "CC") rd.ties = pairUpApart(K.entrants.slice());
+    else if (r === 0) {
       if (K.gres.length < 96) return null;
       const t = K.groups.map((g, gi) => groupTable(comp.key, gi));
       rd.ties = t.map((tb, g) => ({ h: tb[0].id, a: t[g ^ 1][1].id, legs: 2, neutral: false, g1: null, g2: null, pens: null, w: null }));
@@ -216,7 +227,7 @@ function quickLeagueRound(key, r) {
     rd.push({ h, a, hg, ag }); L.n++;
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
       const xi = autoPick(c.squad, c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
-      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - clubLevel(c)) / 25 + gauss() * .3, 3, 10); }
+      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - clubLevel(c)) / 25 + gauss() * .3, 3, 10); if (R() < .009) injure(p); }
       for (let g = 0; g < gf; g++) { const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); s.s.g++; s.s.lg++; s.s.rt += .9; }
       c.wkMatches++;
     }
@@ -245,18 +256,21 @@ function weekly() {
     const ops = rev * .2; c.fin.ops += ops;
     c.fin.rev += rev; c.fin.wages += wages; c.fin.amort += amort; c.cash += rev - wages - ops;
     if (isUser(c)) { const sc = S.rec.scoutLvl * scoutCost(); c.cash -= sc * wk; c.fin.scouting += sc * wk; }
-    const t = TRAIN[isUser(c) ? S.training : "bal"], acad = 1 + c.academy * .03;
+    const t = TRAIN[isUser(c) ? S.training : "bal"], acad = 1 + c.academy * .03, co = coachOf(c), coachDev = .6 + .04 * (co ? co.dev : 10);
     const possible = Math.max(1, c.wkMatches) * 90;
     for (const id of c.squad) {
       const p = P(id);
       p.fit = Math.min(100, p.fit + t.fit);
       p.pt = .75 * p.pt + .25 * Math.min(1, p.wm / possible); p.wm = 0;
       if (p.inj > 0) p.inj--;
+      // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.
       if (p.ovr < p.pot) {
-        const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * t.grow * (p.age <= 21 ? acad : 1) * (.8 + .5 * p.pt);
-        if (R() < ch) { p.ovr++; if (p.ovr > p.peak) p.peak = p.ovr; }
+        const form = p.s.app >= 3 ? clamp((p.s.rt / p.s.app - 6) / 1.2, 0, 1.5) : .5;
+        const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * 1.12 * t.grow * (p.age <= 21 ? acad : 1)
+          * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * (.85 + .2 * form);
+        if (R() < ch) growAttrs(p, 1);
       }
-      if (isUser(c) && S.training === "int" && !p.inj && R() < .006) { p.inj = ri(1, 2); news(`${p.name} picked up a knock in training and is out for ${p.inj} week${p.inj > 1 ? "s" : ""}.`, false, "squad"); }
+      if (isUser(c) && S.training === "int" && !p.inj && R() < .006) injure(p, true);
     }
     c.wkMatches = 0;
   }
@@ -306,7 +320,7 @@ function endSeason() {
   for (const key of Object.keys(S.leagues)) {
     const L = S.leagues[key], t = standings(L); tables[key] = t.map(r => r.id);
     const champ = C(t[0].id); champ.trophies.push({ y: S.year, t: key });
-    rec.L[key] = { table: t.map(r => [r.id, r.pts]), champ: champ.id, ...awardsFor(key) };
+    rec.L[key] = { table: t.map(r => [r.id, r.pts]), champ: champ.id, ...(TOP_LGS.includes(key) || !LG[key].foreign ? awardsFor(key) : {}) };
     t.forEach((r, i) => {
       const c = C(r.id); c.hist.push({ y: S.year, lg: key, pos: i + 1, pts: r.pts });
       S.lastPos[r.id] = i + 1;
@@ -318,10 +332,9 @@ function endSeason() {
   const myKey = me().lg, myPos = tables[myKey].indexOf(S.club) + 1;
 
   // continental places for next season
-  const q = { CC: [], CS: [] };
-  for (const key of ["E1", ...FOREIGN_LGS]) {
+  const q = { CC: [], CS: [], CT: [] };
+  for (const key of TOP_LGS) {
     const t = tables[key], top4 = t.slice(0, 4); q.CC.push(...top4);
-    let cs = [];
     if (key === "E1") {
       const taken = new Set(top4);
       const pickQ = (w, ru, label) => {
@@ -330,11 +343,11 @@ function endSeason() {
         if (id == null || taken.has(id)) id = t.find(x => !taken.has(x));
         taken.add(id); return id;
       };
-      cs.push(pickQ(S.ko.FA.w, S.ko.FA.ru, CUPS.FA.name));
-      cs.push(pickQ(S.ko.LC.w, null, CUPS.LC.name));
-      for (const id of t) { if (cs.length >= 4) break; if (!taken.has(id)) { taken.add(id); cs.push(id); } }
-    } else cs = t.slice(4, 8);
-    q.CS.push(...cs);
+      const next = () => { const id = t.find(x => !taken.has(x)); taken.add(id); return id; };
+      // National Cup winner goes to the Shield, League Cup winner to the Trophy; each passes on if already qualified.
+      q.CS.push(pickQ(S.ko.FA.w, S.ko.FA.ru, CUPS.FA.name), next());
+      q.CT.push(pickQ(S.ko.LC.w, S.ko.LC.ru, CUPS.LC.name), next());
+    } else { q.CS.push(t[4], t[5]); q.CT.push(t[6], t[7]); }
   }
   S.qual = q;
 
@@ -369,6 +382,13 @@ function endSeason() {
     n.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
     moves.push([n.id, "new", null, key]);
   }
+  for (const c of Object.keys(FOREIGN_DEF)) {
+    const t1 = tables[c + "1"], t2 = tables[c + "2"], t3 = tables[c + "3"];
+    for (const id of t1.slice(-3)) move(id, c + "2", "down");
+    for (const id of t2.slice(-3)) move(id, c + "3", "down");
+    for (const id of t2.slice(0, 3)) move(id, c + "1", "up");
+    for (const id of t3.slice(0, 3)) move(id, c + "2", "up");
+  }
   for (const key of ENG_LGS) { rec.L[key].up = ups[key]; rec.L[key].down = downs[key]; }
   news(`Promoted: ${ENG_LGS.filter(k => k !== "E1").map(k => `${ups[k].map(id => C(id).short).join(", ")} from the ${leagueName(k)}`).join("; ")}.`, true, "league");
   news(`New to the National Division North and South: ${moves.filter(m => m[1] === "new").map(m => C(m[0]).name).join(", ")}.`, false, "league");
@@ -395,12 +415,17 @@ function endSeason() {
   d = Math.round(d);
   S.board = clamp(S.board + d, 0, 100);
   S.career.unshift({ year: S.year, club: S.club, lg: myKey, pos: myPos, exp, trophies: won.map(t => t.t), board: d });
-  S.seasonOver = { pos: myPos, exp, lg: myKey, board: d, won: won.map(t => t.t), moved: myMove ? myMove[1] : null, to: myMove ? myMove[3] : null };
+  // You earn coaching points to spend: one a season, more for beating the target or winning something.
+  const earned = 1 + (myPos < exp ? 1 : 0) + Math.min(2, won.length) + (myMove && myMove[1] === "up" ? 1 : 0);
+  S.me.pts += earned; S.me.seasons++;
+  // AI coaches improve slowly too, and drift back if they're past it.
+  for (const c of activeClubs()) if (!isUser(c) && c.coach && R() < .3) { const k = pick(COACH_KEYS)[0]; c.coach[k] = clamp(c.coach[k] + (R() < .7 ? 1 : -1), 1, 20); }
+  S.seasonOver = { pos: myPos, exp, lg: myKey, board: d, earned, won: won.map(t => t.t), moved: myMove ? myMove[1] : null, to: myMove ? myMove[3] : null };
   if (S.board <= 0) S.sacked = true;
 
   // player records, then loans go home
   for (const p of Object.values(S.players)) {
-    if (p.club >= 0 && p.s.app > 0) p.hist.push([S.year, C(p.club).short, p.club, p.s.app, p.s.g, p.s.a, +(p.s.rt / p.s.app).toFixed(2), p.loan ? 1 : 0]);
+    if (p.club >= 0 && p.s.app > 0 && (!isForeign(C(p.club)) || C(p.club).tier === 1 || p.hist.length)) p.hist.push([S.year, C(p.club).short, p.club, p.s.app, p.s.g, p.s.a, +(p.s.rt / p.s.app).toFixed(2), p.loan ? 1 : 0]);
     p.tot[0] += p.s.app; p.tot[1] += p.s.g;
   }
   for (const p of Object.values(S.players)) if (p.loan) endLoan(p);
@@ -420,11 +445,21 @@ function ageAndContracts() {
     const c = p.club >= 0 ? C(p.club) : null;
     if (c && p.age <= 20) p.yt[c.country] = (p.yt[c.country] || 0) + 1;
     p.age++;
-    if (p.age >= 29) { p.ovr = Math.max(28, p.ovr - ri(0, Math.min(4, p.age - 27))); p.pot = p.ovr; }
-    else if (p.age <= 23) p.pot = clamp(p.pot + ri(-3, 2), p.ovr, 95);
-    p.fit = 100; p.sus = 0; p.inj = Math.max(0, p.inj - 6); p.yc = 0; p.req = p.req && p.mood < 40; p.promise = null;
-    const retire = p.age >= 38 || (p.age >= 33 && R() < (p.age - 32) * .22) || (p.club < 0 && p.age >= 31 && R() < .4);
-    if (retire) { if (c) { c.squad = c.squad.filter(id => id !== p.id); if (isUser(c)) news(`${p.name} has retired, aged ${p.age}.`, false, "squad"); } retirePlayer(p); continue; }
+    if (p.age >= 29) { declineAttrs(p, ri(0, Math.min(4, p.age - 27))); p.pot = p.ovr; }
+    else if (p.age <= 24) {
+      // Young players who don't play, or are miserable, lose some of their ceiling; a breakout season raises it.
+      const avg = p.s.app ? p.s.rt / p.s.app : 6.4;
+      let d = ri(-2, 1);
+      if (p.age >= 18 && p.pt < .25) d -= ri(1, 3);
+      if (p.mood < 35) d -= ri(0, 2);
+      if (p.pt > .6 && avg >= 7) d += ri(1, 3);
+      p.pot = clamp(p.pot + d, p.ovr, 95);
+    }
+    p.fit = 100; p.sus = 0; p.inj = Math.max(0, p.inj - 10); p.yc = 0; p.req = p.req && p.mood < 40; p.promise = null;
+    if (p.retiring || p.age >= 41) {
+      if (c) { c.squad = c.squad.filter(id => id !== p.id); if (isUser(c)) news(p.retiring === 1 ? `${p.name} retires, as he told you he would, aged ${p.age}.` : `${p.name} surprises the club by announcing his retirement, aged ${p.age}.`, true, "squad"); }
+      retirePlayer(p); continue;
+    }
     if (!c) continue;
     if (p.am) { p.am.left--; if (p.am.left <= 0) p.am = null; }
     p.yrs--;
@@ -449,7 +484,7 @@ function aiMaintain(c) {
       if (fa) { S.fa = S.fa.filter(id => id !== fa.id); fa.club = c.id; fa.yrs = ri(1, 3); fa.wage = wageDemand(fa, c.rep); fa.joined = S.year; c.squad.push(fa.id); }
       // Fillers are journeymen a little below the club's level; generating young ones here fed a ratings spiral.
       // Anchored to reputation, not current level, so divisions neither spiral up nor drain away over decades.
-      else { const age = ri(21, 29), p = makePlayer({ pos, base: 48 + c.rep * .34 - 3, age, nat: R() < .7 ? c.country : pick(ALL_NATS), club: c.id, rep: c.rep }); p.pot = p.ovr + (age <= 24 ? ri(0, 3) : 0); if (p.nat === c.country) p.yt[c.country] = 3; c.squad.push(p.id); }
+      else { const age = ri(21, 29), p = makePlayer({ pos, base: lvlForRep(c.rep) - 3, age, nat: R() < .7 ? c.country : pick(ALL_NATS), club: c.id, rep: c.rep }); p.pot = p.ovr + (age <= 24 ? ri(0, 3) : 0); if (p.nat === c.country) p.yt[c.country] = 3; c.squad.push(p.id); }
     }
   }
   const cap = c.owner === "reckless" ? 1.18 : OWNER[c.owner].target[1] + .06;

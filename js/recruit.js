@@ -32,7 +32,7 @@ function newProspectClass() {
   for (let i = 0; i < 22; i++) { const [code, r, la, lo] = pick(ABROAD); add(code, null, r, la, lo); }
   // AI clubs pick their targets for the year
   for (const c of activeClubs()) {
-    if (isUser(c) || c.tier >= 5) continue;
+    if (isUser(c) || c.tier >= 5 || (isForeign(c) && c.tier >= 2)) continue;
     const k = 1 + Math.floor(c.academy / 3), reach = c.rep >= 80 ? 1 : 0;
     const cands = S.prospects.filter(y => y.country === c.country || reach || (y.country == null && c.rep >= 70))
       .map(y => ({ y, s: starsOf(y.pot) * (c.rep / 60) + factorScore(y, c) * 4 + R() * 2 })).sort((a, b) => b.s - a.s).slice(0, k + 3);
@@ -40,7 +40,8 @@ function newProspectClass() {
   }
   S.rec.offers = 0; S.rec.hours = recHours();
 }
-const recHours = () => 8 + 3 * S.rec.scoutLvl;
+const recHours = () => Math.max(4, 8 + 3 * S.rec.scoutLvl + Math.round((S.me.rec - 10) * .6));
+const recMult = () => .7 + .03 * S.me.rec;  // a good recruiter builds relationships faster
 const offerCap = () => 3 + Math.floor(me().academy / 2);
 
 function factors(y, c) {
@@ -89,8 +90,8 @@ function recAct(y, act) {
   const cost = REC_COST[act];
   if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}).`;
   if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc++; if (y.sc >= 2) y.known = true; }
-  if (act === "call") { if (y.called === S.week + S.year * 100) return "You've already spoken to his family this week."; y.called = S.week + S.year * 100; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .045 + .03 * (y.pri.dyn + y.pri.acad); }
-  if (act === "visit") { if (y.visit) return "He has already visited."; y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16; }
+  if (act === "call") { if (y.called === S.week + S.year * 100) return "You've already spoken to his family this week."; y.called = S.week + S.year * 100; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + (.045 + .03 * (y.pri.dyn + y.pri.acad)) * recMult(); }
+  if (act === "visit") { if (y.visit) return "He has already visited."; y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16 * recMult(); }
   S.rec.hours -= cost;
   return { scout: `Scouting report on ${y.name} updated.`, call: `You spoke with ${y.name}'s family.`, visit: `${y.name} visited your training ground.` }[act];
 }
@@ -112,7 +113,7 @@ function weeklyRecruiting() {
     }
     for (const id of Object.keys(y.rel).map(Number)) {
       const c = C(id); if (isUser(c) || c.gone) continue;
-      y.rel[id] += rf(.008, .03) * (.6 + c.academy / 10);
+      y.rel[id] += rf(.008, .03) * (.6 + c.academy / 10) * (.7 + .03 * c.coach.rec);
       if (!y.offers.includes(id) && y.rel[id] > .22 && y.offers.length < 6) y.offers.push(id);
     }
     if (S.week >= 8 && y.offers.length) {
@@ -135,7 +136,7 @@ function signingDay() {
     if (y.commit == null || C(y.commit).gone) continue;
     const c = C(y.commit); y.signed = true;
     const p = makePlayer({ pos: y.pos, base: y.ovr + 9, age: 16, nat: y.nat, club: c.id, rep: c.rep });
-    p.name = y.name; p.ovr = clamp(y.ovr + ri(0, 4), 30, 70); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 20000;
+    p.name = y.name; setRating(p, clamp(y.ovr + ri(0, 4), 33, 70)); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 20000;
     p.yt[c.country] = 1; p.from = y.region;
     c.squad.push(p.id);
   }
