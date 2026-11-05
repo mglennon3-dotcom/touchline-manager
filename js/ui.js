@@ -668,6 +668,8 @@ function viewYouth() {
   if (f.pos !== "ALL") ys = ys.filter(y => y.pos === f.pos);
   if (f.st === "OPEN") ys = ys.filter(y => y.commit == null); else if (f.st === "MINE") ys = ys.filter(y => y.offers.includes(c.id) || y.rel[c.id] || y.commit === c.id); else if (f.st === "DONE") ys = ys.filter(y => y.commit != null);
   const commits = S.prospects.filter(y => y.commit === c.id);
+  // Everyone your scouts have watched this year, whatever the filters below say.
+  const scouted = S.prospects.filter(y => y.sc >= 1), REPORT = ["", "First look", "Detailed", "Complete"];
   const cols = [
     { k: "n", l: "Prospect", v: y => y.name, f: y => `<button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button>` },
     { k: "pos", l: "Pos", v: y => ROLE_ORDER[y.pos], f: y => `<span class="pos">${y.pos}</span>` },
@@ -678,7 +680,13 @@ function viewYouth() {
     { k: "act", l: "Actions", f: y => y.commit === c.id ? "" : `<span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sm" data-a="rec" data-v="${y.id}|scout" ${y.sc >= 3 ? "disabled" : ""} title="${scoutHours(3, prospectCountry(y))} hours">Scout ${scoutHours(3, prospectCountry(y))}h</button><button class="btn sm" data-a="rec" data-v="${y.id}|call" title="1 hour">Call</button><button class="btn sm" data-a="rec" data-v="${y.id}|visit" ${y.visit ? "disabled" : ""} title="5 hours">Visit</button><button class="btn sm ${y.offers.includes(c.id) ? "danger" : ""}" data-a="rec" data-v="${y.id}|offer">${y.offers.includes(c.id) ? "Withdraw" : "Offer"}</button></span>` },
   ];
   const regs = [["ENG", "England"], ...COUNTRIES.filter(K => K.code !== "ENG").map(K => [K.code, K.name]), ["ROW", "Brazil, Argentina, West Africa, Scandinavia"], ["ABR", "Everywhere outside England"], ["ALL", "Everywhere"]];
-  return `<div class="stack"><section class="card"><div class="card-h"><h2>Youth recruitment · class of ${S.year + 1}</h2>
+  const scoutCols = [cols[0], cols[1], cols[2], cols[3],
+    { k: "ir", l: "Injury risk", v: y => viewMid(prospectInj(y)), f: y => y.sc >= 2 ? rangeHtml(prospectInj(y), true) : '<span class="tiny muted">scout again</span>' },
+    { k: "rep", l: "Report", v: y => y.sc, f: y => `<span class="${y.sc >= 3 ? "good" : y.sc === 1 ? "warn" : ""}">${REPORT[y.sc]}</span>${y.scT ? `<br><span class="tiny muted">${y.scT}</span>` : ""}` },
+    cols[4], cols[5], cols[6]];
+  const scoutedCard = `<section class="card"><div class="card-h"><h2>Scouted prospects</h2><span class="small">${scouted.length} watched · ${scouted.filter(y => y.commit == null).length} still undecided · Hours this week <b class="num">${S.rec.hours}/${recHours()}</b></span></div>
+    ${table("youth-sc", scoutCols, scouted, { sort: { k: "st", d: -1 }, empty: "You haven't scouted any prospects yet. Use Scout on anyone in the list below: each visit narrows his potential, and a detailed report shows his injury risk and what matters most to him." })}</section>`;
+  return `<div class="stack">${scoutedCard}<section class="card"><div class="card-h"><h2>Youth recruitment · class of ${S.year + 1}</h2>
     <span class="small">Hours this week <b class="num">${S.rec.hours}/${recHours()}</b> · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b> · Youth development <b class="num">${c.academy}/20</b></span></div>
     <div class="prose small" style="margin-bottom:12px"><p>Fifteen-year-olds from England and abroad choose an academy this season and join next summer. Each weighs six things differently, with two that matter most to him: distance from home, a route to first-team minutes, whether your formation uses his position, squad dynamics, prestige and your youth development rating. Scouting narrows his rating and reveals what he cares about; calls and visits build the relationship. Commitments start from week 9 and aren't binding until signing day, so a better offer can still flip a prospect, yours included.</p></div>
     <div class="filters"><label class="f">Region<select id="yf-reg" data-c="yf-reg">${regs.map(([k, l]) => `<option value="${k}" ${f.reg === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>

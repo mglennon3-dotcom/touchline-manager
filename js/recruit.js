@@ -98,7 +98,7 @@ function recAct(y, act) {
   }
   const code = prospectCountry(y), cost = act === "call" ? REC_COST.call : scoutHours(REC_COST[act], code);
   if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}); that needs ${cost}.`;
-  if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc = Math.min(3, y.sc + (knowOf(code) >= 15 ? 2 : 1)); if (y.sc >= 2) y.known = true; learnCountry(code); payTravel(code); }
+  if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc = Math.min(3, y.sc + (knowOf(code) >= 15 ? 2 : 1)); y.scT = whenLabel(); if (y.sc >= 2) y.known = true; learnCountry(code); payTravel(code); }
   if (act === "call") { if (y.called === S.week + S.year * 100) return "You've already spoken to his family this week."; y.called = S.week + S.year * 100; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + (.045 + .03 * (y.pri.dyn + y.pri.acad)) * recMult(); }
   if (act === "visit") { if (y.visit) return "He has already visited."; payTravel(code); y.visit = true; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + .16 * recMult(); }
   S.rec.hours -= cost;
