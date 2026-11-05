@@ -45,6 +45,8 @@ function statusChips(p, c) {
   if (p.req) s += `<span class="chip req">WANTS OUT</span> `;
   else if (p.listed) s += `<span class="chip list">LISTED</span> `;
   if (c && isHG(p, c.country)) s += `<span class="chip hg" title="Homegrown">HG</span> `;
+  const cc = c || (p.club >= 0 ? C(p.club) : null);
+  if (cc && cc.reg && !isReg(p, cc)) s += `<span class="chip sus" title="Not registered for competitions">NOT REG</span> `;
   return s;
 }
 const lgOpts = (sel, keys = Object.keys(LG)) => keys.map(k => `<option value="${k}" ${k === sel ? "selected" : ""}>${LG[k].foreign ? COUNTRY[LG[k].c].name + " · " : ""}${leagueName(k)}</option>`).join("");
@@ -257,7 +259,7 @@ function nextMatchCard() {
     <div class="cmp">${cmp("Attack", mr.att, orr.att)}${cmp("Midfield", mr.mid, orr.mid)}${cmp("Defence", mr.def, orr.def)}</div>
     <div class="row between" style="margin-bottom:10px"><label class="row small">Formation <select id="nx-form" data-c="form">${formOpts(S.formation)}</select></label>
       <span class="seg" role="group" aria-label="Mentality">${Object.entries(MENT).map(([k, v]) => `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}">${v.l}</button>`).join("")}</span></div>
-    ${!reg.ok ? `<p class="bad small">Squad registration is invalid: ${reg.seniors}/${RULES.squadMax} senior players, ${reg.nonHG}/${RULES.nonHGMax} non-homegrown, ${reg.total} in total (16 minimum). Fix it before you can play.</p>` : ""}
+    ${!reg.ok ? `<p class="bad small">Registration is invalid: ${reg.registered}/${RULES.squadMax} seniors registered, ${reg.nonHG}/${RULES.nonHGMax} non-homegrown, ${reg.eligible} eligible players (16 minimum). Fix it on the Squad page before you can play.</p>` : ""}
     ${tired ? `<p class="warn small">${tired} of your XI ${tired > 1 ? "are" : "is"} below 70 fitness.</p>` : ""}${oop ? `<p class="warn small">${oop} player${oop > 1 ? "s are" : " is"} out of position.</p>` : ""}
     <div class="row" style="margin-top:6px"><button class="btn primary" data-a="play" data-v="match">${nx.di === S.di ? (S.set.live ? "Kick off" : "Play match") : "Play to match day"}</button><button class="btn" data-a="go" data-v="tactics">Pick the team</button></div></section>`;
 }
@@ -277,7 +279,7 @@ function summerCard() {
   const c = me(), reg = regInfo(c), newKids = c.squad.map(P).filter(p => p.age === 16), gks = c.squad.filter(id => P(id).pos === "GK").length;
   return `<section class="card"><div class="card-h"><h2>Summer transfer window</h2><span class="eyebrow">Day ${S.summerDay + 1} of ${CAL.summerDays}</span></div>
     <div class="prose"><p>Buy, sell, loan and renew contracts before the new season. Each day, AI clubs do business of their own.</p>
-    <p>Registration for next season: <b class="${reg.seniors > RULES.squadMax ? "bad" : ""}">${reg.seniors}/${RULES.squadMax}</b> seniors, <b class="${reg.nonHG > RULES.nonHGMax ? "bad" : ""}">${reg.nonHG}/${RULES.nonHGMax}</b> non-homegrown, ${reg.u21} under-21s.</p>
+    <p>Registration for next season: <b>${reg.registered}/${RULES.squadMax}</b> seniors registered (${reg.nonHG}/${RULES.nonHGMax} non-homegrown), ${reg.unregistered ? `<b class="warn">${reg.unregistered} left out</b>, ` : ""}${reg.u21} under-21s. Choose who's registered on the Squad page; it locks when the window closes.</p>
     ${reg.total < 20 || gks < 2 ? `<p class="bad">Your squad is thin: ${reg.total} players, ${gks} goalkeeper${gks === 1 ? "" : "s"}. Free agents cost no fee.</p>` : ""}
     ${newKids.length ? `<p>New in the academy: ${newKids.map(p => playerA(p) + ` <span class="muted small">${p.pos}</span>`).join(", ")}.</p>` : ""}</div>
     <div class="row" style="margin-top:10px"><button class="btn" data-a="go" data-v="transfers">Transfer market</button><button class="btn" data-a="go" data-v="squad">Contracts and loans</button><button class="btn primary" data-a="play" data-v="newseason">Start the season</button></div></section>`;
@@ -292,6 +294,7 @@ function viewSquad() {
   const cols = [
     { k: "n", l: "Name", v: p => p.name, f: p => `${playerA(p)} ${statusChips(p, c)}` },
     { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>${xi.has(p.id) ? ' <span class="chip xi">XI</span>' : ""}` },
+    { k: "reg", l: "Registration", v: p => isSenior(p) ? (isReg(p, c) ? 1 : 0) : 2, f: p => !isSenior(p) ? '<span class="tiny muted">Under-21</span>' : `<button class="btn sm ${isReg(p, c) ? "" : "danger"}" data-a="regtoggle" data-v="${p.id}" ${windowOpen() && !p.loan ? "" : "disabled"}>${isReg(p, c) ? "Registered" : "Not registered"}</button>` },
     { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
     { k: "nat", l: "Nat", v: p => p.nat, f: p => p.nat, cls: "hide-sm" },
     { k: "ovr", l: "Rating", r: 1, v: p => p.ovr, f: p => ratingHtml(p) },
@@ -310,9 +313,10 @@ function viewSquad() {
   ];
   return `<div class="stack"><section class="card"><div class="card-h"><h2>Squad</h2>
     <span class="chips" role="group" aria-label="Filter">${[["ALL", "Everyone"], ["SEN", "Seniors (21+)"], ["U21", "Under-21"]].map(([k, l]) => `<button data-a="sqf" data-v="${k}" aria-pressed="${UI.sqf === k}">${l}</button>`).join("")}</span></div>
-    <div class="reg" style="margin-bottom:10px"><span>Registered seniors <b class="${reg.seniors > RULES.squadMax ? "bad" : ""}">${reg.seniors}/${RULES.squadMax}</b></span><span>Non-homegrown <b class="${reg.nonHG > RULES.nonHGMax ? "bad" : ""}">${reg.nonHG}/${RULES.nonHGMax}</b></span><span>Under-21s <b>${reg.u21}</b> (no limit)</span><span>Loans in <b>${reg.loansIn}/${RULES.loansIn}</b></span><span>Wage bill <b>${perWeek(sum(c.squad, id => P(id).wage))}</b></span></div>
+    <div class="reg" style="margin-bottom:10px"><span>Registered seniors <b class="${reg.registered > RULES.squadMax ? "bad" : ""}">${reg.registered}/${RULES.squadMax}</b></span><span>Non-homegrown registered <b class="${reg.nonHG > RULES.nonHGMax ? "bad" : ""}">${reg.nonHG}/${RULES.nonHGMax}</b></span><span>Unregistered <b class="${reg.unregistered ? "warn" : ""}">${reg.unregistered}</b></span><span>Under-21s <b>${reg.u21}</b> (no limit)</span><span>Loans in <b>${reg.loansIn}/${RULES.loansIn}</b></span><span>Wage bill <b>${perWeek(sum(c.squad, id => P(id).wage))}</b></span></div>
+    <div class="row" style="margin-bottom:10px">${windowOpen() ? `<button class="btn sm" data-a="regbest">Register my best 25</button><span class="small muted">Tap Registered / Not registered on a player to change it.</span>` : `<span class="small muted">Registration is locked until the transfer window opens (January, weeks 19–22, and the summer).</span>`}</div>
     ${table("squad", cols, ps, { sort: { k: "pos", d: 1 } })}
-    <p class="hint" style="margin-top:8px">Ratings are out of 20: 10 is average, 20 world class. Potential is your scouts' estimate, not a promise: it depends on minutes, form, happiness and your Development rating. Homegrown (HG) means three seasons at an English club before turning 21.</p></section>
+    <p class="hint" style="margin-top:8px">Squads can be any size, but only 25 seniors (21 and over, at most 17 not homegrown) can be registered; under-21s are always eligible. Unregistered players can't play, grow unhappy, may ask to leave, and several of them sulking unsettles the dressing room. Ratings are out of 20: 10 is average, 20 world class. Potential is your scouts' estimate, not a promise: it depends on minutes, form, happiness and your Development rating. Homegrown (HG) means three seasons at an English club before turning 21.</p></section>
     <section class="card"><div class="card-h"><h2>Out on loan</h2></div>${table("loanout", [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "c", l: "At", f: p => clubA(p.club, { flag: 1 }) }, { k: "app", l: "Apps", r: 1, f: p => p.s.app }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "pt", l: "Minutes", f: p => `<span class="bar"><i style="width:${p.pt * 100}%"></i></span>` }], out, { empty: "Nobody is out on loan. Young players develop faster when they play: loan them out from their profile during a window." })}</section></div>`;
 }
 
@@ -625,7 +629,7 @@ function modalBid(p) {
     ${w < .45 ? `<p class="small">${esc(whyNot(p, c) || "He isn't convinced by the move.")}</p>` : ""}
     <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === ask ? " (asking)" : ""}</option>`).join("")}</select></label>` : ""}
       <label class="f">Contract length<select id="bid-yrs" data-c="bid-yrs">${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === b.yrs ? "selected" : ""}>${y} year${y > 1 ? "s" : ""}</option>`).join("")}</select></label></div>
-    <p class="small">With agent fees (5%) this costs <b>${money(b.fee * 1.05)}</b> now. Your projected cost ratio would move from ${pct(scr(c))} to <b class="${after > RULES.scrSporting ? "bad" : after > RULES.scrLimit ? "warn" : ""}">${pct(after)}</b>. Registration after signing: ${regInfo(c).seniors + (isSenior(p) ? 1 : 0)}/${RULES.squadMax} seniors.</p>
+    <p class="small">With agent fees (5%) this costs <b>${money(b.fee * 1.05)}</b> now. Your projected cost ratio would move from ${pct(scr(c))} to <b class="${after > RULES.scrSporting ? "bad" : after > RULES.scrLimit ? "warn" : ""}">${pct(after)}</b>. ${isSenior(p) ? (regInfo(c).registered < RULES.squadMax ? `He'd take one of your ${RULES.squadMax - regInfo(c).registered} free registration places.` : `Your 25 registration places are full: he'd join unregistered unless you take someone else off the list.`) : "As an under-21 he needs no registration place."}</p>
     ${b.msg ? `<p class="small ${b.ok ? "good" : "bad"}"><b>${esc(b.msg)}</b></p>` : ""}
     <div class="row"><button class="btn primary" data-a="submitbid" data-v="${p.id}" ${windowOpen() && !b.ok ? "" : "disabled"}>${p.club >= 0 ? "Submit offer" : "Offer contract"}</button>${windowOpen() ? "" : '<span class="small muted">The transfer window is closed.</span>'}</div></div>`;
 }

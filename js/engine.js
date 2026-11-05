@@ -12,7 +12,7 @@ function aiMent(c, opp, home) { const d = clubLevel(c) - clubLevel(opp) + (home 
 function makeSide(c, opp, home, auto) {
   let xi, f, ment;
   if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = S.mentality; }
-  else { f = c.formation; xi = autoPick(c.squad, f); ment = aiMent(c, opp, home); auto = true; }
+  else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiMent(c, opp, home); auto = true; }
   const sl = slotsOf(f);
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));

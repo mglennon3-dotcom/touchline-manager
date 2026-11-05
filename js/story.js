@@ -16,6 +16,7 @@ function moodReasons(p) {
   if (p.ovr > clubLevel(c) + 6 && p.amb > .6) out.push(["Feels he has outgrown the club", -1]);
   if (p.promise) out.push([`Promised regular football until week ${p.promise.until + 1}`, 0]);
   if (p.req) out.push(["Has asked to leave", -1]);
+  if (!isReg(p, c)) out.push(["Left out of the registered squad", -1]);
   if (p.loy > .75) out.push(["Loyal to the club", 1]);
   return out;
 }
@@ -27,6 +28,8 @@ function weeklyMood() {
       const p = P(id), e = expectedShare(p, c);
       let d = (p.pt - e) * 6;
       if (p.ovr > lvl + 6 && p.amb > .6) d -= .8;
+      // Left out of the registered 25: it stings more for good, ambitious players.
+      if (!isReg(p, c)) d -= 1.2 + Math.max(0, p.ovr - lvl + 6) * .12 + p.amb;
       if (isUser(c) && userRes && userRes.w === S.week) { const won = (userRes.h === c.id) === (userRes.hg > userRes.ag) && userRes.hg !== userRes.ag; const lost = userRes.hg !== userRes.ag && !won; d += won ? .8 : lost ? -.8 * (1 + p.amb * .5) : 0; }
       d += (64 - p.mood) * .05;
       p.mood = clamp(p.mood + d, 0, 100);
@@ -35,9 +38,17 @@ function weeklyMood() {
         else { p.mood = Math.max(0, p.mood - 25); p.req = true; news(`${p.name} says you broke your promise of more football and wants out.`, true, "squad"); squadUnrest(c, 3); }
         p.promise = null;
       }
-      if (!p.loan && !p.req && p.age >= 19 && p.mood < 26 && R() < .05 + p.amb * .06 && !p.promise) transferRequest(p, c);
+      if (!p.loan && !p.req && p.age >= 19 && p.mood < 26 && R() < .05 + p.amb * .06 + (isReg(p, c) ? 0 : .08) && !p.promise) transferRequest(p, c);
     }
+    registrationUnrest(c);
   }
+}
+/* When several unregistered players are miserable, the mood spreads through the dressing room. */
+function registrationUnrest(c) {
+  const sulking = c.squad.map(P).filter(p => !isReg(p, c) && p.mood < 35);
+  if (sulking.length < 2) return;
+  for (const id of c.squad) { const p = P(id); if (isReg(p, c)) p.mood = Math.max(0, p.mood - .3 * sulking.length * (1 - p.loy * .5)); }
+  if (isUser(c) && (!c.unrestNews || S.week - c.unrestNews >= 6 || c.unrestNews > S.week)) { c.unrestNews = S.week; news(`Unrest in the dressing room: ${sulking.map(p => p.name).join(", ")} ${sulking.length > 1 ? "are" : "is"} unhappy at being left out of the registered squad, and it's affecting the others.`, true, "squad"); }
 }
 function squadUnrest(c, n) { for (const id of c.squad) { const p = P(id); p.mood = Math.max(0, p.mood - n * (1 - p.loy * .5)); } }
 function transferRequest(p, c) {

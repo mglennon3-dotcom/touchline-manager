@@ -19,7 +19,7 @@ function busy(on, text) { const el = document.getElementById("busy"); el.hidden 
 /* ---------- taking a club ---------- */
 function takeClub(id, name, arch, form) {
   S = DRAFT; DRAFT = null; S.club = id; S.me = newManager(name || "The Manager", arch || "bal", form || "4-3-3");
-  const c = me(); S.formation = S.me.form; c.formation = S.formation; S.lineup = autoPick(c.squad, S.formation);
+  const c = me(); S.formation = S.me.form; c.formation = S.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), S.formation);
   startSeason();
   news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}.`, true, "board");
   UI.page = "home"; save(); render(); window.scrollTo(0, 0);
@@ -45,7 +45,7 @@ async function play(mode) {
         continue;
       }
       const day = S.days[S.di], fxs = dayFixtures(day), ufx = userFixture(fxs);
-      if (ufx && !regInfo(me()).ok) { UI.page = "squad"; stopMsg = "Your squad registration is invalid. Reduce to 25 seniors and 17 non-homegrown first."; break; }
+      if (ufx && !regInfo(me()).ok) { UI.page = "squad"; stopMsg = "Your registration is invalid: register at most 25 seniors (17 non-homegrown) and at least 16 eligible players."; break; }
       playOthers(day, fxs);
       if (ufx) {
         if (S.set.live && (mode === "match" || mode === "day")) { startLive(ufx); UI.busy = false; busy(false); render(); window.scrollTo(0, 0); return; }
@@ -94,10 +94,19 @@ async function finishLive() {
 /* ---------- actions ---------- */
 function assignSlot(i, id) {
   const p = P(id); if (!avail(p)) { toast(`${p.name} is ${p.inj ? "injured" : "suspended"}.`); return; }
+  if (!isReg(p, me())) { toast(`${p.name} isn't registered, so he can't play.`); return; }
   const j = S.lineup.indexOf(id); if (j >= 0) [S.lineup[i], S.lineup[j]] = [S.lineup[j], S.lineup[i]]; else S.lineup[i] = id;
   UI.sel = null; save(); render();
 }
 const ACT = {
+  regbest: () => { autoRegister(me(), false); fixUserLineup(); save(); render(); toast("Your best 25 seniors are registered."); },
+  regtoggle: v => {
+    const c = me(), p = P(+v); if (!windowOpen()) return toast("Registration only changes while the transfer window is open.");
+    if (isReg(p, c)) { c.reg = c.reg.filter(id => id !== p.id); fixUserLineup(); toast(`${p.name} is off the registered list. He won't be happy.`); }
+    else { const r = regInfo(c); if (r.registered >= RULES.squadMax) return toast("All 25 places are taken. Unregister someone first.");
+      if (!isHG(p, c.country) && r.nonHG >= RULES.nonHGMax) return toast(`All ${RULES.nonHGMax} non-homegrown places are taken.`);
+      c.reg.push(p.id); toast(`${p.name} is registered.`); }
+    save(); render(); },
   buildask: v => { UI.confirmBuild = v; render(); },
   buildcancel: () => { UI.confirmBuild = null; render(); },
   build: v => { const c = me(); if (c.build) return; startExpansion(c, v); UI.confirmBuild = null; save(); render(); toast("Building work has started."); },
@@ -119,7 +128,7 @@ const ACT = {
   seenreview: () => { S.seasonOverSeen = true; save(); render(); },
   ment: v => { S.mentality = v; save(); render(); },
   train: v => { S.training = v; save(); render(); },
-  autopick: () => { S.lineup = autoPick(me().squad, S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
+  autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render(); },
   "pick-p": v => { const id = +v; if (UI.sel && UI.sel.slot != null) return assignSlot(UI.sel.slot, id); UI.sel = UI.sel && UI.sel.pid === id ? null : { pid: id }; render(); },
   sqf: v => { UI.sqf = v; render(); }, ttab: v => { UI.tab = v; render(); }, nf: v => { UI.nf = v; render(); },
@@ -138,7 +147,7 @@ const ACT = {
   "confirm-yes": () => { const cf = UI.confirm; UI.confirm = null; const p = P(cf.id); if (!p) return; if (cf.act === "loan") { startLoan(p, C(cf.to)); fixUserLineup(); toast(`${p.name} joins ${C(cf.to).name} on loan.`); UI.modal = null; save(); render(); return; } if (cf.act === "sell") { const fee = sellToAbroad(p); toast(`Sold for ${money(fee)}.`); } else { releasePlayer(p); toast(`${p.name} released.`); } UI.modal = null; save(); render(); },
   scout: v => { S.rec.scoutLvl = clamp(S.rec.scoutLvl + +v, 1, 5); save(); render(); },
   academy: v => { const c = me(), cost = +v; if (c.cash < cost || c.academy >= 20) return; c.cash -= cost; c.academy++; news(`Youth development upgraded to ${c.academy}/20 at a cost of ${money(cost)}.`, false, "youth"); save(); render(); },
-  takejob: v => { const c = C(+v); S.club = c.id; S.sacked = false; S.sackReason = null; S.board = 55; S.formation = c.formation; S.lineup = autoPick(c.squad, c.formation); S.expPos = expectedPos(c); S.inbox.forEach(m => m.done = true); news(`You are the new manager of ${c.name}.`, true, "board"); UI.page = "home"; save(); render(); },
+  takejob: v => { const c = C(+v); S.club = c.id; S.sacked = false; S.sackReason = null; S.board = 55; S.formation = c.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), c.formation); S.expPos = expectedPos(c); S.inbox.forEach(m => m.done = true); news(`You are the new manager of ${c.name}.`, true, "board"); UI.page = "home"; save(); render(); },
   reset: async () => { await DB.del("career"); S = null; DRAFT = null; LIVE = null; UI.page = "home"; render(); window.scrollTo(0, 0); },
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
@@ -185,6 +194,7 @@ async function boot(data) {
   if (S && !S.stadiums) ensureStadiums();
   if (S && !S.sponsors) ensureSponsors();
   if (S && !S.dem2) ensureDemandAnchor();
+  if (S && !S.reg2) { for (const c of activeClubs()) autoRegister(c, false); S.reg2 = true; }
   if (S && !S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.

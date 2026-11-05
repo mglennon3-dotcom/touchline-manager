@@ -49,6 +49,7 @@ function transfer(p, to, fee, wage, yrs) {
   to.squad.push(p.id);
   p.club = to.id; p.yrs = yrs; p.wage = wage; p.am = fee > 0 ? { per: Math.round(fee / yrs), left: yrs } : null;
   p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.pt = .5;
+  refreshRegistration(to); if (from) refreshRegistration(from);
   const big = fee >= 15e6 || isUser(to) || (from && isUser(from));
   S.tlog.unshift({ y: S.year, w: S.phase === "summer" ? "Summer" : "Wk " + (S.week + 1), pid: p.id, name: p.name, from: from ? from.id : -1, to: to.id, fee });
   if (S.tlog.length > 300) S.tlog.length = 300;
@@ -94,7 +95,7 @@ function aiTransferDay(intensity) {
     if (best.club === S.club) { if (best.listed || best.req || R() < .25) offerToUser(best, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); continue; }
     if (best.club >= 0) { const seller = C(best.club); if (seller.squad.filter(id => FAM[P(id).pos][best.pos] >= .9).length <= 2 || rivalry(seller.id, c.id) >= 2) continue; }
     transfer(best, c, fee, contractDemand(best, c, w), ri(2, 5));
-    if (regInfo(c).seniors > RULES.squadMax || regInfo(c).nonHG > RULES.nonHGMax) trimSquad(c, false);
+    if (regInfo(c).seniors > RULES.aiSeniorCap) trimSquad(c, false);
   }
 }
 function offerToUser(p, from, fee) {
@@ -207,6 +208,7 @@ function startLoan(p, to) {
   const from = C(p.club);
   from.squad = from.squad.filter(id => id !== p.id); to.squad.push(p.id);
   p.loan = { from: from.id, y: S.year }; p.club = to.id; p.pt = .5; p.listed = false;
+  refreshRegistration(to); refreshRegistration(from);
   if (isUser(from)) S.lineup = S.lineup.map(id => id === p.id ? null : id);
   bumpTick();
   if (isUser(from) || isUser(to)) news(`${p.name} joins ${to.name} on a season-long loan from ${from.name}.`, true, "transfer");
@@ -221,7 +223,7 @@ function endLoan(p) {
 }
 const loanable = p => p.club >= 0 && !p.loan && p.age <= RULES.loanMaxAge && !p.inj;
 function wouldStart(p, c) { return c.squad.map(P).filter(x => x.id !== p.id && FAM[x.pos][p.pos] >= .9 && x.ovr >= p.ovr).length < Math.max(1, roleSlots(c.formation, p.pos)); }
-function canTakeLoan(c, p) { const r = regInfo(c); return r.loansIn < RULES.loansIn && (!isSenior(p) || r.seniors < RULES.squadMax) && (!isSenior(p) || isHG(p, c.country) || r.nonHG < RULES.nonHGMax); }
+function canTakeLoan(c, p) { const r = regInfo(c); return r.loansIn < RULES.loansIn && (!isSenior(p) || r.registered < RULES.squadMax) && (!isSenior(p) || isHG(p, c.country) || r.nonHG < RULES.nonHGMax); }
 /* Where should a young player go to play? Clubs a little below his level that would start him. */
 function loanDestinations(p) {
   return activeClubs().filter(c => c.id !== p.club && !isUser(c) && clubLevel(c) <= p.ovr + 3 && clubLevel(c) >= p.ovr - 9 && wouldStart(p, c) && canTakeLoan(c, p))

@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.7.1";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.8";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -86,6 +86,7 @@ const ROLE_MIX = { GK: 3, CB: 4, FB: 4, DM: 2, CM: 3, AM: 2, W: 3, ST: 3 };
 /* ---------- competition rules (modelled on the current English game) ---------- */
 const RULES = {
   squadMax: 25, nonHGMax: 17, hgYears: 3,  // 25 registered seniors, at most 17 not homegrown, under-21s unlimited
+  aiSeniorCap: 28,                          // AI clubs may carry a few unregistered seniors
   benchSize: 9, subs: 5,
   yellowBans: [[5, .5, 1], [10, .84, 2], [15, 9, 3]], // [cautions, before this share of the league season, games banned]
   straightRed: 3, secondYellow: 1,

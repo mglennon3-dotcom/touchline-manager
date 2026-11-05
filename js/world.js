@@ -49,12 +49,34 @@ function wageDemand(p, rep) { return Math.max(15000, Math.round(baseValue(p) * .
 const isHG = (p, country) => (p.yt[country] || 0) >= RULES.hgYears;
 const isSenior = p => p.age >= 21;
 
+/* Squads can be any size, but only 25 seniors (at most 17 not homegrown) can be registered for competitions.
+   Under-21s are always eligible. Registration can only change while a transfer window is open. */
+const isReg = (p, c) => !isSenior(p) || (c.reg || []).includes(p.id);
+const eligibleIds = c => c.squad.filter(id => isReg(P(id), c));
 function regInfo(c) {
-  const ps = c.squad.map(P), seniors = ps.filter(isSenior), nonHG = seniors.filter(p => !isHG(p, c.country));
-  const gks = ps.filter(p => p.pos === "GK" && !p.inj).length;
-  return { seniors: seniors.length, nonHG: nonHG.length, u21: ps.length - seniors.length, gks, total: ps.length,
+  const ps = c.squad.map(P), seniors = ps.filter(isSenior), reg = seniors.filter(p => isReg(p, c)), nonHG = reg.filter(p => !isHG(p, c.country));
+  const gks = ps.filter(p => p.pos === "GK" && !p.inj && isReg(p, c)).length, eligible = ps.length - seniors.length + reg.length;
+  return { seniors: seniors.length, registered: reg.length, unregistered: seniors.length - reg.length, nonHG: nonHG.length, u21: ps.length - seniors.length, gks, total: ps.length, eligible,
     loansIn: ps.filter(p => p.loan).length,
-    ok: seniors.length <= RULES.squadMax && nonHG.length <= RULES.nonHGMax && ps.length >= 16 };
+    ok: reg.length <= RULES.squadMax && nonHG.length <= RULES.nonHGMax && eligible >= 16 };
+}
+/* Register the best seniors, keeping existing registrations when asked (your choices stand; only empty places are filled). */
+function autoRegister(c, keep) {
+  const seniors = c.squad.map(P).filter(isSenior), ids = new Set(seniors.map(p => p.id));
+  const reg = keep ? (c.reg || []).filter(id => ids.has(id)) : [];
+  const score = p => p.ovr - (p.inj >= 8 ? 12 : 0) - (p.retiring === 1 ? 2 : 0);
+  for (const p of seniors.filter(p => !reg.includes(p.id)).sort((a, b) => score(b) - score(a))) {
+    if (reg.length >= RULES.squadMax) break;
+    if (!isHG(p, c.country) && reg.filter(id => !isHG(P(id), c.country)).length >= RULES.nonHGMax) continue;
+    reg.push(p.id);
+  }
+  c.reg = reg;
+}
+/* Called whenever squads change: AI clubs re-pick their best 25 in a window; you keep yours, with empty places filled. */
+function refreshRegistration(c) {
+  if (!c || c.gone) return;
+  if (!windowOpen() && c.reg) { const ids = new Set(c.squad); c.reg = c.reg.filter(id => ids.has(id)); return; }
+  autoRegister(c, isUser(c));
 }
 
 /* Club strength: average of the best realistic XI by line. Cached per tick — it is asked for constantly. */
@@ -164,21 +186,21 @@ function autoPick(ids, f, fixed) {
   return out;
 }
 function benchFor(c, xi) {
-  const used = new Set(xi), rest = c.squad.map(P).filter(p => avail(p) && !used.has(p.id)).sort((a, b) => b.ovr * b.fit - a.ovr * a.fit);
+  const used = new Set(xi), rest = eligibleIds(c).map(P).filter(p => avail(p) && !used.has(p.id)).sort((a, b) => b.ovr * b.fit - a.ovr * a.fit);
   const gk = rest.find(p => p.pos === "GK"), out = gk ? [gk] : [];
   for (const p of rest) { if (out.length >= RULES.benchSize) break; if (p !== gk) out.push(p); }
   return out.map(p => p.id);
 }
 function fixUserLineup() {
-  const c = me(), sq = new Set(c.squad), seen = new Set();
+  const c = me(), sq = new Set(eligibleIds(c)), seen = new Set();
   const keep = (S.lineup || []).slice(0, 11).map(id => { if (id == null || !sq.has(id) || seen.has(id) || !avail(P(id))) return null; seen.add(id); return id; });
   while (keep.length < 11) keep.push(null);
-  S.lineup = autoPick(c.squad, S.formation, keep);
+  S.lineup = autoPick(eligibleIds(c), S.formation, keep);
 }
 function reshapeUser(f) {
   const xi = S.lineup.filter(id => id != null && avail(P(id))), sl = slotsOf(f), out = Array(11).fill(null), used = new Set();
   sl.forEach((role, i) => { let best = null; for (const id of xi) { const p = P(id); if (used.has(id) || p.pos !== role) continue; if (!best || p.ovr > best.ovr) best = p; } if (best) { out[i] = best.id; used.add(best.id); } });
-  S.formation = f; me().formation = f; S.lineup = autoPick(me().squad, f, out);
+  S.formation = f; me().formation = f; S.lineup = autoPick(eligibleIds(me()), f, out);
 }
 
 /* ---------- world generation ---------- */
@@ -234,15 +256,15 @@ function academyPlayer(c, age) {
 }
 /* Keep an AI club inside the registration rules by releasing its least valuable surplus. */
 function trimSquad(c, atGen) {
+  if (isUser(c) && !atGen) return;  // your squad size is your call
   const release = p => { c.squad = c.squad.filter(id => id !== p.id); if (atGen) delete S.players[p.id]; else if (p.loan) endLoan(p); else toFreeAgent(p); };
   let info = regInfo(c), guard = 0;
-  while (info.nonHG > RULES.nonHGMax && guard++ < 40) {
-    const cand = c.squad.map(P).filter(p => isSenior(p) && !isHG(p, c.country)).sort((a, b) => value(a) - value(b))[0];
-    if (atGen) { cand.nat = c.country; cand.name = nameFor(c.country); cand.yt[c.country] = 3; } else release(cand);
-    info = regInfo(c);
-  }
-  while (info.seniors > RULES.squadMax && guard++ < 80) { const cand = c.squad.map(P).filter(isSenior).sort((a, b) => value(a) - value(b))[0]; release(cand); info = regInfo(c); }
-  while (c.squad.length > 32 && guard++ < 120) { const cand = c.squad.map(P).filter(p => !isSenior(p)).sort((a, b) => a.pot - b.pot)[0]; if (!cand) break; release(cand); }
+  // A new world starts with registrable squads: too many foreign seniors become homegrown locals.
+  const seniorsNonHG = () => c.squad.map(P).filter(p => isSenior(p) && !isHG(p, c.country));
+  while (atGen && seniorsNonHG().length > RULES.nonHGMax && guard++ < 40) { const cand = seniorsNonHG().sort((a, b) => value(a) - value(b))[0]; cand.nat = c.country; cand.name = nameFor(c.country); cand.yt[c.country] = 3; }
+  const cap = atGen ? RULES.squadMax : RULES.aiSeniorCap;
+  while (info.seniors > cap && guard++ < 80) { const cand = c.squad.map(P).filter(isSenior).sort((a, b) => value(a) - value(b))[0]; release(cand); info = regInfo(c); }
+  while (c.squad.length > 34 && guard++ < 120) { const cand = c.squad.map(P).filter(p => !isSenior(p)).sort((a, b) => a.pot - b.pot)[0]; if (!cand) break; release(cand); }
 }
 function toFreeAgent(p) {
   p.club = -1; p.am = null; p.req = false; p.listed = false; p.promise = null; p.yrs = 0; p.loan = null;
@@ -272,7 +294,7 @@ function setupFinances(c) {
 function newWorld() {
   S = { v: 5, year: 2026, phase: "season", week: 0, di: 0, days: [], summerDay: 0, club: null, nextPid: 1, players: {}, clubs: [], fa: [], towns: {},
     leagues: {}, ko: {}, cont: {}, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
-    history: [], career: [], hof: [], scout: {}, me: null, acad20: true, stadiums: true, sponsors: true, dem2: true, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
+    history: [], career: [], hof: [], scout: {}, me: null, acad20: true, stadiums: true, sponsors: true, dem2: true, reg2: true, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
     set: { live: true }, qual: null, lastPos: {}, sacked: false, _tick: 1 };
   for (const key of Object.keys(LG)) {
     const ids = [];
@@ -280,6 +302,7 @@ function newWorld() {
     S.leagues[key] = { key, clubs: ids };
   }
   for (const c of S.clubs) genSquad(c);
+  for (const c of S.clubs) autoRegister(c, false);
   ensureRivals();
   for (const c of S.clubs) setupFinances(c);
   for (const c of S.clubs) initStadium(c);

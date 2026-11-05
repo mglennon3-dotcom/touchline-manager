@@ -51,6 +51,7 @@ function startSeason() {
   for (const k of ENG_LGS) { const po = LG[k].po; if (!po) continue; const names = { c: ["Quarter-finals", "Semi-finals", "Final"], std: ["Semi-finals", "Final"], nl: ["Quarter-finals", "Semi-finals", "Final"] }[po.type]; S.ko["PO" + k] = newKO("PO" + k, "po", leagueName(k) + " play-offs", names, CAL.po[po.type], { lg: k }); }
   setupContinental();
   planRetirements();
+  for (const c of activeClubs()) autoRegister(c, isUser(c));  // the summer window's last act: register for the season
   S.days = buildDays();
   newProspectClass();
   S.expPos = expectedPos(me());
@@ -231,7 +232,7 @@ function quickLeagueRound(key, r) {
     const hg = pois(1.32 * Math.exp(d) * 1.1), ag = pois(1.32 * Math.exp(-d) / 1.1);
     rd.push({ h, a, hg, ag }); L.n++; recordRivalry(h, a, hg, ag); gateFor(H, a); fansAfterMatch(H, hg, ag, a); fansAfterMatch(A, ag, hg, h);
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
-      const xi = autoPick(c.squad, c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
+      const xi = autoPick(eligibleIds(c), c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
       for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - clubLevel(c)) / 25 + gauss() * .3, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
       for (let g = 0; g < gf; g++) { const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); s.s.g++; s.s.lg++; s.s.rt += .9; }
       c.wkMatches++;
@@ -279,7 +280,7 @@ function weekly() {
     }
     c.wkMatches = 0;
   }
-  for (const c of activeClubs()) { stadiumWeek(c); sponsorPay(c, 1 / 52); }
+  for (const c of activeClubs()) { stadiumWeek(c); sponsorPay(c, 1 / 52); if (windowOpen() && !isUser(c)) refreshRegistration(c); }
   for (const id of S.fa) { const p = P(id); p.fit = 100; if (p.inj) p.inj--; }
   weeklyMood();
   weeklyRecruiting();
@@ -386,7 +387,7 @@ function endSeason() {
     c.squad = [];
     const wasMine = isUser(c);
     if (wasMine && !S.set.unsackable) { S.sacked = true; S.sackReason = `${c.name} dropped out of the National Division.`; }
-    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n); initStadium(n); initSponsors(n); n.newcomer = S.year;
+    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); autoRegister(n, false); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n); initStadium(n); initSponsors(n); n.newcomer = S.year;
     n.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
     // In unsackable mode you can't be left without a club: you take over one of the newcomers instead.
     if (wasMine && S.set.unsackable) { S.club = n.id; S.lineup = []; S.formation = S.me.form; n.formation = S.me.form; news(`${c.name} have dropped out of the National Division. You take charge of newcomers ${n.name}.`, true, "board"); }
