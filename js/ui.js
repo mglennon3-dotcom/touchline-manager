@@ -292,6 +292,14 @@ function zoneLegend(key) {
   if (L.tier === 1) return `<span><i style="background:var(--zone-cc)"></i>Champions Cup</span><span><i style="background:var(--zone-cs)"></i>Shield and Trophy${L.foreign ? "" : " (the two cup winners also qualify)"}</span><span><i style="background:var(--zone-down)"></i>Relegation</span>`;
   return `<span><i style="background:var(--zone-cc)"></i>Automatic promotion</span><span><i style="background:var(--zone-po)"></i>Play-offs (one more promoted)</span><span><i style="background:var(--zone-down)"></i>${L.tier === 6 ? "Drop out of the game" : "Relegation"}</span>`;
 }
+/* Your XI and bench for the next match, on the match card: drop a sub with ×, add one from the menu. */
+function matchSquadHtml(c) {
+  const sl = slotsOf(S.formation), xi = S.lineup.map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean), bench = benchFor(c, S.lineup).map(P), mine = new Set(S.bench || []);
+  const pool = eligibleIds(c).map(P).filter(p => avail(p) && !S.lineup.includes(p.id) && !bench.includes(p)).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr);
+  return `<div class="msq"><div><span class="eyebrow">Starting XI</span> <button class="lnk tiny" data-a="go" data-v="tactics">change</button><div class="msq-list">${xi.map(o => `<span class="msq-p"><span class="pos">${o.slot}</span> ${esc(sur(o.p))}</span>`).join("")}</div></div>
+    <div><span class="eyebrow">Bench (${bench.length})</span><div class="msq-list">${bench.map(p => `<span class="msq-p ${mine.has(p.id) ? "" : "auto"}" title="${mine.has(p.id) ? "Your pick" : "Filled automatically"}"><span class="pos">${p.pos}</span> ${esc(sur(p))}<button class="x" data-a="benchdrop" data-v="${p.id}" aria-label="Drop ${esc(p.name)} from the bench">×</button></span>`).join("")}</div>
+      ${pool.length ? `<label class="row small" style="margin-top:6px">Add a sub <select data-c="benchadd"><option value="">Choose a player…</option>${pool.map(p => `<option value="${p.id}">${p.pos} · ${esc(p.name)} · ${Math.round(r20(p.ovr))} · fit ${Math.round(p.fit)}</option>`).join("")}</select></label>` : ""}</div></div>`;
+}
 function nextMatchCard() {
   const nx = peekUserFixture(), c = me();
   if (!nx) return `<section class="card"><h2>No more matches this season</h2><p class="muted" style="margin-top:6px">Play on to the end of the season.</p></section>`;
@@ -312,6 +320,7 @@ function nextMatchCard() {
     <div class="row between" style="margin-bottom:10px"><label class="row small">Formation <select id="nx-form" data-c="form">${formOpts(S.formation)}</select></label>
       <label class="row small">Style <select data-c="style" aria-label="Style of play">${(() => { const on = userOn(); return Object.entries(MENT).map(([k, v]) => `<option value="${k}" ${S.mentality === k ? "selected" : ""}>${v.l}${STYLE_KEYS[k].length ? " · " + fitWord(styleFit(on, k))[1].toLowerCase() : ""}</option>`).join(""); })()}</select></label></div>
     <p class="small muted" style="margin:-4px 0 10px">${(() => { const f = styleFit(userOn(), S.mentality), [, w, cls] = fitWord(f); return STYLE_KEYS[S.mentality].length ? `${MENT[S.mentality].l} is a <span class="${cls}">${w.toLowerCase()}</span> for your XI. ` : ""; })()}${esc(opp.short)} usually play ${MENT[baseStyle(opp)].l.toLowerCase()}${aiStyle(opp, c, fx.h === opp.id && !fx.neutral) !== baseStyle(opp) ? `; expect ${MENT[aiStyle(opp, c, fx.h === opp.id && !fx.neutral)].l.toLowerCase()} against you` : ""}.</p>
+    ${matchSquadHtml(c)}
     ${!reg.ok ? `<p class="bad small">Registration is invalid: ${reg.registered}/${RULES.squadMax} seniors registered, ${reg.nonHG}/${RULES.nonHGMax} non-homegrown, ${reg.eligible} eligible players (16 minimum). Fix it on the Squad page before you can play.</p>` : ""}
     ${tired ? `<p class="warn small">${tired} of your XI ${tired > 1 ? "are" : "is"} below 70 fitness.</p>` : ""}${oop ? `<p class="warn small">${oop} player${oop > 1 ? "s are" : " is"} out of position.</p>` : ""}
     <div class="row" style="margin-top:6px"><button class="btn primary" data-a="play" data-v="${nx.di === S.di ? "play" : "match"}">${nx.di === S.di ? (S.set.live ? "Kick off" : "Play match") : "Go to match day"}</button><button class="btn" data-a="go" data-v="tactics">Pick the team</button></div></section>`;
@@ -891,17 +900,19 @@ function liveRatings(M) {
 }
 function liveTeam(M, k) {
   const s = k ? M.a : M.h, F = FORMATIONS[s.form], sel = UI.lsel || {}, done = M.done, left = RULES.subs - s.subs;
-  const bench = benchAvail(M, k), canSub = !done && left > 0;
+  const pre = M.min === 0 && !done, bench = pre ? s.bench.map(P).filter(Boolean) : benchAvail(M, k), canSub = !done && (pre || left > 0);
+  const inSquad = new Set([...s.on.map(o => o.p.id), ...s.bench]), outside = pre ? eligibleIds(C(s.club)).map(P).filter(p => avail(p) && !inSquad.has(p.id)).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr) : [];
   const slots = s.on.map((o, idx) => { const [role, x, y] = F[o.si] || [o.slot, 50, 50], f = FAM[o.p.pos][o.slot], on = sel.on === idx;
     return `<button class="slot ${f < .9 ? "oop" : ""} ${on ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="livetap" data-v="${idx}" ${done ? "disabled" : ""} title="${esc(o.p.name)}, ${o.p.pos} playing ${o.slot}, fitness ${Math.round(o.fit)}">
       <span class="disc">${Math.round(r20(eff(o.p, o.slot, o.fit)))}</span>${s.yel[o.p.id] ? '<span class="yc" aria-label="Booked"></span>' : ""}${M.min > 0 ? `<span class="mr ${mrCls(matchRating(M, k, o.p.id))}" title="Match rating">${matchRating(M, k, o.p.id).toFixed(1)}</span>` : ""}<span class="nm">${esc(pitchName(o.p, s.on.map(x => x.p)))}</span><span class="fb"><i style="width:${o.fit}%;background:${o.fit < 60 ? "var(--loss)" : o.fit < 75 ? "var(--accent)" : "var(--win)"}"></i></span></button>`; }).join("");
-  const hint = done ? "" : sel.on != null ? (canSub ? `Now tap a substitute to bring on for ${esc(s.on[sel.on].p.name)}, or another player to swap positions.` : "Tap another player to swap positions.") : sel.bench != null ? `Now tap the player to take off for ${esc(P(sel.bench).name)}.` : `Tap a player, then a substitute to bring him on, or two players to swap positions.`;
-  return `<div class="card live-team lv-team" style="--club:${C(s.club).color}"><div class="card-h"><h2>Your team</h2><span class="eyebrow">${left} sub${left === 1 ? "" : "s"} left</span></div>
+  const hint = done ? "" : pre ? (sel.on != null || sel.bench != null || sel.out != null ? `Now tap who to swap with ${esc(P(sel.on != null ? s.on[sel.on].p.id : sel.bench ?? sel.out).name)}: a starter, a substitute or someone outside the squad.` : "Before kick-off: tap any two players (starters, substitutes or the rest of the squad) to swap them. Changes here don't use a substitution and are kept for later matches.") : sel.on != null ? (canSub ? `Now tap a substitute to bring on for ${esc(s.on[sel.on].p.name)}, or another player to swap positions.` : "Tap another player to swap positions.") : sel.bench != null ? `Now tap the player to take off for ${esc(P(sel.bench).name)}.` : `Tap a player, then a substitute to bring him on, or two players to swap positions.`;
+  return `<div class="card live-team lv-team" style="--club:${C(s.club).color}"><div class="card-h"><h2>Your team</h2><span class="eyebrow">${pre ? "Before kick-off · team changes are free" : `${left} sub${left === 1 ? "" : "s"} left`}</span></div>
     <div class="row between small" style="margin-bottom:8px"><label class="row">Formation <select data-c="liveform" ${done ? "disabled" : ""}>${Object.keys(FORMATIONS).map(f => `<option ${f === s.form ? "selected" : ""}>${f}</option>`).join("")}</select></label><span class="muted">${MENT[s.ment].l}</span></div>
     <div class="pitch live">${PITCH_LINES}${slots}</div>
     <p class="small muted" style="margin:8px 0">${hint}</p>
     <h3 style="margin:4px 0 6px">Bench</h3>
     ${bench.length ? `<div class="bench">${bench.map(p => `<button class="bench-p ${sel.bench === p.id ? "sel" : ""}" data-a="livebench" data-v="${p.id}" ${canSub ? "" : "disabled"}><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`).join("")}</div>` : '<p class="small muted">No substitutes available.</p>'}
+    ${pre && outside.length ? `<h3 style="margin:12px 0 6px">Not in the matchday squad</h3><div class="bench">${outside.map(p => `<button class="bench-p ${sel.out === p.id ? "sel" : ""}" data-a="liveout" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`).join("")}</div>` : ""}
   </div>`;
 }
 function viewLive() {

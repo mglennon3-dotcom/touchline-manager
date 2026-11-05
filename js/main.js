@@ -107,6 +107,17 @@ async function playNewSeason() {
 
 /* ---------- live matches ---------- */
 function livePause() { clearTimeout(LIVE.t); LIVE.paused = true; }
+/* Before kick-off: tap any two of a starter, a substitute and a player outside the matchday squad to swap
+   them. It changes the team sheet, so no substitution is used. Two starters swap positions. */
+function livePre(x) {
+  const M = LIVE.M, k = LIVE.k, sel = UI.lsel || {}, kind = o => o.on != null ? "on" : o.bench != null ? "bench" : "out", same = (a, b) => kind(a) === kind(b) && (a.on ?? a.bench ?? a.out) === (b.on ?? b.bench ?? b.out);
+  if (!UI.lsel) UI.lsel = x;
+  else if (same(sel, x)) UI.lsel = null;
+  else if (kind(sel) === "on" && kind(x) === "on") { swapSlots(M, k, sel.on, x.on); savePreMatch(k ? M.a : M.h); UI.lsel = null; }
+  else if (kind(sel) === kind(x)) UI.lsel = x;
+  else { preSwap(M, k, sel, x); UI.lsel = null; save(); }
+  render();
+}
 function startLive(fx) { UI.lsel = null; LIVE = { M: makeMatch(fx, false), fx, k: fx.h === S.club ? 0 : 1, paused: true, speed: 300, t: 0 }; }
 function tick() {
   if (!LIVE || LIVE.paused || LIVE.M.done) return;
@@ -163,9 +174,11 @@ const ACT = {
   train: v => { S.training = v; save(); render(); },
   // Your bench: tap to add or remove; spots you don't fill are filled automatically.
   benchtoggle: v => { const id = +v, b = (S.bench || []).filter(x => S.players[x] && !S.lineup.includes(x)); const i = b.indexOf(id);
-    if (i >= 0) b.splice(i, 1); else { if (b.length >= RULES.benchSize) return toast(`The bench holds ${RULES.benchSize}. Take someone off it first.`); b.push(id); }
+    if (i >= 0) { b.splice(i, 1); (S.benchNo ||= []).includes(id) || S.benchNo.push(id); } else { S.benchNo = (S.benchNo || []).filter(x => x !== id); if (b.length >= RULES.benchSize) return toast(`The bench holds ${RULES.benchSize}. Take someone off it first.`); b.push(id); }
     S.bench = b; save(); render(); },
-  benchauto: () => { S.bench = null; save(); render(); toast("Bench back to automatic: your best available players."); },
+  // From the match card: drop a sub (yours or automatic; he isn't brought back automatically) or add one.
+  benchdrop: v => { const id = +v, cur = benchFor(me(), S.lineup); S.bench = cur.filter(x => x !== id && (S.bench || []).includes(x)); (S.benchNo ||= []).includes(id) || S.benchNo.push(id); save(); render(); },
+  benchauto: () => { S.bench = null; S.benchNo = []; save(); render(); toast("Bench back to automatic: your best available players."); },
   autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render(); },
   "pick-p": v => { const id = +v; if (UI.sel && UI.sel.slot != null) return assignSlot(UI.sel.slot, id); UI.sel = UI.sel && UI.sel.pid === id ? null : { pid: id }; render(); },
@@ -213,13 +226,16 @@ const ACT = {
   // players to swap their positions.
   livetap: v => {
     const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, idx = +v, sel = UI.lsel || {}; livePause();
+    if (M.min === 0) return livePre({ on: idx });
     if (sel.bench != null && s.subs < RULES.subs) { doSub(M, k, idx, sel.bench); UI.lsel = null; }
     else if (sel.on != null && sel.on !== idx) { swapSlots(M, k, sel.on, idx); UI.lsel = null; }
     else UI.lsel = sel.on === idx ? null : { on: idx };
     render();
   },
+  liveout: v => { livePause(); if (LIVE.M.min === 0) livePre({ out: +v }); },
   livebench: v => {
     const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, id = +v, sel = UI.lsel || {}; livePause();
+    if (M.min === 0) return livePre({ bench: id });
     if (sel.on != null && s.subs < RULES.subs) { doSub(M, k, sel.on, id); UI.lsel = null; }
     else UI.lsel = sel.bench === id ? null : { bench: id };
     render();
@@ -230,8 +246,9 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  benchadd: v => { if (v) ACT.benchtoggle(v); },
   autoscout: (v, el) => { S.set.autoScout = el.checked; delete S.set.autoAbroad; save(); render(); toast(el.checked ? "Scouting assistant on: spare hours, England only, no cost." : "Scouting assistant off."); },
-  liveform: v => { livePause(); changeForm(LIVE.M, LIVE.k, v); UI.lsel = null; render(); },
+  liveform: v => { livePause(); changeForm(LIVE.M, LIVE.k, v); if (LIVE.M.min === 0) savePreMatch(LIVE.k ? LIVE.M.a : LIVE.M.h); UI.lsel = null; render(); },
   startsort: v => { const cur = UI.sort.start; UI.sort.start = { k: v, d: cur && cur.k === v ? cur.d : (v === "n" || v === "reg" || v === "co" ? 1 : -1) }; render(); },
   style: v => { S.mentality = v; save(); render(); },
   autostyle: (v, el) => { S.set.autoStyle = el.checked; save(); },

@@ -408,3 +408,10 @@ body{padding-top:env(safe-area-inset-top,0px)}
   .playmenu{right:auto;left:0;min-width:0;width:min(320px,calc(100vw - 32px));overflow-y:auto}
   .mast.compact .playmenu{left:auto;right:0}
 }
+/* matchday squad on the match card */
+.msq{display:grid;gap:10px;margin:4px 0 12px}
+.msq-list{display:flex;flex-wrap:wrap;gap:4px 6px;margin-top:4px}
+.msq-p{display:inline-flex;align-items:center;gap:4px;padding:2px 6px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--surface-2)}
+.msq-p.auto{opacity:.7;border-style:dashed}
+.msq-p .x{border:0;background:none;padding:0 2px;font-size:15px;line-height:1;color:var(--muted)}
+.msq-p .x:hover{color:var(--loss)}

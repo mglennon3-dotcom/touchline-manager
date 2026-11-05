@@ -115,6 +115,26 @@ function doSub(M, i, idx, newId, why) {
   s.on[idx] = { p, slot: o.slot, si: o.si, fit: p.fit, from: M.min }; s.used.push(newId); s.subs++; s.rt = null;
   lg(M, "sub", i, `${why || "Change"}: ${p.name} replaces ${o.p.name}.`);
 }
+/* Before kick-off your team sheet can still change without using a substitution: swap a starter, a
+   substitute and a player outside the matchday squad with one another. a and b are { on: index },
+   { bench: id } or { out: id }. Your saved XI and bench follow, so the change carries to later matches. */
+function preSwap(M, i, a, b) {
+  const s = i ? M.a : M.h, idOf = x => x.on != null ? s.on[x.on].p.id : x.bench ?? x.out;
+  const ia = idOf(a), ib = idOf(b);
+  const put = (x, id) => {
+    if (x.on != null) { const o = s.on[x.on], p = P(id); s.on[x.on] = { p, slot: o.slot, si: o.si, fit: p.fit, from: 0 }; }
+    else if (x.bench != null) s.bench[s.bench.indexOf(x.bench)] = id;
+  };
+  put(a, ib); put(b, ia);
+  s.used = s.on.map(o => o.p.id); s.rt = null; s.fitK = null;
+  savePreMatch(s);
+}
+// Before kick-off your team sheet is your selection: keep the saved formation, XI and bench in step.
+function savePreMatch(s) {
+  if (!isUser(C(s.club))) return;
+  const xi = Array(11).fill(null); for (const o of s.on) xi[o.si] = o.p.id;
+  S.formation = s.form; S.lineup = xi; S.bench = s.bench.slice();
+}
 // Swap two players' positions on the pitch.
 function swapSlots(M, i, a, b) {
   const s = i ? M.a : M.h, x = s.on[a], y = s.on[b];
