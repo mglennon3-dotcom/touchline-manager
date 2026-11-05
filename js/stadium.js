@@ -7,9 +7,11 @@ const MATCHDAY_SHARE = .2;  // share of a club's starting income that comes thro
 const capFor = rep => 600 * Math.pow(1.055, rep);  // typical crowd for a club of this standing: ~1,000 at the bottom, ~45,000 at the top
 const supportMult = c => .6 + .04 * (c.support ?? 10);  // support base 1 → 0.64×, 10 → 1×, 20 → 1.4×
 const homeGames = c => roundsOf(c.lg) / 2;
+// [kind, label, extra capacity, base length in seasons]. Bigger projects take years; size adds a little more.
 const EXPANSIONS = [
-  ["small", "Extend a stand", .15], ["medium", "Rebuild a stand", .35], ["large", "Redevelop two stands", .7], ["new", "Build a new stadium", 1.2],
+  ["small", "Extend a stand", .15, .75], ["medium", "Rebuild a stand", .35, 1.5], ["large", "Redevelop two stands", .7, 2.5], ["new", "Build a new stadium", 1.2, 3.5],
 ];
+const SEASON_WEEKS = 41;  // building only progresses during the season
 function initStadium(c) {
   // Support base, out of 20: only loosely tied to stature, so some small clubs are passionately backed.
   c.support = c.support ?? clamp(Math.round(10 + gauss() * 3.5 + (c.rep - 45) * .05), 1, 20);
@@ -42,7 +44,8 @@ function fansAfterMatch(c, gf, ga, opp) {
   const n = rivalry(c.id, opp), r = gf > ga ? 1.2 : gf < ga ? -1.2 : 0;
   moveFans(c, r * (1 + n) + (fanTarget(c) - c.fans) * .04, n && r ? (r > 0 ? "Derby win" : "Derby defeat") : null);
 }
-const capacityNow = c => Math.round(c.cap * (c.build ? .92 : 1));  // works close part of the ground
+// Works close part of the ground, except a new stadium, built elsewhere while the old one stays open.
+const capacityNow = c => Math.round(c.cap * (c.build && c.build.kind !== "new" ? .92 : 1));
 function gateFor(c, opp) {
   const derby = rivalry(c.id, opp) ? 1.12 : 1;
   const pm = c.tkt || 1;  // ticket price multiplier you choose; dearer seats sell less
@@ -55,16 +58,16 @@ function gateFor(c, opp) {
 }
 /* A project's cost and length. Roughly six seasons of ticket money pays back seats that are filled. */
 function expansionQuote(c, kind) {
-  const [, label, share] = EXPANSIONS.find(e => e[0] === kind);
+  const [, label, share, years] = EXPANSIONS.find(e => e[0] === kind);
   const add = Math.round(c.cap * share / 100) * 100;
   const cost = Math.round(add * c.price * homeGames(c) * 6 / 1e5) * 1e5;
-  const weeks = Math.min(80, Math.round(20 + add / 400));
+  const weeks = Math.round((years + Math.min(1, add / 30000)) * SEASON_WEEKS);
   return { kind, label, add, cost, weeks, perWeek: Math.round(cost / weeks) };
 }
 function startExpansion(c, kind) {
   const q = expansionQuote(c, kind);
   c.build = { ...q, left: q.weeks, paid: 0, y: S.year };
-  if (isUser(c)) news(`Work begins: ${q.label.toLowerCase()} adds ${q.add.toLocaleString()} seats over ${q.weeks} weeks at a cost of ${money(q.cost)}, paid weekly.`, true, "finance");
+  if (isUser(c)) news(`Work begins: ${q.label.toLowerCase()} adds ${q.add.toLocaleString()} seats over ${seasonsText(q.weeks)} at a cost of ${money(q.cost)}, paid weekly.`, true, "finance");
   else if (!isForeign(c) && (c.lg === me().lg || rivalry(c.id, S.club))) news(`${c.name} start work to ${q.label.toLowerCase()}, adding ${q.add.toLocaleString()} seats.`, false, "club");
 }
 /* Runs every week for every club. */
@@ -96,3 +99,4 @@ function ticketForecast(c, pm) {
 }
 /* Saves made before stadiums existed get them now. */
 function ensureStadiums() { for (const c of activeClubs()) if (c.cap == null) initStadium(c); S.stadiums = true; }
+const seasonsText = w => { const y = w / SEASON_WEEKS; return y < 1.15 ? "about a season" : `about ${Math.round(y * 2) / 2} seasons`; };

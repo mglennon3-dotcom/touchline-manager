@@ -80,7 +80,8 @@ passionately backed) and fan engagement from 0 to 100. Lower divisions start wit
 the bottom, 20,000–45,000 in the Premier Division. Engagement settles at a level set by support base and league
 position, so success brings more engagement, and moves with results, derbies, ticket prices, full grounds and
 owners. You set your own ticket prices: dearer seats earn more each but sell fewer and cost goodwill. When demand
-outgrows the ground you can expand it; work takes months and is paid weekly out of cash, which squeezes the
+outgrows the ground you can expand it; work takes from about a season (extending a stand) to four or more (a new
+stadium), and is paid weekly out of cash, which squeezes the
 transfer budget until it's done. AI clubs build too when they keep selling out.
 
 **Sponsorship.** Every club has a shirt sponsor and a kit supplier, each with an annual fee and bonuses for
