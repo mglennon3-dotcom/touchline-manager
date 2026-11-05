@@ -17,9 +17,9 @@ function toast(t) { const el = document.getElementById("toast"); el.textContent 
 function busy(on, text) { const el = document.getElementById("busy"); el.hidden = !on; if (text) el.firstElementChild.textContent = text; }
 
 /* ---------- taking a club ---------- */
-function takeClub(id, name, arch) {
-  S = DRAFT; DRAFT = null; S.club = id; S.me = newManager(name || "The Manager", arch || "bal");
-  const c = me(); S.formation = c.formation; S.lineup = autoPick(c.squad, S.formation);
+function takeClub(id, name, arch, form) {
+  S = DRAFT; DRAFT = null; S.club = id; S.me = newManager(name || "The Manager", arch || "bal", form || "4-3-3");
+  const c = me(); S.formation = S.me.form; c.formation = S.formation; S.lineup = autoPick(c.squad, S.formation);
   startSeason();
   news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}.`, true, "board");
   UI.page = "home"; save(); render(); window.scrollTo(0, 0);
@@ -104,7 +104,7 @@ const ACT = {
   pick: v => takeClub(+v),
   choose: v => { UI.modal = { t: "coach", club: +v, arch: "bal", name: "" }; renderModal(); setTimeout(() => { const el = document.getElementById("coach-name"); if (el) el.focus(); }, 0); },
   arch: v => { const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; UI.modal.arch = v; renderModal(); },
-  startcareer: () => { const el = document.getElementById("coach-name"); const m = UI.modal; UI.modal = null; takeClub(m.club, (el && el.value.trim()) || "The Manager", m.arch); },
+  startcareer: () => { const el = document.getElementById("coach-name"), fe = document.getElementById("coach-form"); const m = UI.modal; UI.modal = null; takeClub(m.club, (el && el.value.trim()) || "The Manager", m.arch, fe ? fe.value : "4-3-3"); },
   coachpt: v => { if (S.me.pts <= 0 || S.me[v] >= 20) return; S.me[v]++; S.me.pts--; save(); render(); },
   scoutp: v => { const p = P(+v); if (S.rec.hours < 2) return toast(`Not enough scouting hours left this week (${S.rec.hours}).`); S.rec.hours -= 2; S.scout[p.id] = Math.min(2, (S.scout[p.id] || 0) + 1); save(); renderModal(); render(); toast(S.scout[p.id] >= 2 ? `Full report on ${p.name} filed.` : `First look at ${p.name}: one more visit for a full report.`); },
   sort: v => { const [id, k] = v.split("|"); const cur = UI.sort[id]; UI.sort[id] = { k, d: cur && cur.k === k ? -cur.d : (["n", "pos", "club", "from", "rank"].includes(k) ? 1 : -1) }; render(); },
@@ -150,8 +150,10 @@ const CHG = {
   live: (v, el) => { S.set.live = el.checked; save(); },
   lg: v => { UI.lg = v; render(); },
   startl: v => { UI.startL = v; render(); },
+  cform: v => { UI.modal.form = v; const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; },
+  pref: v => { S.me.formPending = v; toast(`From next season you'll prefer the ${v}.`); save(); },
   cup: v => { UI.cupK = v; render(); },
-  import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); if (d.v !== 4 || d.club == null) throw new Error("not a save"); S = d; LIVE = null; UI.page = "home"; await save(); render(); toast("Save file loaded."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
+  import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); if (d.v === 4) migrate4(d); if (d.v !== 5 || d.club == null) throw new Error("not a save"); S = d; LIVE = null; UI.page = "home"; await save(); render(); toast("Save file loaded."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
   "tf-pos": v => { UI.tf.pos = v; render(); }, "tf-age": v => { UI.tf.age = +v; render(); }, "tf-min": v => { UI.tf.min = +v; render(); }, "tf-fee": v => { UI.tf.fee = +v; render(); }, "tf-lg": v => { UI.tf.lg = v; render(); },
   "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); },
   "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); },
@@ -172,7 +174,8 @@ async function boot(data) {
   const h = location.hash.slice(1); if (VIEWS[h]) UI.page = h;
   try { await DB.open(); } catch (e) { /* storage unavailable: play in memory */ }
   S = (data && data.S) || (DB.db ? await DB.get("career") : null);
-  if (S && (S.v !== 4 || S.club == null)) S = null;
+  if (S && S.v === 4) migrate4(S);
+  if (S && (S.v !== 5 || S.club == null)) S = null;
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.
   try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) { }
@@ -180,3 +183,13 @@ async function boot(data) {
 }
 window.claude?.hot?.snapshot?.(() => ({ S }));
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+
+/* Saves from version 4 gain injury proneness, coaches' preferred formations and a preference for you. */
+function migrate4(d) {
+  const keep = S; S = d;
+  for (const p of Object.values(d.players)) if (p.ir == null) p.ir = clamp(Math.round(10 + gauss() * 3.2), 1, 20);
+  for (const y of d.prospects || []) if (y.ir == null) y.ir = clamp(Math.round(10 + gauss() * 3.2), 1, 20);
+  for (const c of d.clubs) { if (c.coach && !c.coach.form) c.coach.form = FORMATIONS[c.formation] ? c.formation : prefFormation(c.coach.arch); if (!FORMATIONS[c.formation]) c.formation = c.coach ? c.coach.form : "4-3-3"; }
+  if (d.me && !d.me.form) d.me.form = FORMATIONS[d.formation] ? d.formation : "4-3-3";
+  d.v = 5; S = keep;
+}

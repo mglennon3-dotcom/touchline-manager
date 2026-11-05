@@ -266,3 +266,4 @@ tr.z-po td:first-child{box-shadow:inset 3px 0 var(--zone-po)} tr.z-down td:first
 .abar i.a1{background:var(--loss)}.abar i.a2{background:var(--muted)}.abar i.a3{background:var(--win)}.abar i.a4{background:var(--accent)}
 .train.arch{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 input[type=text]{width:100%}
+.rt.est{font-weight:600;border:1px dashed var(--line)}

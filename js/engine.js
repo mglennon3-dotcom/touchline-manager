@@ -4,8 +4,8 @@ function sideRatings(on, ment, form, co) {
   const N = FNORM[form];
   let a = 0, m = 0, d = 0;
   for (const o of on) { const e = eff(o.p, o.slot, o.fit), w = WT[o.slot]; a += e * w[0]; m += e * w[1]; d += e * w[2]; }
-  const k = MENT[ment].m, ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1;
-  return { att: a / N[0] * k[0] * ca, mid: m / N[1] * k[1], def: d / N[2] * k[2] * cd };
+  const k = MENT[ment].m, ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
+  return { att: a / N[0] * k[0] * ca * pf, mid: m / N[1] * k[1] * pf, def: d / N[2] * k[2] * cd * pf };
 }
 function aiMent(c, opp, home) { const d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5); return d < -4 ? "def" : d > 4 ? "att" : "bal"; }
 
@@ -82,7 +82,7 @@ function step(M) {
       else { s.yel[o.p.id] = 1; M.cards.push(o.p.id); lg(M, "card", i, `Yellow card for ${o.p.name}.`); }
     } else if (outf.length && R() < .0005) sendOff(M, i, pick(outf), "Straight red", RULES.straightRed);
     for (const o of s.on.slice()) {
-      const risk = .00011 * (o.fit < 75 ? 1 + (75 - o.fit) / 12 : 1);
+      const risk = .00011 * (o.fit < 75 ? 1 + (75 - o.fit) / 12 : 1) * injMult(o.p);
       if (R() < risk) {
         M.inj.push(o.p.id); const idx = s.on.indexOf(o);
         lg(M, "inj", i, `${o.p.name} goes down injured.`);

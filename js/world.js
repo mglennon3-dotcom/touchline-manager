@@ -25,7 +25,7 @@ function makePlayer(o) {
     fit: ri(92, 100), mood: ri(58, 76), pt: .5, wm: 0, amb: +R().toFixed(2), loy: +R().toFixed(2),
     club: o.club ?? -1, wage: 0, yrs: ri(1, 5), am: null, yt: {}, inj: 0, sus: 0, yc: 0,
     s: newStats(), hist: [], req: false, listed: false, promise: null, joined: S.year, loan: null, peak: ovr, tot: [0, 0],
-    at: null, retiring: 0, injT: "",
+    at: null, retiring: 0, injT: "", ir: clamp(Math.round(10 + gauss() * 3.2), 1, 20),  // injury proneness: hidden, 1 robust – 20 fragile
   };
   p.at = genAttrs(o.pos, r20(ovr)); setOvr(p); p.pot = Math.max(p.pot, p.ovr);
   p.wage = wageDemand(p, o.rep ?? 60);
@@ -120,21 +120,32 @@ function viewOf(p, v, k, wide) {
 const ratingView = p => viewOf(p, r20(p.ovr), 1, 5);
 const attrView = (p, k) => scoutLevel(p) === 0 ? null : viewOf(p, p.at[k], k.charCodeAt(0) + k.charCodeAt(1), 0);
 const ratingMid = p => { const [a, b] = ratingView(p); return (a + b) / 2; };
-/* Potential is never shown as a number: your scouts give a star estimate, sharper with a better recruiter. */
-function potStars(p) {
-  if (scoutLevel(p) < 2) return null;
-  const rec = S.me ? S.me.rec : 10, est = r20(p.pot) + (seedOf(p.id, 7) - .5) * Math.max(1, 9 - rec * .4);
-  return est >= 17 ? 5 : est >= 14.5 ? 4 : est >= 12 ? 3 : est >= 9.5 ? 2 : 1;
+/* Potential and injury proneness are hidden. Scouts estimate them as a range out of 20:
+   a first look gives a wide range, a full report a narrow one, and a better recruiter narrows both. */
+function hiddenView(p, val, k) {
+  const lvl = scoutLevel(p); if (lvl === 0) return null;
+  const rec = S.me ? S.me.rec : 10, w = lvl >= 2 ? Math.max(1, 5 - rec * .2) : Math.max(3, 9 - rec * .25);
+  const c = val + (seedOf(p.id, k) - .5) * w * .8;
+  return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
+const potView = p => hiddenView(p, r20(p.pot), 11);
+const injView = p => hiddenView(p, p.ir, 13);
+const viewMid = v => v ? (v[0] + v[1]) / 2 : 0;
+const injMult = p => .45 + .055 * (p.ir || 10);  // 1 → about half the average risk, 20 → about 1.55×
 
 /* ---------- coaches ---------- */
 function genCoach(rep, nat) {
-  const base = 6 + rep * .09, arch = pick(["bal", "off", "def", "rec", "dev", "bal"]), co = { name: nameFor(nat), nat, arch };
+  const base = 6 + rep * .09, arch = pick(["bal", "off", "def", "rec", "dev", "bal"]), co = { name: nameFor(nat), nat, arch, form: prefFormation(arch) };
   for (const [k] of COACH_KEYS) co[k] = clamp(Math.round(base + gauss() * 1.6 + (ARCH[arch].key === k ? 3 : arch === "bal" ? 0 : -1)), 1, 20);
   return co;
 }
-function newManager(name, arch) {
-  const co = { name, arch, nat: "ENG", pts: 0, seasons: 0 };
+/* Attacking coaches lean to front threes, defensive ones to back fives; everyone else follows the modern mix. */
+function prefFormation(arch) {
+  const tilt = { off: { "4-3-3": 2, "3-4-3": 2, "4-2-3-1": 1.3, "4-1-2-1-2": 1.5 }, def: { "5-4-1": 2.5, "5-3-2": 2.5, "4-1-4-1": 1.6, "4-4-1-1": 1.4 } }[arch] || {};
+  return wpick(FORM_KEYS, f => FORM_WEIGHT[f] * (tilt[f] || 1));
+}
+function newManager(name, arch, form) {
+  const co = { name, arch, nat: "ENG", pts: 0, seasons: 0, form: form || "4-3-3" };
   for (const [k] of COACH_KEYS) co[k] = arch === "bal" ? 10 : ARCH[arch].key === k ? 14 : 9;
   if (arch !== "bal") co[COACH_KEYS.find(([k]) => k !== ARCH[arch].key)[0]] = 8;  // archetypes trade a point for focus
   return co;
@@ -189,8 +200,9 @@ function newClub(lgKey, rep) {
   const ownerType = wpick(["prudent", "balanced", "ambitious", "reckless"], o => ({ prudent: 3, balanced: 4, ambitious: 2, reckless: 1 })[o]);
   const c = { id: S.clubs.length, name: pick(K.fmt).replace("{t}", t), town: t, short, country: K.code, lg: lgKey, tier: L.tier, region: rname,
     lat: rlat + rf(-.6, .6), lon: rlon + rf(-.8, .8), color: CLUB_COLORS[S.clubs.length % CLUB_COLORS.length], rep, owner: ownerType,
-    academy: clamp(Math.round(rep / 12 + gauss() * 1.4), 1, 10), formation: pick(["4-4-2", "4-3-3", "4-2-3-1", "4-3-3", "4-2-3-1", "3-5-2", "4-1-4-1", "5-3-2", "3-4-3", "4-4-2"]),
+    academy: clamp(Math.round(rep / 12 + gauss() * 1.4), 1, 10), formation: null,
     coach: genCoach(rep, K.code), squad: [], cash: 0, revBase: 0, revSeason: 0, fin: null, youthMin: rf(.03, .14), ym: 0, tm: 0, wkMatches: 0, trophies: [], hist: [], schemes: [], gone: false, founded: S.year };
+  c.formation = c.coach.form;
   S.clubs.push(c);
   return c;
 }
@@ -256,7 +268,7 @@ function setupFinances(c) {
   c.cash = Math.round(c.revBase * rf(.12, .4) + (c.owner === "reckless" ? c.revBase * .35 : 0));
 }
 function newWorld() {
-  S = { v: 4, year: 2026, phase: "season", week: 0, di: 0, days: [], summerDay: 0, club: null, nextPid: 1, players: {}, clubs: [], fa: [], towns: {},
+  S = { v: 5, year: 2026, phase: "season", week: 0, di: 0, days: [], summerDay: 0, club: null, nextPid: 1, players: {}, clubs: [], fa: [], towns: {},
     leagues: {}, ko: {}, cont: {}, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
     history: [], career: [], hof: [], scout: {}, me: null, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
     set: { live: true }, qual: null, lastPos: {}, sacked: false, _tick: 1 };
@@ -302,6 +314,7 @@ function injure(p, minorOnly) {
     retireNow(p); return;
   }
   p.inj = Math.max(p.inj, ri(lo, hi)); p.injT = what;
+  if (lo >= 8) p.ir = Math.min(20, p.ir + 1);  // serious injuries leave a player more prone to the next one
   if (lo >= 30) { p.at[p.pos === "GK" ? "ss" : "pac"] = Math.max(1, p.at[p.pos === "GK" ? "ss" : "pac"] - 1); setOvr(p); }
   if (mine) news(`${p.name} has a ${what} and will be out for ${injLength(p.inj)}${lo >= 30 ? ". His season is over" : ""}.`, lo >= 8, "squad");
 }

@@ -25,7 +25,7 @@ function newProspectClass() {
     const tot = sum(Object.values(pri)); for (const k in pri) pri[k] /= tot;
     S.prospects.push({ id: "y" + S.year + "-" + S.prospects.length, name: nameFor(nat), nat, country, region, lat: lat + rf(-.6, .6), lon: lon + rf(-.8, .8),
       pos: pick(["GK", "CB", "CB", "FB", "DM", "CM", "CM", "AM", "W", "W", "ST", "ST"]), ovr: clamp(Math.round(pot * .55 + gauss() * 3), 30, 60), pot, open: +rf(.15, 1).toFixed(2),
-      pri, top, sc: 0, known: false, rel: {}, offers: [], visit: false, called: -1, commit: null, cw: null });
+      pri, top, sc: 0, known: false, ir: clamp(Math.round(10 + gauss() * 3.2), 1, 20), rel: {}, offers: [], visit: false, called: -1, commit: null, cw: null });
   };
   for (let i = 0; i < 80; i++) { const [r, la, lo] = pick(COUNTRY.ENG.regions); add("ENG", "ENG", r, la, lo); }
   for (const K of COUNTRIES.filter(k => k.code !== "ENG")) for (let i = 0; i < 7; i++) { const [r, la, lo] = pick(K.regions); add(K.code, K.code, r, la, lo); }
@@ -64,7 +64,15 @@ function factorScore(y, c) { const f = factors(y, c); return sum(FACTORS, ([k]) 
 const clubScore = (y, c) => factorScore(y, c) + .45 * (y.rel[c.id] || 0);
 const grade = v => v >= .8 ? "A" : v >= .62 ? "B" : v >= .45 ? "C" : v >= .3 ? "D" : "F";
 
-/* What you can see depends on how much you've scouted him. */
+/* What you can see depends on how much you've scouted him: potential and injury proneness as ranges out of 20. */
+function prospectView(y, val, k) {
+  const rec = S.me ? S.me.rec : 10, w = [8, 5, 3, Math.max(1, 3 - rec * .1)][y.sc];
+  let h = 0; for (const ch of y.id) h = (h * 31 + ch.charCodeAt(0)) % 9973;
+  const c = val + (seedOf(h, k) - .5) * w * .8;
+  return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
+}
+const prospectPot = y => prospectView(y, r20(y.pot), 3);
+const prospectInj = y => y.sc >= 2 ? prospectView(y, y.ir, 5) : null;
 function shownStars(y) {
   const s = starsOf(y.pot);
   if (y.sc >= 2) return [s, s];
@@ -136,7 +144,7 @@ function signingDay() {
     if (y.commit == null || C(y.commit).gone) continue;
     const c = C(y.commit); y.signed = true;
     const p = makePlayer({ pos: y.pos, base: y.ovr + 9, age: 16, nat: y.nat, club: c.id, rep: c.rep });
-    p.name = y.name; setRating(p, clamp(y.ovr + ri(0, 4), 33, 70)); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 20000;
+    p.name = y.name; p.ir = y.ir || p.ir; setRating(p, clamp(y.ovr + ri(0, 4), 33, 70)); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 20000;
     p.yt[c.country] = 1; p.from = y.region;
     c.squad.push(p.id);
   }

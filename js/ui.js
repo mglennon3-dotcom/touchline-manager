@@ -26,7 +26,14 @@ function attrStrip(p) {
   if (lvl === 0) return '<span class="muted tiny">Scout to see</span>';
   return `<span class="atts">${attrKeys(p.pos).map(k => { const [lo, hi] = attrView(p, k); return `<span class="at ${aCls((lo + hi) / 2)}" title="${ATTRS[p.pos === "GK" ? "gk" : "out"].find(a => a[0] === k)[1]}">${k.toUpperCase()} ${lo === hi ? lo : lo + "–" + hi}</span>`; }).join("")}</span>`;
 }
-function potHtml(p) { const s = potStars(p); return s == null ? '<span class="muted tiny">?</span>' : starHtml(s, s); }
+// Estimates of hidden ratings. For injury risk a high number is bad, so the colours run the other way.
+function rangeHtml(v, risk) {
+  if (!v) return '<span class="muted tiny" title="Scout him to find out">?</span>';
+  const mid = (v[0] + v[1]) / 2, cls = aCls(risk ? 21 - mid : mid);
+  return `<span class="rt est ${cls}" title="Scouts' estimate">${v[0] === v[1] ? v[0] : v[0] + "–" + v[1]}</span>`;
+}
+const potHtml = p => rangeHtml(potView(p)), injHtml = p => rangeHtml(injView(p), true);
+const formOpts = sel => FORM_KEYS.map(f => `<option value="${f}" ${f === sel ? "selected" : ""}>${f}${S && S.me && S.me.form === f ? ", preferred" : ""}</option>`).join("");
 function statusChips(p, c) {
   let s = "";
   if (p.inj) s += `<span class="chip inj" title="${esc(p.injT || "Injured")}">${p.inj >= 30 ? "OUT FOR SEASON" : p.inj >= 8 ? "INJ " + Math.round(p.inj / 4.3) + "m" : "INJ " + p.inj + "w"}</span> `;
@@ -200,7 +207,7 @@ function nextMatchCard() {
     <div class="fixture">${team(H)}<div class="vs">v</div>${team(A)}</div>
     <div class="row small muted between"><span>Your XI · ${ARCH[S.me.arch].l}</span><span>${esc(opp.short)}'s likely XI · ${esc(coachOf(opp).name)}, ${ARCH[coachOf(opp).arch].l.toLowerCase()}</span></div>
     <div class="cmp">${cmp("Attack", mr.att, orr.att)}${cmp("Midfield", mr.mid, orr.mid)}${cmp("Defence", mr.def, orr.def)}</div>
-    <div class="row between" style="margin-bottom:10px"><label class="row small">Formation <select id="nx-form" data-c="form">${FORM_KEYS.map(f => `<option ${f === S.formation ? "selected" : ""}>${f}</option>`).join("")}</select></label>
+    <div class="row between" style="margin-bottom:10px"><label class="row small">Formation <select id="nx-form" data-c="form">${formOpts(S.formation)}</select></label>
       <span class="seg" role="group" aria-label="Mentality">${Object.entries(MENT).map(([k, v]) => `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}">${v.l}</button>`).join("")}</span></div>
     ${!reg.ok ? `<p class="bad small">Squad registration is invalid: ${reg.seniors}/${RULES.squadMax} senior players, ${reg.nonHG}/${RULES.nonHGMax} non-homegrown, ${reg.total} in total (16 minimum). Fix it before you can play.</p>` : ""}
     ${tired ? `<p class="warn small">${tired} of your XI ${tired > 1 ? "are" : "is"} below 70 fitness.</p>` : ""}${oop ? `<p class="warn small">${oop} player${oop > 1 ? "s are" : " is"} out of position.</p>` : ""}
@@ -240,7 +247,8 @@ function viewSquad() {
     { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
     { k: "nat", l: "Nat", v: p => p.nat, f: p => p.nat, cls: "hide-sm" },
     { k: "ovr", l: "Rating", r: 1, v: p => p.ovr, f: p => ratingHtml(p) },
-    { k: "pot", l: "Potential", v: p => potStars(p) || 0, f: p => potHtml(p), cls: "hide-sm" },
+    { k: "pot", l: "Potential", v: p => viewMid(potView(p)), f: p => potHtml(p), cls: "hide-sm" },
+    { k: "ir", l: "Injury risk", v: p => viewMid(injView(p)), f: p => injHtml(p), cls: "hide-sm" },
     { k: "att", l: "Attributes", f: p => attrStrip(p), cls: "hide-sm" },
     { k: "fit", l: "Fit", v: p => p.fit, f: p => fitBar(p.fit) },
     { k: "mood", l: "Mood", v: p => p.mood, f: p => moodTag(p) },
@@ -273,8 +281,9 @@ function viewTactics() {
   const lines = `<svg class="lines" viewBox="0 0 68 96" preserveAspectRatio="none" aria-hidden="true" fill="none" stroke="var(--chalk)" stroke-width=".4"><rect x="2" y="2" width="64" height="92"/><line x1="2" y1="48" x2="66" y2="48"/><circle cx="34" cy="48" r="7"/><rect x="16" y="2" width="36" height="14"/><rect x="26" y="2" width="16" height="5"/><rect x="16" y="80" width="36" height="14"/><rect x="26" y="89" width="16" height="5"/></svg>`;
   const ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
   return `<div class="squad" style="--club:${c.color}"><div class="stack" style="gap:10px">
-    <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${FORM_KEYS.map(f => `<option ${f === S.formation ? "selected" : ""}>${f}</option>`).join("")}</select></label><button class="btn sm" data-a="autopick">Pick best XI</button></div>
+    <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${formOpts(S.formation)}</select></label><button class="btn sm" data-a="autopick">Pick best XI</button></div>
     <div class="pitch">${lines}${slotsHtml}</div>
+    ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}
     <p class="hint">Tap a shirt, then a player, to swap. The number is his rating in that role; a dashed ring means he's out of position. Your formation also matters in youth recruitment: prospects want a position your shape actually uses.</p>
     <div class="card"><h3 style="margin-bottom:8px">Mentality</h3><span class="seg" role="group">${Object.entries(MENT).map(([k, v]) => `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}">${v.l}</button>`).join("")}</span></div>
     <div class="card"><h3 style="margin-bottom:8px">Training focus</h3><div class="train">${Object.entries(TRAIN).map(([k, t]) => `<button data-a="train" data-v="${k}" aria-pressed="${S.training === k}"><b>${t.l}</b><span class="tiny muted">${t.d}</span></button>`).join("")}</div>
@@ -396,7 +405,7 @@ function viewYouth() {
     { k: "n", l: "Prospect", v: y => y.name, f: y => `<button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button>` },
     { k: "pos", l: "Pos", v: y => ROLE_ORDER[y.pos], f: y => `<span class="pos">${y.pos}</span>` },
     { k: "from", l: "From", v: y => km(y, c), f: y => `${esc(y.region)} <span class="tiny muted">${Math.round(km(y, c))} km</span>` },
-    { k: "st", l: "Rating", v: y => shownStars(y)[1], f: y => starHtml(...shownStars(y)) },
+    { k: "st", l: "Potential", v: y => viewMid(prospectPot(y)), f: y => rangeHtml(prospectPot(y)) },
     { k: "you", l: "Your pitch", v: y => clubScore(y, c), f: y => { const s = clubScore(y, c); return `<span class="bar" title="${Math.round(s * 100)}"><i style="width:${clamp(s, 0, 1) * 100}%"></i></span>`; } },
     { k: "rank", l: "Standing", v: y => yourRank(y), f: y => y.commit != null ? (y.commit === c.id ? '<b class="good">Committed to you</b>' : `<span class="muted">Committed to</span> ${clubA(y.commit, { short: true })}`) : rankLabel(y) },
     { k: "act", l: "Actions", f: y => y.commit === c.id ? "" : `<span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sm" data-a="rec" data-v="${y.id}|scout" ${y.sc >= 3 ? "disabled" : ""} title="3 hours">Scout</button><button class="btn sm" data-a="rec" data-v="${y.id}|call" title="1 hour">Call</button><button class="btn sm" data-a="rec" data-v="${y.id}|visit" ${y.visit ? "disabled" : ""} title="5 hours">Visit</button><button class="btn sm ${y.offers.includes(c.id) ? "danger" : ""}" data-a="rec" data-v="${y.id}|offer">${y.offers.includes(c.id) ? "Withdraw" : "Offer"}</button></span>` },
@@ -409,7 +418,7 @@ function viewYouth() {
       <label class="f">Position<select id="yf-pos" data-c="yf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Show<select id="yf-st" data-c="yf-st">${[["OPEN", "Undecided"], ["MINE", "Your targets"], ["DONE", "Committed"], ["ALL", "Everyone"]].map(([k, l]) => `<option value="${k}" ${f.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: "No prospects match." })}</section>
-    <section class="card"><div class="card-h"><h2>Committed to you</h2></div>${commits.length ? commits.map(y => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span><button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button> <span class="pos">${y.pos}</span> <span class="muted small">${esc(y.region)}</span></span>${starHtml(...shownStars(y))}</div>`).join("") : '<p class="muted">No commitments yet.</p>'}</section></div>`;
+    <section class="card"><div class="card-h"><h2>Committed to you</h2></div>${commits.length ? commits.map(y => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span><button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button> <span class="pos">${y.pos}</span> <span class="muted small">${esc(y.region)}</span></span>${rangeHtml(prospectPot(y))}</div>`).join("") : '<p class="muted">No commitments yet.</p>'}</section></div>`;
 }
 function yourRank(y) { const cs = contenders(y); const i = cs.findIndex(x => x.c.id === S.club); return i < 0 ? 99 : i; }
 function rankLabel(y) {
@@ -501,7 +510,7 @@ function modalPlayer(p) {
     actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>Ask to loan</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;
   }
   return mHead(esc(p.name), `${ROLE_NAME[p.pos]} · ${NAT_NAME[p.nat] || p.nat} · ${p.age}`, c ? c.color : "var(--muted)", c ? crest(c, 36) : "") + `<div class="modal-b">
-    <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)}</dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
+    <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${injHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
       <div><dt>Value</dt><dd class="num">${money(value(p))}</dd></div><div><dt>Wage</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Contract</dt><dd>${c ? p.yrs + " yr" + (p.yrs === 1 ? "" : "s") : "—"}</dd></div>
       <div><dt>Fitness</dt><dd>${fitBar(p.fit)} ${Math.round(p.fit)}</dd></div><div><dt>Mood</dt><dd>${moodTag(p)}</dd></div><div><dt>Homegrown</dt><dd>${Object.entries(p.yt).filter(([, v]) => v >= RULES.hgYears).map(([k]) => COUNTRY[k] ? COUNTRY[k].name : k).join(", ") || "No"}</dd></div>
       <div><dt>Season</dt><dd class="num">${p.s.app} apps · ${p.s.g} g · ${p.s.a} a</dd></div><div><dt>Avg rating</dt><dd class="num">${avg}</dd></div><div><dt>Career</dt><dd class="num">${p.tot[0] + p.s.app} apps · ${p.tot[1] + p.s.g} g</dd></div></dl>
@@ -524,7 +533,7 @@ function modalClub(c) {
   return mHead(esc(c.name), `${leagueName(c.lg)} · ${esc(c.region)}, ${COUNTRY[c.country].name}${c.gone ? ` · dropped out ${seasonLabel(c.goneYear)}` : ""}`, c.color, crest(c, 40)) + `<div class="modal-b">
     <dl class="facts">${c.gone ? "" : `<div><dt>Position</dt><dd>${ord(posIn(L, c.id))}</dd></div>`}<div><dt>Squad level</dt><dd class="num">${r20(clubLevel(c)).toFixed(1)} / 20</dd></div><div><dt>Prestige</dt><dd class="num">${c.rep}</dd></div>
       <div><dt>Formation</dt><dd>${c.formation}</dd></div><div><dt>Academy</dt><dd>${c.academy}/10</dd></div><div><dt>Owner</dt><dd>${OWNER[c.owner].l}</dd></div>
-      <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
+      <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · prefers ${coachOf(c).form} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
       <div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
     ${c.hist.length ? `<p class="small">Recent finishes: ${c.hist.slice(-6).reverse().map(h => `${seasonLabel(h.y)} ${ord(h.pos)} in ${leagueName(h.lg)}`).join(" · ")}</p>` : ""}
     ${c.trophies.length ? `<p class="small">Honours: ${c.trophies.slice(-12).reverse().map(t => `${trophyName(t.t)} ${seasonLabel(t.y)}`).join(", ")}</p>` : ""}
@@ -535,7 +544,7 @@ function modalProspect(y) {
   const c = me(), f = factors(y, c), cs = contenders(y).slice(0, 5);
   const best = cs[0] ? cs[0].s : 1;
   return mHead(esc(y.name), `${ROLE_NAME[y.pos]} · age 15 · ${esc(y.region)}${y.country === "ENG" ? "" : " (abroad)"}`, "var(--accent)") + `<div class="modal-b">
-    <dl class="facts"><div><dt>Rating</dt><dd>${starHtml(...shownStars(y))}</dd></div><div><dt>Scouted</dt><dd>${["Not yet", "Once", "Twice", "Fully"][y.sc]}</dd></div>
+    <dl class="facts"><div><dt>Potential</dt><dd>${rangeHtml(prospectPot(y))} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${rangeHtml(prospectInj(y), true)}</dd></div><div><dt>Scouted</dt><dd>${["Not yet", "Once", "Twice", "Fully"][y.sc]}</dd></div>
       ${y.sc >= 3 ? `<div><dt>Current rating</dt><dd class="num">${Math.round(r20(y.ovr))} / 20</dd></div>` : ""}<div><dt>Distance</dt><dd class="num">${Math.round(f.d)} km</dd></div>
       <div><dt>Open to moving</dt><dd>${y.known ? (y.open > .66 ? "Very" : y.open > .4 ? "Somewhat" : "Prefers to stay near home") : "Unknown"}</dd></div><div><dt>Status</dt><dd>${y.commit != null ? "Committed to " + clubA(y.commit) : y.offers.length + " offer" + (y.offers.length === 1 ? "" : "s")}</dd></div></dl>
     ${y.commit != null && y.commit !== c.id ? `<p class="small">He has committed elsewhere, but nothing is signed until the end of the season. Make an offer and keep building the relationship: if your club clearly suits him better, he may change his mind.</p>` : ""}
@@ -546,11 +555,12 @@ function modalProspect(y) {
     ${y.commit !== c.id && !y.signed ? `<div class="row"><button class="btn sm" data-a="rec" data-v="${y.id}|scout" ${y.sc >= 3 ? "disabled" : ""}>Scout (3h)</button><button class="btn sm" data-a="rec" data-v="${y.id}|call">Call family (1h)</button><button class="btn sm" data-a="rec" data-v="${y.id}|visit" ${y.visit ? "disabled" : ""}>Host a visit (5h)</button><button class="btn sm" data-a="rec" data-v="${y.id}|offer">${y.offers.includes(c.id) ? "Withdraw offer" : "Offer a place"}</button><span class="small muted">${S.rec.hours}h left this week</span></div>` : ""}</div>`;
 }
 function modalCoach(m) {
-  const c = DRAFT.clubs[m.club], arch = m.arch || "bal", co = newManager("", arch);
+  const c = DRAFT.clubs[m.club], arch = m.arch || "bal", co = newManager("", arch), form = m.form || "4-3-3";
   return mHead("Your manager", `Taking over ${esc(c.name)} · ${leagueName(c.lg)}`, c.color, crest(c, 36)) + `<div class="modal-b">
     <label class="f">Name<input type="text" id="coach-name" maxlength="28" value="${esc(m.name || "")}" placeholder="Your name"></label>
     <div><h3 style="margin-bottom:6px">Style</h3><div class="train arch">${Object.entries(ARCH).map(([k, a]) => `<button data-a="arch" data-v="${k}" aria-pressed="${arch === k}"><b>${a.l}</b><span class="tiny muted">${a.d}</span></button>`).join("")}</div></div>
     <div class="attrs">${COACH_KEYS.map(([k, l]) => `<div class="attr"><span>${l}</span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b></div>`).join("")}</div>
+    <label class="f">Preferred formation<select id="coach-form" data-c="cform">${FORM_KEYS.map(f => `<option ${f === form ? "selected" : ""}>${f}</option>`).join("")}</select><span class="tiny muted" style="font-weight:400">Your teams play about 2% better in it. ${esc(c.name)} currently play ${c.formation}.</span></label>
     <p class="small muted">You start as an average coach: 40 points across four ratings out of 20. A specialist puts 14 in one area and gives a point up elsewhere. You earn more points every season, and extra for beating the board's target, winning trophies and promotion.</p>
     <div class="row"><button class="btn primary" data-a="startcareer">Start the career</button><button class="btn" data-a="closemodal">Back</button></div></div>`;
 }
@@ -599,10 +609,11 @@ function viewManager() {
   const co = S.me, c = me();
   const row = ([k, l]) => `<div class="attr"><span><b>${l}</b><br><span class="tiny muted">${COACH_EFFECT[k]}</span></span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b>${co.pts > 0 && co[k] < 20 ? `<button class="btn sm" data-a="coachpt" data-v="${k}">+1</button>` : ""}</div>`;
   const rivals = S.leagues[c.lg].clubs.filter(id => id !== c.id).map(C).sort((a, b) => sum(COACH_KEYS, ([k]) => b.coach[k]) - sum(COACH_KEYS, ([k]) => a.coach[k])).slice(0, 8);
-  return `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2>${esc(co.name)}</h2><span class="eyebrow">${ARCH[co.arch].l} · ${co.seasons} season${co.seasons === 1 ? "" : "s"} · ${esc(c.name)}</span></div>
+  return `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2>${esc(co.name)}</h2><span class="eyebrow">${ARCH[co.arch].l} · prefers ${co.form} · ${co.seasons} season${co.seasons === 1 ? "" : "s"} · ${esc(c.name)}</span></div>
     <div class="attrs coach">${COACH_KEYS.map(row).join("")}</div>
+    <label class="row small" style="margin-top:12px">Preferred formation <select id="mg-pref" data-c="pref">${FORM_KEYS.map(f => `<option ${f === co.form ? "selected" : ""}>${f}</option>`).join("")}</select><span class="tiny muted">Changing it takes a season to bed in: the bonus applies from next season.</span></label>
     <p class="small" style="margin-top:10px">${co.pts ? `<b>${co.pts} point${co.pts > 1 ? "s" : ""} to spend.</b> ` : ""}You earn a point every season, plus one for finishing above the board's target, up to two for trophies, and one for promotion. Ratings are out of 20.</p></section>
     <section class="card"><div class="card-h"><h2>Career</h2></div>${S.career.length ? table("career-m", [{ k: "y", l: "Season", f: r => seasonLabel(r.year) }, { k: "c", l: "Club", f: r => clubA(r.club) }, { k: "l", l: "League", f: r => leagueName(r.lg) }, { k: "p", l: "Finish", r: 1, f: r => ord(r.pos) }, { k: "e", l: "Target", r: 1, f: r => ord(r.exp) }, { k: "t", l: "Trophies", f: r => r.trophies.map(trophyName).join(", ") || "—" }], S.career) : '<p class="muted">Finish a season to start your record.</p>'}</section></div>
-    <section class="card"><div class="card-h"><h2>Rival coaches</h2><span class="small muted">${leagueName(c.lg)}</span></div>${table("rivalco", [{ k: "c", l: "Club", f: x => clubA(x.id, { short: true }) }, { k: "n", l: "Coach", f: x => esc(x.coach.name) + `<br><span class="tiny muted">${ARCH[x.coach.arch].l}</span>` }, ...COACH_KEYS.map(([k, l]) => ({ k, l: l.slice(0, 3), r: 1, f: x => x.coach[k] }))], rivals)}</section></div>`;
+    <section class="card"><div class="card-h"><h2>Rival coaches</h2><span class="small muted">${leagueName(c.lg)}</span></div>${table("rivalco", [{ k: "c", l: "Club", f: x => clubA(x.id, { short: true }) }, { k: "n", l: "Coach", f: x => esc(x.coach.name) + `<br><span class="tiny muted">${ARCH[x.coach.arch].l}</span>` }, { k: "f", l: "System", f: x => x.coach.form }, ...COACH_KEYS.map(([k, l]) => ({ k, l: l.slice(0, 3), r: 1, f: x => x.coach[k] }))], rivals)}</section></div>`;
 }
 const VIEWS = { manager: viewManager, home: viewHome, squad: viewSquad, tactics: viewTactics, fixtures: viewFixtures, league: viewLeague, cups: viewCups, transfers: viewTransfers, youth: viewYouth, finances: viewFinances, news: viewNews, history: viewHistory };

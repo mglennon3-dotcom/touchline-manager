@@ -38,14 +38,20 @@ strength, and their clubs buy, sell, loan, recruit youth and play in Europe.
 
 **Players** are rated out of 20 (10 is an average professional, 20 world class). Outfield players have
 Shooting, Passing, Tackling, Strength and Pace; keepers have Shot-stopping, Long passing and Short passing.
-Each position weighs them differently, and the overall rating comes from them. Potential is hidden: your
-scouts give a star estimate. Players only grow toward it with minutes, good form, a happy dressing room and
+Each position weighs them differently, and the overall rating comes from them. Two ratings are hidden and
+only estimated by scouts, as a range out of 20: **potential**, and **injury proneness** (1 robust, 20 fragile;
+fragile players get injured about three times as often as robust ones, and serious injuries make a player
+more prone). Players only grow toward it with minutes, good form, a happy dressing room and
 a coach who develops players; young players who don't play lose some of it. Ratings are exact for your own
 players and your division; everyone else shows a range until scouted (2 hours of your weekly scouting time
 for a first look, again for a full report).
 
-**Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development. You pick an archetype
-(or balanced) when you start and earn points to spend every season. Every AI club has its own coach, and a
+**Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development, and each has a preferred
+formation: teams play about 2% better in their coach's own system. Twelve modern shapes are available
+(4-3-3, 4-2-3-1, 4-4-2, 4-4-1-1, 4-1-4-1, 4-3-2-1, 4-1-2-1-2, 3-4-2-1, 3-4-3, 3-5-2, 5-3-2, 5-4-1), and AI
+coaches favour them roughly as often as the modern game does. A better Recruitment rating narrows your scouts'
+estimates. You pick an archetype (or balanced) and a preferred formation when you start, and earn points to
+spend every season. Every AI club has its own coach, and a
 sacked coach is replaced by a new one with a different style.
 
 **Injuries** range from knocks of a week or two, through tears that take months, to rare season-ending

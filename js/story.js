@@ -100,8 +100,8 @@ function weeklyStories() {
       const c = C(t[i].id); if (isUser(c)) continue;
       const exp = expectedPos(c);
       if (i + 1 - exp >= 7 && R() < .12) {
-        const old = c.formation, gone = c.coach.name; c.formation = pick(FORM_KEYS.filter(f => f !== old)); c.coach = genCoach(c.rep + ri(-5, 8), R() < .7 ? c.country : pick(Object.keys(COUNTRY)));
-        if (L.key === "E1" || L.key === me().lg) news(`${c.name} sack ${gone} with the club ${ord(i + 1)}. ${c.coach.name} (${ARCH[c.coach.arch].l.toLowerCase()}) takes over and is expected to switch from ${old} to ${c.formation}.`, false, "club");
+        const old = c.formation, gone = c.coach.name; c.coach = genCoach(c.rep + ri(-5, 8), R() < .7 ? c.country : pick(Object.keys(COUNTRY))); c.formation = c.coach.form;
+        if (L.key === "E1" || L.key === me().lg) news(`${c.name} sack ${gone} with the club ${ord(i + 1)}. ${c.coach.name} (${ARCH[c.coach.arch].l.toLowerCase()}) takes over and ${old === c.formation ? `keeps the ${old}` : `brings his preferred ${c.formation} in place of the ${old}`}.`, false, "club");
       }
     }
   }

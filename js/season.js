@@ -227,7 +227,7 @@ function quickLeagueRound(key, r) {
     rd.push({ h, a, hg, ag }); L.n++;
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
       const xi = autoPick(c.squad, c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
-      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - clubLevel(c)) / 25 + gauss() * .3, 3, 10); if (R() < .009) injure(p); }
+      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - clubLevel(c)) / 25 + gauss() * .3, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
       for (let g = 0; g < gf; g++) { const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); s.s.g++; s.s.lg++; s.s.rt += .9; }
       c.wkMatches++;
     }
@@ -270,7 +270,7 @@ function weekly() {
           * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * (.85 + .2 * form);
         if (R() < ch) growAttrs(p, 1);
       }
-      if (isUser(c) && S.training === "int" && !p.inj && R() < .006) injure(p, true);
+      if (isUser(c) && S.training === "int" && !p.inj && R() < .006 * injMult(p)) injure(p, true);
     }
     c.wkMatches = 0;
   }
@@ -418,6 +418,7 @@ function endSeason() {
   // You earn coaching points to spend: one a season, more for beating the target or winning something.
   const earned = 1 + (myPos < exp ? 1 : 0) + Math.min(2, won.length) + (myMove && myMove[1] === "up" ? 1 : 0);
   S.me.pts += earned; S.me.seasons++;
+  if (S.me.formPending) { S.me.form = S.me.formPending; S.me.formPending = null; }
   // AI coaches improve slowly too, and drift back if they're past it.
   for (const c of activeClubs()) if (!isUser(c) && c.coach && R() < .3) { const k = pick(COACH_KEYS)[0]; c.coach[k] = clamp(c.coach[k] + (R() < .7 ? 1 : -1), 1, 20); }
   S.seasonOver = { pos: myPos, exp, lg: myKey, board: d, earned, won: won.map(t => t.t), moved: myMove ? myMove[1] : null, to: myMove ? myMove[3] : null };
