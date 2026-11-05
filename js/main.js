@@ -161,6 +161,11 @@ const ACT = {
   ment: v => { S.mentality = v; save(); render(); },
 
   train: v => { S.training = v; save(); render(); },
+  // Your bench: tap to add or remove; spots you don't fill are filled automatically.
+  benchtoggle: v => { const id = +v, b = (S.bench || []).filter(x => S.players[x] && !S.lineup.includes(x)); const i = b.indexOf(id);
+    if (i >= 0) b.splice(i, 1); else { if (b.length >= RULES.benchSize) return toast(`The bench holds ${RULES.benchSize}. Take someone off it first.`); b.push(id); }
+    S.bench = b; save(); render(); },
+  benchauto: () => { S.bench = null; save(); render(); toast("Bench back to automatic: your best available players."); },
   autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render(); },
   "pick-p": v => { const id = +v; if (UI.sel && UI.sel.slot != null) return assignSlot(UI.sel.slot, id); UI.sel = UI.sel && UI.sel.pid === id ? null : { pid: id }; render(); },

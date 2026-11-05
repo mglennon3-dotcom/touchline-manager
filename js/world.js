@@ -225,11 +225,18 @@ function autoPick(ids, f, fixed) {
   fill(1); fill(.85); fill(0);
   return out;
 }
+/* The nine substitutes. Yours are the ones you picked on the Tactics page (S.bench), still eligible,
+   available and not in the XI; any spots left are filled as for AI clubs: a keeper, then the best and
+   fittest. */
 function benchFor(c, xi) {
-  const used = new Set(xi), rest = eligibleIds(c).map(P).filter(p => avail(p) && !used.has(p.id)).sort((a, b) => b.ovr * b.fit - a.ovr * a.fit);
-  const gk = rest.find(p => p.pos === "GK"), out = gk ? [gk] : [];
-  for (const p of rest) { if (out.length >= RULES.benchSize) break; if (p !== gk) out.push(p); }
-  return out.map(p => p.id);
+  const used = new Set(xi), elig = new Set(eligibleIds(c));
+  const mine = isUser(c) && S.bench ? S.bench.filter(id => elig.has(id) && !used.has(id) && S.players[id] && avail(P(id))).slice(0, RULES.benchSize) : [];
+  mine.forEach(id => used.add(id));
+  const rest = [...elig].map(P).filter(p => avail(p) && !used.has(p.id)).sort((a, b) => b.ovr * b.fit - a.ovr * a.fit);
+  const out = [], gk = mine.some(id => P(id).pos === "GK") ? null : rest.find(p => p.pos === "GK");
+  if (gk && mine.length < RULES.benchSize) out.push(gk);
+  for (const p of rest) { if (mine.length + out.length >= RULES.benchSize) break; if (p !== gk) out.push(p); }
+  return [...mine, ...out.map(p => p.id)];
 }
 function fixUserLineup() {
   const c = me(), sq = new Set(eligibleIds(c)), seen = new Set();
