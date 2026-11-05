@@ -165,12 +165,14 @@ function takeover(c, kind) {
     const war = Math.round(c.revBase * rf(.8, 2.5));
     c.owner = R() < .55 ? "ambitious" : "reckless"; c.cash += war; c.revBase = Math.round(c.revBase * 1.08); c.rep = Math.min(90, c.rep + 3);
     const acad = R() < .5 ? ri(1, 3) : 0; c.academy = Math.min(20, c.academy + acad);
+    moveFans(c, 6, "New owners investing");
     detail = `promises ${money(war)} for new players${acad ? ` and a bigger academy (youth development +${acad})` : ""}`;
   } else {
     const drain = Math.round(c.revBase * rf(.2, .6));
     c.owner = "prudent"; c.cash -= drain;
     const acad = R() < .4 ? ri(1, 2) : 0; c.academy = Math.max(1, c.academy - acad);
     if (!isUser(c)) for (const p of c.squad.map(P).sort((a, b) => b.wage - a.wage).slice(0, 2)) p.listed = true;  // high earners up for sale
+    moveFans(c, -8, "New owners cutting costs");
     detail = `loads ${money(drain)} of costs onto the club and orders spending cuts${acad ? `, trimming the academy (youth development −${acad})` : ""}`;
   }
   (c.takeovers ||= []).push({ y: S.year, kind, who, from: before, to: c.owner });

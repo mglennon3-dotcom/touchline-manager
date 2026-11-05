@@ -75,6 +75,14 @@ Investors bring cash, a commercial boost, a bigger appetite for spending and oft
 Cost-cutters and leveraged buyers drain cash, cut spending tolerance and sometimes the academy, and push high earners
 out; the board's expectations ease a little.
 
+**Stadiums and supporters.** Every club has a ground, a support base rated out of 20 (some small clubs are
+passionately backed) and fan engagement from 0 to 100. Lower divisions start with small grounds: around 1,000 at
+the bottom, 20,000–45,000 in the Premier Division. Engagement settles at a level set by support base and league
+position, so success brings more engagement, and moves with results, derbies, ticket prices, full grounds and
+owners. You set your own ticket prices: dearer seats earn more each but sell fewer and cost goodwill. When demand
+outgrows the ground you can expand it; work takes months and is paid weekly out of cash, which squeezes the
+transfer budget until it's done. AI clubs build too when they keep selling out.
+
 **Injuries** range from knocks of a week or two, through tears that take months, to rare season-ending
 injuries and very rare career-ending ones. **Retirements** start from age 30: some players announce at the
 start of the season that it will be their last, others surprise you at the end.

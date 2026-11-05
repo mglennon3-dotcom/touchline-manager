@@ -194,7 +194,8 @@ const FA_PRIZE = [25e3, 50e3, 85e3, 150e3, 250e3, 400e3, 800e3, 1.5e6, 3e6], LC_
 function pay(id, amt) { const c = C(id); c.cash += amt; c.fin.prize += amt; }
 function recordResult(fx, M) {
   const hg = M.h.goals, ag = M.a.goals;
-  if (fx.comp === "L") { const L = S.leagues[fx.key]; (L.results[fx.round] ||= []).push({ h: fx.h, a: fx.a, hg, ag }); L.n++; }
+  let att = null;
+  if (fx.comp === "L") { const L = S.leagues[fx.key]; (L.results[fx.round] ||= []).push({ h: fx.h, a: fx.a, hg, ag }); L.n++; att = gateFor(C(fx.h), fx.a); fansAfterMatch(C(fx.h), hg, ag, fx.a); fansAfterMatch(C(fx.a), ag, hg, fx.h); }
   if (fx.comp === "G") { S.cont[fx.key].gres.push({ g: fx.g, h: fx.h, a: fx.a, hg, ag }); if (hg !== ag) pay(hg > ag ? fx.h : fx.a, CONT[fx.key].prize[1]); }
   if (fx.comp === "K") {
     const comp = S.ko[fx.key], rd = comp.rounds[fx.r], t = rd.ties[fx.tie];
@@ -216,7 +217,7 @@ function recordResult(fx, M) {
   }
   recordRivalry(fx.h, fx.a, hg, ag);
   if (fx.h === S.club || fx.a === S.club) {
-    S.myRes.push({ w: S.week, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, sc: M.goals.map(g => [g.side, g.n, g.min]) });
+    S.myRes.push({ w: S.week, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, att, sc: M.goals.map(g => [g.side, g.n, g.min]) });
     afterUserMatch(fx, M);
   }
 }
@@ -228,7 +229,7 @@ function quickLeagueRound(key, r) {
   for (const [h, a] of L.fixtures[r]) {
     const H = C(h), A = C(a), d = (clubLevel(H) - clubLevel(A)) * .085;
     const hg = pois(1.32 * Math.exp(d) * 1.1), ag = pois(1.32 * Math.exp(-d) / 1.1);
-    rd.push({ h, a, hg, ag }); L.n++; recordRivalry(h, a, hg, ag);
+    rd.push({ h, a, hg, ag }); L.n++; recordRivalry(h, a, hg, ag); gateFor(H, a); fansAfterMatch(H, hg, ag, a); fansAfterMatch(A, ag, hg, h);
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
       const xi = autoPick(c.squad, c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
       for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - clubLevel(c)) / 25 + gauss() * .3, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
@@ -278,6 +279,7 @@ function weekly() {
     }
     c.wkMatches = 0;
   }
+  for (const c of activeClubs()) stadiumWeek(c);
   for (const id of S.fa) { const p = P(id); p.fit = 100; if (p.inj) p.inj--; }
   weeklyMood();
   weeklyRecruiting();
@@ -368,7 +370,7 @@ function endSeason() {
   const move = (id, to, dir) => {
     const c = C(id), from = c.lg; S.leagues[from].clubs = S.leagues[from].clubs.filter(x => x !== id); S.leagues[to].clubs.push(id);
     c.lg = to; c.tier = LG[to].tier;
-    const ratio = Math.pow(S.revK[to] / S.revK[from], .7); c.revBase = Math.round(c.revBase * ratio);
+    const ratio = Math.pow(S.revK[to] / S.revK[from], .7); c.revBase = Math.round(c.revBase * ratio); rescalePrice(c, ratio);
     // Relegation clauses: wages fall roughly in line with income.
     if (dir === "down") { c.rep = Math.max(8, c.rep - 4); for (const pid of c.squad) P(pid).wage = Math.round(P(pid).wage * clamp(ratio * 1.1, .55, .95)); if (isUser(c)) news("Relegation clauses cut the squad's wages.", true, "finance"); }
     else c.rep = Math.min(90, c.rep + 4);
@@ -384,7 +386,7 @@ function endSeason() {
     c.squad = [];
     const wasMine = isUser(c);
     if (wasMine && !S.set.unsackable) { S.sacked = true; S.sackReason = `${c.name} dropped out of the National Division.`; }
-    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n);
+    const n = newClub(key, clamp(Math.round(LG[key].rep[0] - 13 + gauss() * 2), 8, 24)); genSquad(n); setupFinances(n); S.leagues[key].clubs.push(n.id); assignRivals(n); initStadium(n);
     n.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
     // In unsackable mode you can't be left without a club: you take over one of the newcomers instead.
     if (wasMine && S.set.unsackable) { S.club = n.id; S.lineup = []; S.formation = S.me.form; n.formation = S.me.form; news(`${c.name} have dropped out of the National Division. You take charge of newcomers ${n.name}.`, true, "board"); }
@@ -403,7 +405,7 @@ function endSeason() {
 
   // reputation follows results; income drifts toward what that reputation earns in the division
   for (const key of Object.keys(S.leagues)) rec.L[key].table.forEach(([id], i) => { const c = C(id); if (c.gone) return; const target = LG[key].rep[0] - (i + 1) * LG[key].rep[1]; c.rep = clamp(Math.round(c.rep * .85 + target * .15), 8, 99); });
-  for (const c of activeClubs()) { const fair = S.revK[c.lg] * Math.pow(1.061, c.rep); c.revBase = Math.round(c.revBase * .8 + fair * .2); }
+  for (const c of activeClubs()) { const fair = S.revK[c.lg] * Math.pow(1.061, c.rep), old = c.revBase; c.revBase = Math.round(c.revBase * .8 + fair * .2); rescalePrice(c, c.revBase / Math.max(1, old)); c.lastAtt = c.att[1] ? Math.round(c.att[0] / c.att[1]) : c.lastAtt; c.att = [0, 0]; aiStadium(c); }
 
   // finances close: the summer share of income and costs, then the cost-ratio check
   for (const c of activeClubs()) {
@@ -419,6 +421,7 @@ function endSeason() {
   const won = me().trophies.filter(t => t.y === S.year);
   d += won.length * 10;
   if (myMove && myMove[1] === "down") d -= 30;
+  moveFans(me(), clamp((exp - myPos) * 1.5, -10, 10) + won.length * 5 + (myMove && myMove[1] === "up" ? 8 : myMove && myMove[1] === "down" ? -8 : 0), "The season as a whole");
   if (myMove && myMove[1] === "up") d += 20;
   d = Math.round(d);
   S.board = clamp(S.board + d, 0, 100);

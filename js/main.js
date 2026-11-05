@@ -98,6 +98,9 @@ function assignSlot(i, id) {
   UI.sel = null; save(); render();
 }
 const ACT = {
+  buildask: v => { UI.confirmBuild = v; render(); },
+  buildcancel: () => { UI.confirmBuild = null; render(); },
+  build: v => { const c = me(); if (c.build) return; startExpansion(c, v); UI.confirmBuild = null; save(); render(); toast("Building work has started."); },
   go: v => { UI.page = v; UI.sel = null; UI.menu = false; location.hash = v; render(); window.scrollTo(0, 0); },
   menu: () => { UI.menu = !UI.menu; render(); },
   play: v => v === "newseason" ? playNewSeason() : play(v),
@@ -152,6 +155,7 @@ const CHG = {
   startl: v => { UI.startL = v; render(); },
   cform: v => { UI.modal.form = v; const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; },
   unsack: (v, el) => { S.set.unsackable = el.checked; save(); render(); toast(el.checked ? "Unsackable mode on." : "Unsackable mode off: the board can fire you again."); },
+  ticket: v => { me().tkt = +v; save(); render(); },
   pref: v => { S.me.formPending = v; toast(`From next season you'll prefer the ${v}.`); save(); },
   cup: v => { UI.cupK = v; render(); },
   import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); if (d.v === 4) migrate4(d); if (d.v !== 5 || d.club == null) throw new Error("not a save"); S = d; LIVE = null; UI.page = "home"; await save(); render(); toast("Save file loaded."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
@@ -178,6 +182,7 @@ async function boot(data) {
   if (S && S.v === 4) migrate4(S);
   if (S && (S.v !== 5 || S.club == null)) S = null;
   if (S && !S.rivalsDone) ensureRivals();
+  if (S && !S.stadiums) ensureStadiums();
   if (S && !S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.

@@ -272,7 +272,7 @@ function setupFinances(c) {
 function newWorld() {
   S = { v: 5, year: 2026, phase: "season", week: 0, di: 0, days: [], summerDay: 0, club: null, nextPid: 1, players: {}, clubs: [], fa: [], towns: {},
     leagues: {}, ko: {}, cont: {}, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
-    history: [], career: [], hof: [], scout: {}, me: null, acad20: true, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
+    history: [], career: [], hof: [], scout: {}, me: null, acad20: true, stadiums: true, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
     set: { live: true }, qual: null, lastPos: {}, sacked: false, _tick: 1 };
   for (const key of Object.keys(LG)) {
     const ids = [];
@@ -282,6 +282,7 @@ function newWorld() {
   for (const c of S.clubs) genSquad(c);
   ensureRivals();
   for (const c of S.clubs) setupFinances(c);
+  for (const c of S.clubs) initStadium(c);
   // Income scale per division, anchored to reputation the same way wages are anchored to ability (≈6% per point).
   S.revK = {};
   for (const key of Object.keys(LG)) { const ks = S.leagues[key].clubs.map(C).map(c => c.revBase / Math.pow(1.061, c.rep)).sort((a, b) => a - b); S.revK[key] = ks[Math.floor(ks.length / 2)]; }

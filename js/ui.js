@@ -72,6 +72,7 @@ function render() {
     <div class="mast-r"><dl class="kpis"><div><dt>Cash</dt><dd class="${c.cash < 0 ? "bad" : ""}">${money(c.cash)}</dd></div>
       <div><dt>Cost ratio</dt><dd class="${ratio > RULES.scrSporting ? "bad" : ratio > RULES.scrLimit ? "warn" : ""}" title="Squad Cost Ratio, projected">${pct(ratio)}</dd></div>
       <div><dt>Position</dt><dd>${pos ? ord(pos) : "—"}</dd></div>
+      <div><dt>Fans</dt><dd class="${fanWord(c.fans)[1]}" title="Fan engagement: ${fanWord(c.fans)[0]}">${Math.round(c.fans)}</dd></div>
       <div><dt>Board${S.set.unsackable ? ' <span title="Unsackable mode is on">· safe</span>' : ""}</dt><dd>${S.board}<span class="meter ${S.board < 30 ? "low" : ""}"><i style="width:${S.board}%"></i></span></dd></div></dl>
       ${LIVE ? "" : playControl()}</div></div>
     ${LIVE ? "" : `<nav class="tabs" aria-label="Sections">${PAGES.map(([k, l]) => `<button data-a="go" data-v="${k}" ${UI.page === k ? 'aria-current="page"' : ""}>${l}${k === "home" && dec ? `<span class="dot">${dec}</span>` : ""}</button>`).join("")}</nav>`}
@@ -130,6 +131,8 @@ function viewStart() {
         { k: "rep", l: "Prestige", r: 1, v: r => r.c.rep, f: r => r.c.rep, cls: "hide-sm" },
         { k: "acad", l: "Youth dev", r: 1, v: r => r.c.academy, f: r => `<b class="rt ${aCls(r.c.academy)}">${r.c.academy}</b>` },
         { k: "fin", l: "Finances", v: r => finHealth(r.c).ratio, f: r => { const h = finHealth(r.c); return `<b class="${h.cls}">${h.label}</b><br><span class="tiny muted">${money(r.c.cash)} cash · ${money(r.c.revBase)} a year</span>`; } },
+        { k: "cap", l: "Ground", r: 1, v: r => r.c.cap, f: r => r.c.cap.toLocaleString(), cls: "hide-sm" },
+        { k: "sup", l: "Support", r: 1, v: r => r.c.support, f: r => `<span class="rt ${aCls(r.c.support)}">${r.c.support}</span>`, cls: "hide-sm" },
         { k: "own", l: "Owner", f: r => OWNER[r.c.owner].l, cls: "hide-sm" },
         { k: "exp", l: "Board target", f: r => expText(r.exp, key) },
         { k: "go", l: "", f: r => `<button class="btn sm" data-a="choose" data-v="${r.c.id}">Manage</button>` },
@@ -139,6 +142,23 @@ function viewStart() {
   S = keep; return html;
 }
 /* A club's finances at a glance: squad costs (wages plus transfer amortisation) against annual income. */
+function stadiumCard(c) {
+  const avg = c.att[1] ? Math.round(c.att[0] / c.att[1]) : (c.lastAtt || 0), full = c.cap ? avg / capacityNow(c) : 0, [fw, fk] = fanWord(c.fans);
+  const prices = [.6, .7, .8, .9, 1, 1.1, 1.2, 1.35, 1.5, 1.6];
+  const fc = ticketForecast(c, c.tkt || 1), cf = UI.confirmBuild;
+  const b = c.build;
+  const log = (c.fanLog || []).slice(0, 4);
+  return `<section class="card"><div class="card-h"><h2>Stadium & supporters</h2></div>
+    <dl class="facts"><div><dt>Capacity</dt><dd class="num">${c.cap.toLocaleString()}</dd></div><div><dt>Average crowd</dt><dd class="num">${avg ? avg.toLocaleString() : "—"} <span class="tiny muted">${avg ? pct(full) + " full" : ""}</span></dd></div>
+      <div><dt>Demand</dt><dd class="num">~${(Math.round(demandOf(c) / 100) * 100).toLocaleString()}</dd></div><div><dt>Support base</dt><dd><span class="rt ${aCls(c.support)}">${c.support}</span> <span class="tiny muted">/ 20</span></dd></div></dl>
+    <div style="margin-top:10px"><div class="attr"><span><b>Fan engagement</b> <span class="${fk}">${fw}</span></span><span class="abar"><i style="left:0;width:${c.fans}%" class="${aCls(c.fans / 5)}"></i></span><b class="num">${Math.round(c.fans)}</b></div>
+      <p class="tiny muted" style="margin-top:4px">Engagement drifts toward a level set by your support base and league position, and moves with results, derbies, ticket prices, full grounds, the season as a whole and changes of owner. Higher engagement fills more seats.${log.length ? " Recent: " + log.map(l => `${esc(l.why)} ${l.d > 0 ? "+" : ""}${l.d}`).join(" · ") + "." : ""}</p></div>
+    <label class="row small" style="margin-top:10px">Ticket price <select id="ticket" data-c="ticket">${prices.map(m => `<option value="${m}" ${Math.abs((c.tkt || 1) - m) < .01 ? "selected" : ""}>€${(c.price * m).toFixed(0)}${m === 1 ? " (standard)" : ` (${m > 1 ? "+" : ""}${Math.round((m - 1) * 100)}%)`}</option>`).join("")}</select></label>
+    <p class="tiny muted">At this price: about ${fc.att.toLocaleString()} a game and ${money(fc.income)} in ticket income. Dearer tickets earn more per seat but sell fewer and cost goodwill every home game; cheaper ones fill the ground and lift engagement.</p>
+    <div style="margin-top:10px">${b ? `<p class="small"><b>${esc(b.label)}</b>: +${b.add.toLocaleString()} seats, ${b.left} of ${b.weeks} weeks left. ${money(b.perWeek)} a week comes out of your cash until it's done (${money(b.paid)} of ${money(b.cost)} paid). Capacity is reduced while work goes on.</p>`
+      : cf ? (() => { const q = expansionQuote(c, cf); return `<p class="small">${esc(q.label)}: +${q.add.toLocaleString()} seats for ${money(q.cost)} over ${q.weeks} weeks (${money(q.perWeek)} a week out of cash). Start now?</p><div class="row"><button class="btn sm primary" data-a="build" data-v="${cf}">Start building</button><button class="btn sm" data-a="buildcancel">Cancel</button></div>`; })()
+      : `<p class="small" style="margin-bottom:6px">Expand the ground. ${demandOf(c) > c.cap ? "Demand is above capacity, so new seats should sell." : "Demand is below capacity right now, so new seats would mostly sit empty."}</p><div class="row">${EXPANSIONS.map(([k, l]) => { const q = expansionQuote(c, k); return `<button class="btn sm" data-a="buildask" data-v="${k}" title="${money(q.cost)} over ${q.weeks} weeks">${l} (+${q.add.toLocaleString()})</button>`; }).join("")}</div>`}</div></section>`;
+}
 function finHealth(c) {
   const ratio = squadCost(c) / Math.max(1, c.revBase);
   const [label, cls] = ratio < .75 ? ["Healthy", "good"] : ratio < .85 ? ["Comfortable", "ok"] : ratio <= 1 ? ["Stretched", "warn"] : ["Over the limit", "bad"];
@@ -191,7 +211,7 @@ function resultRow(r) {
   const mine = r.h === S.club ? r.hg : r.ag, th = r.h === S.club ? r.ag : r.hg;
   let x = mine > th ? "W" : mine < th ? "L" : "D"; if (r.pens) { const mp = r.h === S.club ? r.pens[0] : r.pens[1], tp = r.h === S.club ? r.pens[1] : r.pens[0]; x = mp > tp ? "W" : "L"; }
   return `<div class="res"><span class="h">${clubA(r.h, { flag: 1 })}</span><span class="sc">${r.hg}–${r.ag}${r.et ? " aet" : ""}</span><span>${clubA(r.a, { flag: 1 })}</span>
-    <span class="tiny muted" style="grid-column:1/-1;text-align:center"><span class="form"><i class="${x}">${x}</i></span>${rivalry(r.h, r.a) ? ` <b>${rivalry(r.h, r.a) >= 2 ? "Derby" : "Rivalry"}</b> ·` : ""} ${esc(r.label)}${r.pens ? ` · ${r.pens[0]}–${r.pens[1]} pens` : ""}${r.sc.length ? " · " + r.sc.map(([s, n, m]) => `${esc(n)} ${m}′`).join(", ") : ""}</span></div>`;
+    <span class="tiny muted" style="grid-column:1/-1;text-align:center"><span class="form"><i class="${x}">${x}</i></span>${rivalry(r.h, r.a) ? ` <b>${rivalry(r.h, r.a) >= 2 ? "Derby" : "Rivalry"}</b> ·` : ""} ${esc(r.label)}${r.pens ? ` · ${r.pens[0]}–${r.pens[1]} pens` : ""}${r.sc.length ? " · " + r.sc.map(([s, n, m]) => `${esc(n)} ${m}′`).join(", ") : ""}${r.att ? ` · crowd ${r.att.toLocaleString()}` : ""}</span></div>`;
 }
 function miniTable(L, rows, offset) {
   return `<div class="tbl-wrap"><table><thead><tr><th class="r">#</th><th>Club</th><th class="r">P</th><th class="r">GD</th><th class="r">Pts</th></tr></thead><tbody>${rows.map((r, i) => `<tr class="${r.id === S.club ? "me" : ""} ${zoneCls(L.key, offset + i + 1)}"><td class="r num">${offset + i + 1}</td><td>${clubA(r.id)}${rivalChip(r.id)}${r.ded ? ` <span class="chip req" title="Points deducted">−${r.ded}</span>` : ""}</td><td class="r num">${r.p}</td><td class="r num">${r.gf - r.ga > 0 ? "+" : ""}${r.gf - r.ga}</td><td class="r num"><b>${r.pts}</b></td></tr>`).join("")}</tbody></table></div>`;
@@ -454,11 +474,11 @@ function viewFinances() {
     <div class="gauge" role="img" aria-label="Projected ratio ${pct(ratio)}"><span class="tick" style="left:${mk(.85)}%">85%</span><span class="tick" style="left:${mk(1.15)}%">115%</span><span class="mk" style="left:${mk(ratio)}%"><span>${pct(ratio)}</span></span></div>
     <p class="small muted">Projected for the full season at today's wage bill and income. ${c.lastSCR ? `Last season: ${pct(c.lastSCR)}.` : ""}</p></section>
     <section class="card"><div class="card-h"><h2>This season so far</h2></div><dl class="ledger">
-      <dt>Broadcast, matchday and commercial</dt><dd>${money(f.rev)}</dd><dt>Prize money</dt><dd>${money(f.prize + f.merit)}</dd><dt>Player sales (fees received)</dt><dd>${money(f.sold)}</dd>${f.scheme ? `<dt>Connected-party income</dt><dd>${money(f.scheme)}</dd>` : ""}
-      <dt>Wages</dt><dd class="bad">${money(-f.wages)}</dd><dt>Staff and running costs</dt><dd class="bad">${money(-f.ops)}</dd><dt>Transfer fees paid</dt><dd class="bad">${money(-f.bought)}</dd><dt>Agent fees</dt><dd class="bad">${money(-f.agent)}</dd><dt>Scouting network</dt><dd class="bad">${money(-f.scouting)}</dd>${f.levy ? `<dt>Cost-ratio levy</dt><dd class="bad">${money(-f.levy)}</dd>` : ""}
+      <dt>Broadcast, commercial and matchday</dt><dd>${money(f.rev)}</dd><dt class="tiny" style="padding-left:12px">of which ticket sales</dt><dd class="tiny">${money(f.gate || 0)}</dd><dt>Prize money</dt><dd>${money(f.prize + f.merit)}</dd><dt>Player sales (fees received)</dt><dd>${money(f.sold)}</dd>${f.scheme ? `<dt>Connected-party income</dt><dd>${money(f.scheme)}</dd>` : ""}
+      <dt>Wages</dt><dd class="bad">${money(-f.wages)}</dd><dt>Staff and running costs</dt><dd class="bad">${money(-f.ops)}</dd><dt>Transfer fees paid</dt><dd class="bad">${money(-f.bought)}</dd><dt>Agent fees</dt><dd class="bad">${money(-f.agent)}</dd>${f.stadium ? `<dt>Stadium works</dt><dd class="bad">${money(-f.stadium)}</dd>` : ""}<dt>Scouting network</dt><dd class="bad">${money(-f.scouting)}</dd>${f.levy ? `<dt>Cost-ratio levy</dt><dd class="bad">${money(-f.levy)}</dd>` : ""}
       <dt class="tot">Cash in the bank</dt><dd class="tot">${money(c.cash)}</dd></dl>
       <p class="small muted" style="margin-top:8px">Annual income at this level: about ${money(c.revSeason)}. Transfer fees are spread over the contract (amortisation: ${money(sum(c.squad, id => P(id).am ? P(id).am.per : 0))} a year).</p></section></div>
-    <div class="stack"><section class="card"><div class="card-h"><h2>Scouting & academy</h2></div>
+    <div class="stack">${stadiumCard(c)}<section class="card"><div class="card-h"><h2>Scouting & academy</h2></div>
       <div class="prose"><p>Scouting network: <b>level ${S.rec.scoutLvl}</b> (${money(S.rec.scoutLvl * scoutCost())} a year) gives ${recHours()} recruiting hours a week.</p>
       <div class="row"><button class="btn sm" data-a="scout" data-v="-1" ${S.rec.scoutLvl <= 1 ? "disabled" : ""}>Reduce</button><button class="btn sm" data-a="scout" data-v="1" ${S.rec.scoutLvl >= 5 ? "disabled" : ""}>Expand</button></div>
       <p>Youth development: <b>${c.academy}/20</b>. It sets the potential of each summer's academy graduates, attracts prospects, develops under-21s faster and lets you offer more places. A small club with a great academy can produce stars.</p>
@@ -550,7 +570,7 @@ function modalClub(c) {
     <dl class="facts">${c.gone ? "" : `<div><dt>Position</dt><dd>${ord(posIn(L, c.id))}</dd></div>`}<div><dt>Squad level</dt><dd class="num">${r20(clubLevel(c)).toFixed(1)} / 20</dd></div><div><dt>Prestige</dt><dd class="num">${c.rep}</dd></div>
       <div><dt>Formation</dt><dd>${c.formation}</dd></div><div><dt>Youth development</dt><dd>${c.academy}/20</dd></div><div><dt>Owner</dt><dd>${OWNER[c.owner].l}</dd></div>
       <div><dt>Coach</dt><dd>${esc(coachOf(c).name)}<br><span class="tiny muted">${ARCH[coachOf(c).arch].l} · prefers ${coachOf(c).form} · ${COACH_KEYS.map(([k, l]) => l.slice(0, 3) + " " + coachOf(c)[k]).join(" · ")}</span></dd></div>
-      <div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
+      <div><dt>Ground</dt><dd class="num">${(c.cap || 0).toLocaleString()}${c.build ? ' <span class="tiny muted">(expanding)</span>' : ""}</dd></div><div><dt>Supporters</dt><dd>${fanWord(c.fans)[0]} <span class="tiny muted">· support ${c.support}/20</span></dd></div><div><dt>Cost ratio</dt><dd class="num">${pct(scr(c))}</dd></div><div><dt>Trophies</dt><dd>${c.trophies.length}</dd></div></dl>
     ${c.hist.length ? `<p class="small">Recent finishes: ${c.hist.slice(-6).reverse().map(h => `${seasonLabel(h.y)} ${ord(h.pos)} in ${leagueName(h.lg)}`).join(" · ")}</p>` : ""}
     ${(c.takeovers || []).length ? `<p class="small">Ownership: ${c.takeovers.slice(-4).map(t => `${seasonLabel(t.y)} ${esc(t.who.replace(/^An? /, "").toLowerCase())} (${t.kind === "invest" ? "investor" : "cost-cutter"})`).join(" · ")}</p>` : ""}
     ${Object.keys(c.rivals || {}).length ? `<p class="small">Rivals: ${Object.entries(c.rivals).filter(([id]) => !C(+id).gone).map(([id, n]) => `${clubA(+id, { crest: false })} (${RIVAL_WORD[n].toLowerCase()}, ${recStr(h2hOf(c, +id))})`).join(" · ")}</p>` : ""}
