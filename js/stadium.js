@@ -12,20 +12,33 @@ const EXPANSIONS = [
   ["small", "Extend a stand", .15, .75], ["medium", "Rebuild a stand", .35, 1.5], ["large", "Redevelop two stands", .7, 2.5], ["new", "Build a new stadium", 1.2, 3.5],
 ];
 const SEASON_WEEKS = 41;  // building only progresses during the season
+// Starting ground sizes by division. Where a club sits in its range depends on prestige, support and history (chance).
+const CAP_RANGE = { 1: [20000, 70000], 2: [10000, 40000], 3: [3000, 20000], 4: [2000, 10000], 5: [1500, 6000], 6: [800, 4000] };
+const FOREIGN_CAP = { 1: [12000, 70000], 2: [5000, 30000], 3: [2000, 12000] };
+function startingCapacity(c) {
+  const [lo, hi] = (isForeign(c) ? FOREIGN_CAP : CAP_RANGE)[c.tier];
+  const L = LG[c.lg], repPos = clamp((c.rep - (L.rep[0] - L.size * L.rep[1])) / (L.size * L.rep[1]), 0, 1);
+  const u = clamp(.55 * repPos + .3 * (c.support - 1) / 19 + gauss() * .15 + .08, 0, 1);
+  return Math.round(lo * Math.pow(hi / lo, u) / 100) * 100;
+}
 function initStadium(c) {
   // Support base, out of 20: only loosely tied to stature, so some small clubs are passionately backed.
   c.support = c.support ?? clamp(Math.round(10 + gauss() * 3.5 + (c.rep - 45) * .05), 1, 20);
-  c.cap = Math.max(800, Math.round(capFor(c.rep) * (.7 + .03 * c.support) * rf(.85, 1.1) / 100) * 100);
+  c.fans = c.fans ?? clamp(Math.round(fanTarget(c) + gauss() * 5), 20, 90);
+  c.cap = startingCapacity(c);
+  // Demand is anchored to the club's own ground at the start, then grows with prestige, form and engagement.
+  c.dem0 = c.cap * rf(.88, 1.08); c.rep0 = c.rep; c.fans0 = c.fans;
   const att = Math.min(c.cap, demandOf(c));
   const md = c.revBase * MATCHDAY_SHARE;
   c.price = Math.max(5, md / (homeGames(c) * att));
   c.revBase = Math.round(c.revBase - md);
   c.build = null; c.att = [0, 0];  // season attendance: total, home games
-  c.fans = c.fans ?? clamp(Math.round(fanTarget(c) + gauss() * 5), 20, 90); c.tkt = c.tkt || 1;
+  c.tkt = c.tkt || 1;
 }
 function demandOf(c) {
   const L = S.leagues[c.lg], pos = L && L.n ? posIn(L, c.id) / L.clubs.length : .5;
-  return capFor(c.rep) * supportMult(c) * (.85 + .3 * (1 - pos)) * (.8 + .4 * (c.fans ?? 60) / 100);
+  if (c.dem0 == null) return capFor(c.rep) * supportMult(c) * (.85 + .3 * (1 - pos)) * (.8 + .4 * (c.fans ?? 60) / 100);
+  return c.dem0 * Math.pow(1.055, c.rep - c.rep0) * (.85 + .3 * (1 - pos)) * (.8 + .4 * (c.fans ?? 60) / 100) / (.8 + .4 * (c.fans0 ?? 60) / 100);
 }
 /* Where engagement settles: well-supported clubs and winning clubs sit higher. */
 function fanTarget(c) {
@@ -99,4 +112,6 @@ function ticketForecast(c, pm) {
 }
 /* Saves made before stadiums existed get them now. */
 function ensureStadiums() { for (const c of activeClubs()) if (c.cap == null) initStadium(c); S.stadiums = true; }
+/* Saves from before demand was anchored keep their grounds; demand is pinned to what they draw today. */
+function ensureDemandAnchor() { for (const c of activeClubs()) if (c.cap != null && c.dem0 == null) { const d = demandOf(c); c.dem0 = d; c.rep0 = c.rep; c.fans0 = c.fans; } S.dem2 = true; }
 const seasonsText = w => { const y = w / SEASON_WEEKS; return y < 1.15 ? "about a season" : `about ${Math.round(y * 2) / 2} seasons`; };

@@ -184,6 +184,7 @@ async function boot(data) {
   if (S && !S.rivalsDone) ensureRivals();
   if (S && !S.stadiums) ensureStadiums();
   if (S && !S.sponsors) ensureSponsors();
+  if (S && !S.dem2) ensureDemandAnchor();
   if (S && !S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   render();
   // Ask the browser not to clear a long career when space runs low, and cache the game for offline play.

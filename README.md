@@ -76,8 +76,8 @@ Cost-cutters and leveraged buyers drain cash, cut spending tolerance and sometim
 out; the board's expectations ease a little.
 
 **Stadiums and supporters.** Every club has a ground, a support base rated out of 20 (some small clubs are
-passionately backed) and fan engagement from 0 to 100. Lower divisions start with small grounds: around 1,000 at
-the bottom, 20,000–45,000 in the Premier Division. Engagement settles at a level set by support base and league
+passionately backed) and fan engagement from 0 to 100. Grounds start at 20,000–70,000 in the Premier Division, 10,000–40,000 in
+the First Division, 3,000–20,000 in the Second, and smaller below that (800–4,000 at the bottom). Engagement settles at a level set by support base and league
 position, so success brings more engagement, and moves with results, derbies, ticket prices, full grounds and
 owners. You set your own ticket prices: dearer seats earn more each but sell fewer and cost goodwill. When demand
 outgrows the ground you can expand it; work takes from about a season (extending a stand) to four or more (a new
