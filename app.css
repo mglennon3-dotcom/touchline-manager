@@ -328,3 +328,6 @@ body{padding-top:env(safe-area-inset-top,0px)}
 .save-act,.save-ask{gap:8px}
 .save-ask{display:grid;gap:6px;justify-items:start}
 .save-ask .btn.danger{border-color:var(--loss)}
+/* Pinned name cells draw their own row line: rows have fractional heights, and a pinned cell could paint
+   over the line of the one above it, leaving gaps beside some names. */
+.tbl-wrap.tall td:first-child{border-bottom-color:transparent;box-shadow:inset 0 -1px 0 var(--line),1px 0 0 var(--line)}

@@ -305,10 +305,10 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   if (!S.dem2) ensureDemandAnchor();
   if (S.me && !S.me.know) S.me.know = newKnowledge("ENG");  // saves from before league knowledge
   if (!S.reg2) { for (const c of activeClubs()) autoRegister(c, false); S.reg2 = true; }
-  if (!S.towns2) {  // rename any club the generator gave a real club's town before the blocklist covered it
+  if (!S.towns3) {  // (towns3: rerun when the blocklist grows) rename any club the generator gave a real club's town before the blocklist covered it
     for (const c of S.clubs) if (TOWN_BLOCK.has(c.town)) { const t = townName(COUNTRY[c.country]), old = c.town, taken = new Set(S.clubs.filter(x => x.country === c.country).map(x => x.short)), sh = stripAcc(t).toUpperCase().slice(0, 3);
       c.name = c.name.replace(old, t); c.town = t; if (!taken.has(sh)) c.short = sh; }
-    S.towns2 = true; }
+    S.towns3 = true; }
   if (!S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   if (!S.attr2) { for (const p of Object.values(S.players)) convertAttrs(p); for (const c of S.clubs) delete c._lv; S.attr2 = true; }
 }

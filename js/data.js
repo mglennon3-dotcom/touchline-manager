@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.13";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.13.1";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -90,6 +90,12 @@ const MENT = {
 };
 // The attributes each style leans on. How far the XI's are above or below what's usual for their positions
 // and ratings decides how well the style works for them (see styleFit).
+// Squad-page summaries. Keepers have no outfield attributes: their "attack" is distribution and their
+// "defence" is shot-stopping, and they have no physical ratings.
+const ATTR_GROUPS = {
+  out: { atk: ["fin", "dri", "tec", "vis", "pas", "cmp"], dfn: ["tac", "mar", "hea"], phy: ["pac", "sta", "str"] },
+  gk: { atk: ["lp", "sp"], dfn: ["ss"], phy: [] },
+};
 const STYLE_KEYS = { vatt: ["fin", "dri", "pac", "sta"], att: ["fin", "dri", "vis", "tec"], pos: ["pas", "tec", "vis", "cmp"], bal: [],
   ctr: ["pac", "dri", "fin", "vis"], def: ["tac", "mar", "hea", "str"], vdef: ["tac", "mar", "hea", "cmp"] };
 const STYLE_BY_AG = { 3: "vatt", 2: "att", 1: "pos", 0: "bal", "-1": "ctr", "-2": "def", "-3": "vdef" };
@@ -186,7 +192,7 @@ const COUNTRIES = [
 const COUNTRY = Object.fromEntries(COUNTRIES.map(c => [c.code, c]));
 const TOWN_BLOCK = new Set(["Torino","Valencia","Hamburg","Wolfsburg","Marino","Salerno","Lucca","Sevilla","Marburg","Rotdam","Amsdam","Brugge","Genk",
   // Real English clubs the generator can spell out of its own parts (one was "Everton FC" in a test save).
-  "Ashford","Brackley","Margate","Bromley","Weston","Salford","Everton","Tilbury","Kirkby","Corby","Hartley","Bradford"]);
+  "Ashford","Brackley","Margate","Bromley","Weston","Salford","Everton","Tilbury","Kirkby","Corby","Hartley","Bradford","Ashton","Thornbury","Redbridge","Walton"]);
 // Youth prospects also come from outside the eight leagues.
 const ABROAD = [["BRA","Brazil",-15.8,-47.9],["ARG","Argentina",-34.6,-58.4],["WAF","West Africa",6.5,-1.5],["SCA","Scandinavia",59.9,10.8]];
 const NAT_NAME = { ENG: "England", ESP: "Spain", GER: "Germany", ITA: "Italy", POR: "Portugal", FRA: "France", NED: "Netherlands", BEL: "Belgium", BRA: "Brazil", ARG: "Argentina", WAF: "Ghana", SCA: "Norway" };
