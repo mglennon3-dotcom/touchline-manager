@@ -327,6 +327,7 @@ function setCompact(on) {
   const m = document.querySelector(".mast"); UI.mastCompact = on; if (!m) return;
   const before = m.getBoundingClientRect().height;
   m.classList.toggle("compact", on); syncMastHeight();
+  if (!on) { const n = m.querySelector("nav.tabs"); if (n) n.scrollLeft = UI.navX || 0; }  // hidden links lose their sideways scroll
   // The masthead is sticky, so it takes up room in the page: shrinking it would make everything below
   // jump up. Scroll by the difference so what you were reading stays where it was.
   const d = before - m.getBoundingClientRect().height; if (d) window.scrollBy(0, -d);

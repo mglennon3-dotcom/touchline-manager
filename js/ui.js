@@ -93,6 +93,9 @@ function render() {
   const winBadge = windowOpen() ? ` <span class="win-badge">Transfer window open${S.phase === "season" ? ` to week ${janEnd}` : ""}</span>` : "";
   const when = (S.phase === "summer" ? `Preseason · week ${S.summerDay + 1} of ${CAL.summerDays}` : `Week ${S.week + 1}`) + winBadge;
   const ratio = scr(c), dec = openDecisions().length;
+  // The section links scroll sideways on a phone. render() rebuilds them, which reset the scroll to Home
+  // every time: keep where you'd scrolled to (UI.navX, updated as you scroll).
+  const navOld = document.querySelector("nav.tabs"); if (navOld && navOld.offsetParent) UI.navX = navOld.scrollLeft;  // not while hidden by the compact masthead
   app.innerHTML = `<header class="mast${UI.mastCompact ? " compact" : ""}" style="--club:${c.color}"><div class="wrap gut">
     <div class="mast-in"><div class="ident">${crest(c, 34)}<div><div class="eyebrow">${seasonLabel(S.year)} · ${leagueName(c.lg)} · ${when}</div><h1>${esc(c.name)}</h1></div></div>
     <div class="mast-r"><dl class="kpis"><div><dt>Cash</dt><dd class="${c.cash < 0 ? "bad" : ""}">${money(c.cash)}</dd></div>
@@ -103,6 +106,14 @@ function render() {
       ${LIVE ? "" : playControl()}</div></div>
     ${LIVE ? "" : `<nav class="tabs" aria-label="Sections">${PAGES.map(([k, l]) => `<button data-a="go" data-v="${k}" ${UI.page === k ? 'aria-current="page"' : ""}>${l}${k === "home" && dec ? `<span class="dot">${dec}</span>` : ""}</button>`).join("")}${DB.db ? `<button data-a="landing" title="Your careers: switch, start a new one or delete">Saves</button>` : ""}</nav>`}
   </div></header><main class="wrap gut">${LIVE ? viewLive() : (VIEWS[UI.page] || viewHome)()}</main>`;
+  const nav = document.querySelector("nav.tabs");
+  if (nav) {
+    nav.scrollLeft = UI.navX || 0;
+    // If the current section's link is off-screen (opened from a button elsewhere), bring it into view.
+    const cur = nav.querySelector('[aria-current="page"]');
+    if (cur && (cur.offsetLeft < nav.scrollLeft || cur.offsetLeft + cur.offsetWidth > nav.scrollLeft + nav.clientWidth)) nav.scrollLeft = UI.navX = Math.max(0, cur.offsetLeft - 16);
+    nav.addEventListener("scroll", () => { UI.navX = nav.scrollLeft; }, { passive: true });
+  }
   renderModal();
 }
 function playControl() {
