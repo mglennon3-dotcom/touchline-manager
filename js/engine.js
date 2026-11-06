@@ -141,6 +141,15 @@ function swapSlots(M, i, a, b) {
   [x.slot, y.slot] = [y.slot, x.slot]; [x.si, y.si] = [y.si, x.si]; s.rt = null; s.fitK = null;
   lg(M, "tac", i, `${x.p.name} and ${y.p.name} swap positions.`);
 }
+// Move a player into a position nobody is filling: after a red card (or an injury with no subs left) the
+// shape has a gap, and you choose who covers it, keeper included.
+function moveToSlot(M, i, a, si) {
+  const s = i ? M.a : M.h, o = s.on[a], sl = slotsOf(s.form);
+  if (!o || si < 0 || si >= sl.length || s.on.some(x => x.si === si)) return false;
+  o.si = si; o.slot = sl[si]; s.rt = null; s.fitK = null;
+  lg(M, "tac", i, `${o.p.name} moves to ${ROLE_NAME[o.slot].toLowerCase()}.`);
+  return true;
+}
 // Change formation mid-match: put the players on the pitch into the new shape, best fits first.
 function changeForm(M, i, form) {
   const s = i ? M.a : M.h, sl = slotsOf(form), pairs = [];

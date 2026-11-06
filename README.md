@@ -121,7 +121,9 @@ cards, bans or ratings.
 (fitness included), fitness bars and bookings, with the bench below. Tap a player and then a substitute to
 bring him on, or two players to swap their positions; change formation from the menu above the pitch. Any of
 these pauses the match until you resume.
-Substitutes sit directly under the pitch, above the Starting XI. Before kick-off, tap a sub (or a starter)
+After a red card (or an injury with no subs left) the gap shows on the pitch as an empty position: tap a
+player and then the gap (or the gap, then a player) to move him there, keeper included, or change formation
+and then arrange the ten as you like. Substitutes sit directly under the pitch, above the Starting XI. Before kick-off, tap a sub (or a starter)
 to list everyone outside the matchday squad and swap one in.
 **Fitness** recovers day by day between fixtures: each day a player wins back a share of what he's lost
 (Recovery a third, Balanced a quarter, Intense under a fifth), more with good Stamina, so a tired player

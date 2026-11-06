@@ -253,11 +253,16 @@ const ACT = {
   livetap: v => {
     const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, idx = +v, sel = UI.lsel || {}; livePause();
     if (M.min === 0) return livePre({ on: idx });
+    if (sel.empty != null) { moveToSlot(M, k, idx, sel.empty); UI.lsel = null; return render(); }
     if (sel.bench != null && s.subs < RULES.subs) { doSub(M, k, idx, sel.bench); UI.lsel = null; }
     else if (sel.on != null && sel.on !== idx) { swapSlots(M, k, sel.on, idx); UI.lsel = null; }
     else UI.lsel = sel.on === idx ? null : { on: idx };
     render();
   },
+  liveempty: v => { const M = LIVE.M, k = LIVE.k, si = +v, sel = UI.lsel || {}; livePause();
+    if (sel.on != null) { moveToSlot(M, k, sel.on, si); UI.lsel = null; }
+    else UI.lsel = sel.empty === si ? null : { empty: si };
+    render(); },
   liveout: v => { livePause(); if (LIVE.M.min === 0) livePre({ out: +v }); },
   livebench: v => {
     const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, id = +v, sel = UI.lsel || {}; livePause();
