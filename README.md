@@ -92,6 +92,9 @@ any travel) narrows the potential estimate, shows his injury history before a de
 cares about, and nudges lads who value youth development or playing time. A home visit
 counts most with lads who want to stay near home or care about squad dynamics; hosting suits the rest.
 Trips abroad cost travel, shown on the button.
+The first club to offer a place (while the offer stands) gets an edge, worth about a home visit: he remembers
+who believed in him first. It settles about a quarter of contested races, and offering early to your top
+targets won 9 of 12 in testing against 5-8 without it. The Offered tab and his profile show who offered first.
 The Youth page has four tabs: Offered, Scouted, All prospects (the full class with filters) and Committed.
 Offered and Scouted are your working lists: **Offered places** (everyone you've offered a place who
 hasn't signed: your standing among his suitors, how many other offers he has, or which club he chose) and

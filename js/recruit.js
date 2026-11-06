@@ -62,7 +62,12 @@ function factors(y, c) {
   return { loc, time, form, dyn, prest, acad, d, ahead, slots, compat, sameRole };
 }
 function factorScore(y, c) { const f = factors(y, c); return sum(FACTORS, ([k]) => y.pri[k] * f[k]); }
-const clubScore = (y, c) => factorScore(y, c) + .45 * (y.rel[c.id] || 0);
+/* The club that offered him a place first, and still has the offer on the table, has an edge: he remembers
+   who believed in him before anyone else did. Offers are kept in the order they were made, so it is the first
+   entry. FIRST_OFFER is about what a home visit is worth to a typical lad, and enough to settle a close race. */
+const FIRST_OFFER = .07;
+const firstOffer = y => y.offers[0];
+const clubScore = (y, c) => factorScore(y, c) + .45 * (y.rel[c.id] || 0) + (y.offers[0] === c.id ? FIRST_OFFER : 0);
 const grade = v => v >= .8 ? "A" : v >= .62 ? "B" : v >= .45 ? "C" : v >= .3 ? "D" : "F";
 
 /* What you can see depends on how much you've scouted him: potential and injury proneness as ranges out of 20. */
@@ -95,7 +100,9 @@ function recAct(y, act) {
     if (y.offers.includes(c.id)) { y.offers = y.offers.filter(id => id !== c.id); S.rec.offers--; return `Offer to ${y.name} withdrawn.`; }
     if (y.sc < 1) return "Scout him at least once before offering a place.";
     if (S.rec.offers >= offerCap()) return `Your academy can only offer ${offerCap()} places a year. Withdraw one first.`;
-    y.offers.push(c.id); y.rel[c.id] = (y.rel[c.id] || 0) + .05; S.rec.offers++; return `Academy place offered to ${y.name}.`;
+    const first = !y.offers.length;
+    y.offers.push(c.id); y.rel[c.id] = (y.rel[c.id] || 0) + .05; S.rec.offers++;
+    return first ? `Academy place offered to ${y.name}: the first offer he's had, and he'll remember it.` : `Academy place offered to ${y.name}. ${C(y.offers[0]).name} offered first, which counts in their favour.`;
   }
   if (act === "home" && y.sc < 1) return "Scout him at least once before visiting his family.";
   if (act === "coach" && y.coach) return "You've already spoken to his youth coaches.";
