@@ -34,6 +34,10 @@ function dedupeNames(c) {
   return out;
 }
 
+/* Growth speed: how quickly a player closes on his potential, never shown. 10 is the old rate; 1 develops at
+   55% of it and 20 at 150%, so two players with the same potential can be years apart in reaching it. */
+const newGrowthSpeed = () => clamp(Math.round(10 + gauss() * 3.2), 1, 20);
+const gsMult = p => .5 + (p.gs ?? 10) / 20;
 function makePlayer(o) {
   const age = o.age ?? ri(18, 33);
   let ovr = Math.round((o.base ?? 65) + gauss() * 3.4 + (age <= 17 ? -9 : age <= 19 ? -5 : age <= 21 ? -2.5 : age >= 33 ? -2 : 0));
@@ -45,6 +49,7 @@ function makePlayer(o) {
     club: o.club ?? -1, wage: 0, yrs: ri(1, 5), am: null, yt: {}, inj: 0, sus: 0, yc: 0,
     s: newStats(), hist: [], req: false, listed: false, promise: null, joined: S.year, loan: null, peak: ovr, tot: [0, 0],
     at: null, retiring: 0, injT: "", ir: clamp(Math.round(10 + gauss() * 3.2), 1, 20),  // injury proneness: hidden, 1 robust – 20 fragile
+    gs: newGrowthSpeed(),  // growth speed: hidden, 1 slow – 20 quick (see gsMult)
   };
   p.at = genAttrs(o.pos, r20(ovr)); setOvr(p); p.pot = Math.max(p.pot, p.ovr);
   p.wage = wageDemand(p, o.rep ?? 60);

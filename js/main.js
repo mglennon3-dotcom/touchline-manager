@@ -407,7 +407,7 @@ function initAcademy() {
 }
 function upgradeSave() {  // bring an older save up to date; runs on load and on import
   // Repairs keepers whose fitness went NaN after playing outfield (fixed in 5.22.0).
-  for (const p of Object.values(S.players)) if (!isFinite(p.fit)) p.fit = 90;
+  for (const p of Object.values(S.players)) { if (!isFinite(p.fit)) p.fit = 90; if (p.gs == null) p.gs = newGrowthSpeed(); }  // 5.34: hidden growth speed
   // 5.33: the academy. Teenagers (18 and under) outside the current matchday squad move into it.
   if (!S.acadV && S.club != null && !S.sacked) { const n = initAcademy(); if (n) news(`Your club now runs an academy: ${n} teenager${n > 1 ? "s" : ""} outside the matchday squad moved into it. Promote any of them from the Academy page.`, true, "youth"); }
   if (!S.rivalsDone) ensureRivals();

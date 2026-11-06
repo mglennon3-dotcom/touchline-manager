@@ -321,7 +321,7 @@ function weekly() {
       if (p.ovr < p.pot) {
         const form = p.s.app >= 3 ? clamp((p.s.rt / p.s.app - 6) / 1.2, 0, 1.5) : .5;
         const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * 1.12 * t.grow * (p.age <= 21 ? acad : 1)
-          * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * (.85 + .2 * form);
+          * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * (.85 + .2 * form) * gsMult(p);
         if (R() < ch) growAttrs(p, 1);
       }
       if (isUser(c) && S.training === "int" && !p.inj && R() < .006 * injMult(p)) injure(p, true);
