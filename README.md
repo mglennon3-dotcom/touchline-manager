@@ -102,7 +102,8 @@ hasn't signed: your standing among his suitors, how many other offers he has, or
 to the first; those who accept move to Committed to you.
 
 **Academy** (its own page): your youth players are kept apart from the first team. Summer graduates and
-signed youth recruits join it; players 20 and under can be sent down from the first-team squad. Academy
+signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
+Academy page or the player's own card, which also has Promote to first team). Academy
 players never need registering; anyone turning 21 moves up as the season ends, in time to register him in
 preseason. Each season week the academy plays an unofficial under-18 match (unnamed trialists fill
 the side when it's short), which counts as playing time: over a season academy players gained about +5 on the
