@@ -123,9 +123,11 @@ bring him on, or two players to swap their positions; change formation from the 
 these pauses the match until you resume.
 Substitutes sit directly under the pitch, above the Starting XI. Before kick-off, tap a sub (or a starter)
 to list everyone outside the matchday squad and swap one in.
-**Fitness** recovers day by day between fixtures (Recovery about +4.5 a day, Balanced +3.5, Intense +2.3;
-a full match costs 18-22). With Balanced training a side playing once a week is fresh each time, and a
-midweek game leaves regulars a few points down. Over a season, starting XIs average 94-98% at kick-off.
+**Fitness** recovers day by day between fixtures: each day a player wins back a share of what he's lost
+(Recovery a third, Balanced a quarter, Intense under a fifth), more with good Stamina, so a tired player
+recovers fastest and fatigue can't snowball. A full match costs about 22 at Stamina 5, 18 at 10, 14 at 15
+and 11 at 20. An unrotated XI in two-match weeks starts at about 93-96% on Balanced, 84-94% on Intense
+and 94-98% on Recovery.
 The scoreboard lists each side's scorers and bookings with the minute, and goals and bookings show on
 your players on the pitch too. Below the play controls, three tabs replace the long page: Commentary,
 Tactics (style, formation, team and bench) and Stats (possession, shots, cards, subs and match ratings).

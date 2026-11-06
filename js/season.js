@@ -284,9 +284,13 @@ function userFixture(fxs) { return fxs.find(fx => fx.h === S.club || fx.a === S.
    weekends on Saturday) and recovery is per day elapsed. */
 const SLOT_DAY = [2, 3, 2, 6];  // ord 0 European, 1 cup, 2 midweek league, 3 weekend league
 const dayNo = d => d.w * 7 + SLOT_DAY[d.ord ?? 3];
+// Each day a player wins back a share of what he's lost, so the more tired he is the faster he recovers.
+// A flat daily amount (the first version of this) let fatigue snowball: an unrotated XI on Intense fell to
+// about 50% by week 13, lowest player 33%. Stamina speeds recovery: 20 recovers 40% faster than 0.
+const recoverRate = (p, k) => k * (.8 + .4 * (p.at.sta ?? 10) / 20);
 function recoverDays(days) {
   if (days <= 0) return;
-  for (const c of activeClubs()) { const per = TRAIN[isUser(c) ? S.training : "bal"].fit / 7 * days; for (const id of c.squad) { const p = P(id); if (p && p.fit < 100) p.fit = Math.min(100, Math.round((p.fit + per) * 10) / 10); } }
+  for (const c of activeClubs()) { const k = TRAIN[isUser(c) ? S.training : "bal"].rk; for (const id of c.squad) { const p = P(id); if (p && p.fit < 100) p.fit = Math.min(100, Math.round((100 - (100 - p.fit) * Math.pow(1 - recoverRate(p, k), days)) * 10) / 10); } }
 }
 function finishDay() {
   const cur = S.days[S.di], nxt = S.days[S.di + 1];

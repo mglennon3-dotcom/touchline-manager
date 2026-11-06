@@ -172,7 +172,7 @@ function step(M) {
   // Keepers have no Stamina attribute: a keeper sent on outfield (an injury with only a keeper on the bench)
   // used to get NaN fitness, which made his side's ratings NaN in every later match: they never had the ball,
   // and their opponents had it every minute and could never score. He tires like a stamina-8 player.
-  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.25 - (o.p.at.sta ?? 8) / 40) * MENT[s.ment].tire));  // stamina 10 tires at the old rate, 20 a quarter slower
+  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.4 - (o.p.at.sta ?? 8) / 25) * MENT[s.ment].tire));  // a full match: stamina 5 costs ~22, 10 ~18, 15 ~14, 20 ~11 (the old 1.25 - sta/40 spread them only 20 to 13.5, so Stamina barely mattered)
   if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); }
   // Fit only changes with the players or the style, so it isn't recomputed with every fitness update.
   for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length; if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV); }
