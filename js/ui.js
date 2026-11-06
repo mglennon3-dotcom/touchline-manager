@@ -774,7 +774,7 @@ function viewTransfers() {
         { k: "club", l: "Club", v: p => p.club >= 0 ? C(p.club).name : "", f: p => p.club >= 0 ? clubA(p.club, { short: true, flag: 1 }) : '<span class="muted">Free</span>' },
         loans ? { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage) } : { k: "ask", l: "Asking", r: 1, v: p => askingPrice(p), f: p => p.club >= 0 ? money(askingPrice(p)) : "Free" },
         { k: "w", l: "Interest", v: p => willingness(p, c), f: p => { const [l, k] = willingLabel(willingness(p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
-        { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"}>Ask to loan</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
+        { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"} title="You pay his wage while he's with you">Loan · ${perWeek(p.wage)}</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
       ], pool, { limit: 200,  empty: UI.tab === "scouted" && !scouted.length ? "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here." : "No players match these filters." })}`;
   }
   const title = { offers: "Offers", scouted: "Scouted players", search: "Search the market", mine: "Selling", log: "Activity" }[group];
@@ -1035,7 +1035,7 @@ function modalPlayer(p) {
   else if (loanedIn) actions = `<p class="small">On loan from ${clubA(p.loan.from)} until the end of the season.</p>`;
   else if (S.club != null && p.age >= 17 && !p.loan) {
     const [l, k] = willingLabel(willingness(p, me()));
-    actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>Ask to loan</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;
+    actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"} title="On loan you pay his wage">Ask to loan (you pay ${perWeek(p.wage)})</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;
   }
   return mHead(esc(p.name), `${ROLE_NAME[p.pos]} · ${NAT_NAME[p.nat] || p.nat} · ${p.age}`, c ? c.color : "var(--muted)", c ? crest(c, 36) : "") + `<div class="modal-b">
     <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${injHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
@@ -1098,18 +1098,27 @@ function modalCoach(m) {
     <div class="row"><button class="btn primary" data-a="startcareer">Start the career</button><button class="btn" data-a="closemodal">Back</button></div></div>`;
 }
 function modalBid(p) {
-  const c = me(), ask = askingPrice(p), w = willingness(p, c), [wl, wk] = willingLabel(w), wage = contractDemand(p, c, w);
-  const b = UI.bid && UI.bid.id === p.id ? UI.bid : (UI.bid = { id: p.id, fee: ask, yrs: p.age >= 31 ? 2 : 4, msg: "" });
-  const after = scr(c, wage + (b.fee ? b.fee / b.yrs : 0) + b.fee * .05);
-  const fees = p.club >= 0 ? [.85, .95, 1, 1.1, 1.25].map(k => Math.round(ask * k / 1e4) * 1e4) : [0];
+  const c = me(), ask = askingPrice(p), w = willingness(p, c), [wl, wk] = willingLabel(w), demand = contractDemand(p, c, w);
+  const b = UI.bid && UI.bid.id === p.id ? UI.bid : (UI.bid = { id: p.id, fee: ask, yrs: p.age >= 31 ? 2 : 4, wage: demand, msg: "" });
+  if (b.wage == null) b.wage = demand;
+  const after = scr(c, b.wage + (b.fee ? b.fee / b.yrs : 0) + b.fee * .05);
+  // Fee and wage choices: steps around the asking price and his demand, plus any counter-offer on the table.
+  const uniq = a => [...new Set(a)].sort((x, y) => x - y);
+  const fees = p.club >= 0 ? uniq([.7, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2].map(k => roundFee(ask * k)).concat(b.counterFee ? [b.counterFee] : [], [b.fee])) : [0];
+  const wages = uniq([.7, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2, 1.3].map(k => Math.round(demand * k / 1000) * 1000).concat(b.counterWage ? [b.counterWage] : [], [b.wage]));
+  const feeAgreed = b.feeOK != null && b.fee >= b.feeOK;
+  const counters = [b.counterFee && b.fee !== b.counterFee && !feeAgreed ? `<button class="btn sm" data-a="bidcounter" data-v="fee">Offer their ${money(b.counterFee)}</button>` : "", b.counterWage && b.wage !== b.counterWage ? `<button class="btn sm" data-a="bidcounter" data-v="wage">Offer him ${perWeek(b.counterWage)}</button>` : ""].filter(Boolean).join("");
   return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · rated ${ratingView(p).join("–").replace(/^(\d+)–\1$/, "$1")}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
-    <dl class="facts"><div><dt>Asking price</dt><dd class="num">${p.club >= 0 ? money(ask) : "None"}</dd></div><div><dt>His interest</dt><dd class="${wk === "ok" ? "" : wk}">${wl}</dd></div><div><dt>Wants</dt><dd class="num">${perWeek(wage)}</dd></div><div><dt>Your cash</dt><dd class="num">${money(c.cash)}</dd></div></dl>
+    <dl class="facts"><div><dt>Asking price</dt><dd class="num">${p.club >= 0 ? money(ask) : "None"}</dd></div><div><dt>His interest</dt><dd class="${wk === "ok" ? "" : wk}">${wl}</dd></div><div><dt>His contract request</dt><dd class="num">${perWeek(demand)}</dd></div><div><dt>Earns now</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Your cash</dt><dd class="num">${money(c.cash)}</dd></div></dl>
     ${w < .45 ? `<p class="small">${esc(whyNot(p, c) || "He isn't convinced by the move.")}</p>` : ""}
-    <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === ask ? " (asking)" : ""}</option>`).join("")}</select></label>` : ""}
+    <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee ${feeAgreed ? '<span class="good tiny">agreed ✓</span>' : ""}<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === roundFee(ask) ? " (asking)" : ""}${v === b.counterFee ? " (their counter)" : ""}</option>`).join("")}</select></label>` : ""}
+      <label class="f">Wage offer<select id="bid-wage" data-c="bid-wage">${wages.map(v => `<option value="${v}" ${v === b.wage ? "selected" : ""}>${perWeek(v)}${v === demand ? " (his request)" : ""}${v === b.counterWage ? " (he'd sign)" : ""}</option>`).join("")}</select></label>
       <label class="f">Contract length<select id="bid-yrs" data-c="bid-yrs">${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === b.yrs ? "selected" : ""}>${y} year${y > 1 ? "s" : ""}</option>`).join("")}</select></label></div>
-    <p class="small">With agent fees (5%) this costs <b>${money(b.fee * 1.05)}</b> now. Your projected cost ratio would move from ${pct(scr(c))} to <b class="${after > RULES.scrSporting ? "bad" : after > RULES.scrLimit ? "warn" : ""}">${pct(after)}</b>. ${isSenior(p) ? (regInfo(c).registered < RULES.squadMax ? `He'd take one of your ${RULES.squadMax - regInfo(c).registered} free registration places.` : `Your 25 registration places are full: he'd join unregistered unless you take someone else off the list.`) : "As an under-21 he needs no registration place."}</p>
+    <p class="small">With agent fees (5%) this costs <b>${money(b.fee * 1.05)}</b> now and <b>${perWeek(b.wage)}</b> in wages. Your projected cost ratio would move from ${pct(scr(c))} to <b class="${after > RULES.scrSporting ? "bad" : after > RULES.scrLimit ? "warn" : ""}">${pct(after)}</b>. ${isSenior(p) ? (regInfo(c).registered < RULES.squadMax ? `He'd take one of your ${RULES.squadMax - regInfo(c).registered} free registration places.` : `Your 25 registration places are full: he'd join unregistered unless you take someone else off the list.`) : "As an under-21 he needs no registration place."}</p>
     ${b.msg ? `<p class="small ${b.ok ? "good" : "bad"}"><b>${esc(b.msg)}</b></p>` : ""}
-    <div class="row"><button class="btn primary" data-a="submitbid" data-v="${p.id}" ${windowOpen() && !b.ok ? "" : "disabled"}>${p.club >= 0 ? "Submit offer" : "Offer contract"}</button>${windowOpen() ? "" : '<span class="small muted">The transfer window is closed.</span>'}</div></div>`;
+    ${counters ? `<div class="row" style="gap:6px">${counters}</div>` : ""}
+    <p class="tiny muted">Offer below his request and he may say no and name his price; keen players accept a little less. His club may come back with a counter-offer. Three refusals from either side and talks are off until next week.</p>
+    <div class="row"><button class="btn primary" data-a="submitbid" data-v="${p.id}" ${windowOpen() && !b.ok ? "" : "disabled"}>${p.club >= 0 ? (feeAgreed ? "Offer these terms" : "Submit offer") : "Offer contract"}</button>${windowOpen() ? "" : '<span class="small muted">The transfer window is closed.</span>'}</div></div>`;
 }
 
 /* ---------- live match ---------- */

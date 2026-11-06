@@ -117,25 +117,51 @@ function canBuy(p) {
    outcome (club rejected the fee, player refused, or signed). Refusals before an answer (no cash, window shut)
    aren't offers. */
 function logBid(p, fee, yrs, res, msg) { (S.bids ||= {})[p.id] = { y: S.year, w: S.phase === "season" ? S.week : -1, fee, ask: p.club >= 0 ? askingPrice(p) : 0, yrs, res, msg, club: p.club }; }
-function userBid(p, fee, yrs) {
-  const r = userBidInner(p, fee, yrs);
+/* Negotiating a signing: the fee with his club, then personal terms with him. st carries the state of the
+   talks (UI.bid): an agreed fee stays agreed while you work on his wage, and each side's refusals are counted.
+   His club has a private floor, between 88% and 98% of the asking price (fixed for the season), and meets
+   you half way with a counter it would accept. He has a minimum wage too: the keener he is the less he needs
+   (a fully keen player takes 80% of his demand), and players 31 and over want 10% more for a one-year deal.
+   Three refusals from either side and talks are off until next week. */
+const clubFloor = p => askingPrice(p) * (.88 + .1 * seedOf(p.id + S.year * 7, 3));
+const wageFloor = (p, demand, w, yrs) => demand * (1 - .2 * w) * (p.age >= 31 && yrs === 1 ? 1.1 : 1);
+const roundFee = v => { const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.ceil(v / mag) * mag; };
+function userBid(p, fee, yrs, wage, st) {
+  const r = userBidInner(p, fee, yrs, wage, st || {});
   if (r.res) logBid(p, fee, yrs, r.res, r.msg);
   return r;
 }
-function userBidInner(p, fee, yrs) {
+function userBidInner(p, fee, yrs, wage, st) {
   const err = canBuy(p); if (err) return { ok: false, msg: err };
-  const c = me(), ask = askingPrice(p), w = willingness(p, c);
+  const c = me(), w = willingness(p, c), lock = () => { (S.tried ||= {})[p.id] = S.year + ":" + S.week + ":" + S.phase + S.summerDay; };
   if (fee * 1.05 > c.cash) return { ok: false, msg: `You can't cover ${money(fee)} plus agent fees with ${money(c.cash)} in the bank.` };
-  if (p.club >= 0 && fee < ask) {
-    const ok = fee >= ask * .88 && R() < .45;
-    if (!ok) { (S.tried ||= {})[p.id] = S.year + ":" + S.week + ":" + S.phase + S.summerDay; return { ok: false, res: "rejected", msg: `${C(p.club).name} reject ${money(fee)}. They want around ${money(ask)}.` }; }
-  }
   if (w < .3) return { ok: false, res: "refused", msg: `${p.name} doesn't want to join. ${whyNot(p, c)}` };
-  const wage = contractDemand(p, c, w), fromRival = p.club >= 0 ? rivalry(p.club, c.id) : 0, rivalClub = p.club >= 0 ? C(p.club) : null;
+  // 1. The fee, unless it's already agreed at this figure or more.
+  if (p.club >= 0 && !(st.feeOK != null && fee >= st.feeOK)) {
+    const ask = askingPrice(p), floor = clubFloor(p);
+    if (fee < floor) {
+      st.clubNo = (st.clubNo || 0) + 1;
+      if (st.clubNo >= 3 || fee < ask * .6) { lock(); return { ok: false, res: "rejected", msg: `${C(p.club).name} end the talks${fee < ask * .6 ? ` at ${money(fee)}: nowhere near their ${money(ask)} valuation` : " after three offers below what they'll take"}. Try again next week.` }; }
+      const counter = roundFee(Math.max(floor, fee + (ask - fee) * .5));
+      st.counterFee = counter;
+      return { ok: false, msg: `${C(p.club).name} turn down ${money(fee)} and come back at ${money(counter)}.` };
+    }
+    st.feeOK = fee; st.counterFee = null;
+  }
+  // 2. Personal terms.
+  const demand = contractDemand(p, c, w), min = wageFloor(p, demand, w, yrs);
+  if (wage < min) {
+    st.playerNo = (st.playerNo || 0) + 1;
+    if (st.playerNo >= 3) { lock(); return { ok: false, res: "refused", msg: `${p.name} walks away from the talks after three offers below what he'll accept. Try again next week.` }; }
+    const counter = Math.ceil(Math.max(min, wage + (demand - wage) * .5) / 1000) * 1000;
+    st.counterWage = counter;
+    return { ok: false, msg: `${p.club >= 0 ? "Fee agreed. " : ""}${p.name} turns down ${perWeek(wage)} on a ${yrs}-year deal; he'd sign for ${perWeek(counter)}.` };
+  }
+  const fromRival = p.club >= 0 ? rivalry(p.club, c.id) : 0, rivalClub = p.club >= 0 ? C(p.club) : null;
   transfer(p, c, fee, wage, yrs);
   if (fromRival) { S.board = clamp(S.board - fromRival, 0, 100); news(`Signing ${p.name} from ${rivalClub.name} divides opinion. Some supporters will never accept a player from across the divide.`, true, "transfer"); }
   fixUserLineup();
-  return { ok: true, res: "signed", msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}.` };
+  return { ok: true, res: "signed", msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}${p.club >= 0 && fee ? ` for ${money(fee)}` : ""}.` };
 }
 function whyNot(p, b) {
   const cur = p.club >= 0 ? C(p.club) : null, out = [];
@@ -252,7 +278,7 @@ function userLoanIn(p) {
   if (rank >= slots * 2) return { ok: false, msg: `${parent.name} want him playing regularly, and he'd be behind ${rank} players at your club.` };
   if (clubLevel(c) < p.ovr - 10) return { ok: false, msg: `${parent.name} want him tested at a higher level than the ${leagueName(c.lg)}.` };
   startLoan(p, c); fixUserLineup();
-  return { ok: true, msg: `${p.name} joins on loan for the season. You pay his wages.` };
+  return { ok: true, msg: `${p.name} joins on loan for the season. You pay his wage, ${perWeek(p.wage)}${S.phase === "season" ? ` (about ${money(p.wage * Math.max(0, (S.days.length ? S.days[S.days.length - 1].w + 11 : 52) - S.week) / 52)} to the end of the season)` : ""}.` };
 }
 function aiLoans() {
   for (const c of activeClubs()) {

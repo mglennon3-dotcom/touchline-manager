@@ -255,6 +255,12 @@ wages at today's bill, running costs, scouting, stadium works and any cost-ratio
 bonuses and future transfers count once they happen. In preseason it projects the coming season. Checked
 by projecting at week 6 and playing the season out: a Premier club came to €34.4M projected against €38.9M
 actual (the gap was a cup run), and a fifth-tier club to €230k against €260k.
+**Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
+commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the
+asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed
+while you settle his wage. He accepts less than his request the keener he is (a fully keen player takes 80%),
+wants 10% more for a one-year deal from 31, and names his price when he says no. Three refusals from either
+side end the talks until next week. Loan buttons show his wage, which you pay while he's with you.
 **Transfers page** is laid out like the Youth page, in tabs with counts: Offers (players you bid for who
 turned you down, with your offer, today's asking price, the answer and how keen they are now, plus a New
 offer button; players you sign drop off), Scouted, Search (all players, free agents, transfer listed, loan

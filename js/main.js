@@ -215,7 +215,8 @@ const ACT = {
   export: () => { try { const blob = new Blob([JSON.stringify(S)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `touchline-${me().short}-${S.year}.json`; document.body.appendChild(a); a.click(); a.remove(); toast("Save file exported."); } catch (e) { toast("Export isn't available here."); } },
   needfind: v => { UI.tf = { pos: v, age: 40, min: 0, fee: 0, lg: "ALL" }; UI.tab = "search"; UI.page = "transfers"; location.hash = "transfers"; render(); toTop(); },
   bid: v => { UI.modal = { t: "bid", id: +v }; UI.bid = null; renderModal(); },
-  submitbid: v => { const p = P(+v), b = UI.bid; const r = userBid(p, p.club >= 0 ? b.fee : 0, b.yrs); b.msg = r.msg; b.ok = r.ok; save(); if (r.ok) { toast(r.msg); render(); } renderModal(); },
+  submitbid: v => { const p = P(+v), b = UI.bid; const r = userBid(p, p.club >= 0 ? b.fee : 0, b.yrs, b.wage, b); b.msg = r.msg; b.ok = r.ok; save(); if (r.ok) { toast(r.msg); render(); } renderModal(); },
+  bidcounter: v => { const b = UI.bid; if (v === "fee" && b.counterFee) b.fee = b.counterFee; if (v === "wage" && b.counterWage) b.wage = b.counterWage; b.msg = ""; renderModal(); },
   rec: v => { const [id, act] = v.split("|"); const y = S.prospects.find(x => x.id === id); const r = recAct(y, act); toast(r); save(); render(); },
   renew: v => { const p = P(+v), t = renewTerms(p); if (!t.happy) return toast(t.reason); p.yrs = 4; p.wage = t.wage; p.mood = Math.min(100, p.mood + 5); news(`${p.name} signs a new four-year contract on ${perWeek(t.wage)}.`, false, "squad"); save(); render(); toast(`${p.name} renewed until ${S.year + 4}.`); },
   list: v => { const p = P(+v); p.listed = !p.listed; if (p.listed) p.mood = Math.max(0, p.mood - 6); save(); render(); toast(p.listed ? `${p.name} is on the transfer list.` : `${p.name} is off the list.`); },
@@ -316,7 +317,7 @@ const CHG = {
   import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); d.saveId = newSaveId(); if (!adoptSave(d)) throw new Error("not a save"); await save(); render(); toTop(); toast("Save file loaded as a new career."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
   "tf-pos": v => { UI.tf.pos = v; render(); }, "tf-age": v => { UI.tf.age = +v; render(); }, "tf-min": v => { UI.tf.min = +v; render(); }, "tf-fee": v => { UI.tf.fee = +v; render(); }, "tf-lg": v => { UI.tf.lg = v; render(); }, "tf-int": v => { UI.tf.int = v; render(); },
   "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); },
-  "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); },
+  "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); }, "bid-wage": v => { UI.bid.wage = +v; UI.bid.msg = ""; renderModal(); },
 };
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-a]");
