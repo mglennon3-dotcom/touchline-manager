@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.38.1";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.39.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -103,9 +103,9 @@ const STYLE_KEYS = { vatt: ["fin", "dri", "pac", "sta"], att: ["fin", "dri", "vi
 const STYLE_BY_AG = { 3: "vatt", 2: "att", 1: "pos", 0: "bal", "-1": "ctr", "-2": "def", "-3": "vdef" };
 const TRAIN = {
   // rk: the share of lost fitness recovered each day (see recoverDays), scaled by the player's stamina.
-  rec: { l: "Recovery", rk: .34, grow: .45, d: "Players win back about a third of lost fitness a day: about 96% for every game even in a two-match week. Players barely develop." },
-  bal: { l: "Balanced", rk: .26, grow: 1, d: "About a quarter of lost fitness back a day: fresh for one game a week, about 92% in a two-match week. Steady development." },
-  int: { l: "Intense", rk: .18, grow: 1.6, d: "Under a fifth back a day: about 85% in a two-match week, so rotate. Fastest development; occasional training knocks." },
+  rec: { l: "Recovery", rk: .27, grow: .45, d: "Players win back over a quarter of lost fitness a day: about 97% for a game a week, around 90% in a two-match week. Players barely develop." },
+  bal: { l: "Balanced", rk: .20, grow: 1, d: "About a fifth of lost fitness back a day: about 95% for a game a week, 80-88% in a two-match week. Steady development." },
+  int: { l: "Intense", rk: .15, grow: 1.6, d: "Less back each day: about 90% for a game a week, 80-85% or lower in a two-match week, so rotate. Fastest development; occasional training knocks." },
 };
 // Squad shape every generated club starts from (24 senior-ish players)
 const ROLE_MIX = { GK: 3, CB: 4, FB: 4, DM: 2, CM: 3, AM: 2, W: 3, ST: 3 };
