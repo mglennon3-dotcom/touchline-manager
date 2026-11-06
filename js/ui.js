@@ -710,7 +710,10 @@ function viewYouth() {
   if (f.st === "OPEN") ys = ys.filter(y => y.commit == null); else if (f.st === "MINE") ys = ys.filter(y => y.offers.includes(c.id) || y.rel[c.id] || y.commit === c.id); else if (f.st === "DONE") ys = ys.filter(y => y.commit != null);
   const commits = S.prospects.filter(y => y.commit === c.id);
   // Everyone your scouts have watched this year, whatever the filters below say.
-  const scouted = S.prospects.filter(y => y.sc >= 1 || y.coach), REPORT = ["Coaches' view", "First look", "Detailed", "Complete"];
+  // Two working lists above the full class: prospects you've offered a place (and not yet signed), and those
+  // you've scouted but not offered. A prospect moves from the second to the first when you offer.
+  const offered = S.prospects.filter(y => y.offers.includes(c.id) && y.commit !== c.id);
+  const scouted = S.prospects.filter(y => (y.sc >= 1 || y.coach) && !y.offers.includes(c.id) && y.commit !== c.id), REPORT = ["Coaches' view", "First look", "Detailed", "Complete"];
   const cols = [
     { k: "n", l: "Prospect", v: y => y.name, f: y => `<button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button>` },
     { k: "pos", l: "Pos", v: y => ROLE_ORDER[y.pos], f: y => `<span class="pos">${y.pos}</span>` },
@@ -725,10 +728,16 @@ function viewYouth() {
     { k: "ir", l: "Injury risk", v: y => viewMid(prospectInj(y)), f: y => prospectInj(y) ? rangeHtml(prospectInj(y), true) : '<span class="tiny muted">scout again</span>' },
     { k: "rep", l: "Report", v: y => y.sc, f: y => `<span class="${y.sc >= 3 ? "good" : y.sc <= 1 ? "warn" : ""}">${REPORT[y.sc]}</span>${y.sc && y.coach ? ' <span class="tiny muted">+ coaches</span>' : ""}${y.scT || y.coachT ? `<br><span class="tiny muted">${y.scT || y.coachT}</span>` : ""}` },
     cols[4], cols[5], cols[6]];
-  const scoutedCard = `<section class="card"><div class="card-h"><h2>Scouted prospects</h2><span class="small">${scouted.length} watched · ${scouted.filter(y => y.commit == null).length} still undecided · Hours this week <b class="num">${S.rec.hours}/${recHours()}</b></span></div>
+  const scoutedCard = `<section class="card"><div class="card-h"><h2>Scouted prospects</h2><span class="small">${scouted.length} watched, not offered · ${scouted.filter(y => y.commit == null).length} still undecided · Hours this week <b class="num">${S.rec.hours}/${recHours()}</b></span></div>
     ${scoutAssistHtml()}
     ${table("youth-sc", scoutCols, scouted, { sort: { k: "st", d: -1 }, empty: "You haven't scouted any prospects yet. Use Scout on anyone in the list below: each visit narrows his potential, and a detailed report shows his injury risk and what matters most to him." })}</section>`;
-  return `<div class="stack">${scoutedCard}<section class="card"><div class="card-h"><h2>Youth recruitment · class of ${S.year + 1}</h2>
+  const offerCols = [cols[0], cols[1], cols[2], cols[3], scoutCols[5], cols[4],
+    { k: "ost", l: "Offer", v: y => y.commit != null ? 2 : yourRank(y), f: y => y.commit != null ? `<span class="bad">Chose</span> ${clubA(y.commit, { short: true })}` : `${rankLabel(y)}<br><span class="tiny muted">${y.offers.length - 1 ? `${y.offers.length - 1} other offer${y.offers.length > 2 ? "s" : ""}` : "only offer so far"}</span>` },
+    cols[6]];
+  const pending = offered.filter(y => y.commit == null).length;
+  const offeredCard = `<section class="card"><div class="card-h"><h2>Offered places</h2><span class="small">${pending} waiting on a decision${offered.length > pending ? ` · ${offered.length - pending} chose elsewhere` : ""} · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b></span></div>
+    ${table("youth-of", offerCols, offered, { sort: { k: "ost", d: 1 }, empty: "You haven't offered anyone a place yet. Offer from a prospect's Actions: an offer lifts his interest, and he decides during the season. Those who accept move to Committed to you." })}</section>`;
+  return `<div class="stack">${offeredCard}${scoutedCard}<section class="card"><div class="card-h"><h2>Youth recruitment · class of ${S.year + 1}</h2>
     <span class="small">Hours this week <b class="num">${S.rec.hours}/${recHours()}</b> · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b> · Youth development <b class="num">${c.academy}/20</b></span></div>
     <div class="prose small" style="margin-bottom:12px"><p>Fifteen-year-olds from England and abroad choose an academy this season and join next summer. Each weighs six things differently, with two that matter most to him: distance from home, a route to first-team minutes, whether your formation uses his position, squad dynamics, prestige and your youth development rating. Scouting narrows his rating and reveals what he cares about; speaking to his youth coaches (a sharper estimate of his potential, his injury history and a small word in his ear), calls, hosting him at your ground and visiting his family at home build the relationship (a home visit counts most with lads who want to stay near home or care about squad dynamics). Commitments start from week 9 and aren't binding until signing day, so a better offer can still flip a prospect, yours included.</p></div>
     <div class="filters"><label class="f">Region<select id="yf-reg" data-c="yf-reg">${regs.map(([k, l]) => `<option value="${k}" ${f.reg === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
