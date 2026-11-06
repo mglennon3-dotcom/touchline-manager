@@ -127,7 +127,8 @@ to list everyone outside the matchday squad and swap one in.
 (Recovery a third, Balanced a quarter, Intense under a fifth), more with good Stamina, so a tired player
 recovers fastest and fatigue can't snowball. A full match costs about 22 at Stamina 5, 18 at 10, 14 at 15
 and 11 at 20. An unrotated XI in two-match weeks starts at about 93-96% on Balanced, 84-94% on Intense
-and 94-98% on Recovery.
+and 94-98% on Recovery. Preseason weeks recover the same way, so a friendly every week leaves the XI at
+about 98% for the opening day.
 The scoreboard lists each side's scorers and bookings with the minute, and goals and bookings show on
 your players on the pitch too. Below the play controls, three tabs replace the long page: Commentary,
 Tactics (style, formation, team and bench) and Stats (possession, shots, cards, subs and match ratings).

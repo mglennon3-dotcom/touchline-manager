@@ -599,7 +599,10 @@ function aiMaintain(c) {
 function summerStep() {
   aiTransferDay(.6);
   if (S.summerDay === 1) aiLoans();
-  for (const p of me().squad.map(P)) p.fit = Math.min(100, p.fit + 10);  // preseason training gets everyone fit
+  // Preseason weeks recover like the season's days (a week of them, for every club). It was a flat +10 a
+  // week for your squad only, against 18-25 for a friendly, so a side with a friendly a week started the
+  // season at 72% (97, 92, 86, 80, 76 through the weeks) while the rested squad sat at 100%.
+  recoverDays(7);
   autoScout(); S.rec.hours = recHours();  // scouting hours are weekly in preseason too; only the season's weekly() refilled them
   S.summerDay++;
   if (S.summerDay < CAL.summerDays) return;
