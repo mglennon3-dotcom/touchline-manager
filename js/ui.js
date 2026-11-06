@@ -713,13 +713,19 @@ function viewTransfers() {
       ], pool, { empty: UI.tab === "scouted" && !scouted.length ? "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here." : "No players match these filters." })}`;
   }
   const title = { offers: "Offers", scouted: "Scouted players", search: "Search the market", mine: "Selling", log: "Activity" }[group];
-  return `<div class="stack"><div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-a="ttab" data-v="${k}" aria-pressed="${group === k}" aria-selected="${group === k}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>
+  return `<div class="stack">${hoursStrip()}<div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-a="ttab" data-v="${k}" aria-pressed="${group === k}" aria-selected="${group === k}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>
     ${group === "search" ? needsCard(true) : ""}<section class="card"><div class="card-h"><h2>${title}</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
     ${group === "search" ? `<div class="chips" role="group" aria-label="Browse" style="margin-bottom:10px">${SEARCH.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</div>` : ""}
     ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Ratings outside your division are estimates until you scout a player (open him, 2 hours). Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section></div>`;
 }
 
 /* ---------- youth recruitment ---------- */
+/* Scouting hours left this week, shown above the tabs on every Transfers and Youth tab: scouting a player
+   or prospect, calls, visits and coach chats all draw on the same weekly pool. */
+function hoursStrip() {
+  const h = S.rec.hours, max = recHours();
+  return `<div class="hours-strip" title="Refills every week. Scouting, calls, visits and coach chats all use it."><span>Scouting hours this week</span><b class="num ${h <= 0 ? "bad" : h < 3 ? "warn" : ""}">${h}/${max}</b><span class="bar"><i style="width:${clamp(h / Math.max(1, max), 0, 1) * 100}%"></i></span></div>`;
+}
 // The scouting assistant's controls, shown on both Scouted lists (the setting is shared).
 function scoutAssistHtml() {
   const on = autoScoutOn(), L = S.autoLast;
@@ -773,7 +779,7 @@ function viewYouth() {
   const tabs = [["offered", "Offered", offered.filter(y => y.commit == null).length], ["scouted", "Scouted", scouted.length], ["all", "All prospects", null], ["committed", "Committed", commits.length]];
   const tab = UI.ytab || "offered";
   const body = { offered: offeredCard, scouted: scoutedCard, all: classCard, committed: commitCard }[tab] || offeredCard;
-  return `<div class="stack"><div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([v, l, n]) => `<button role="tab" data-a="ytab" data-v="${v}" aria-pressed="${tab === v}" aria-selected="${tab === v}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>${body}</div>`;
+  return `<div class="stack">${hoursStrip()}<div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([v, l, n]) => `<button role="tab" data-a="ytab" data-v="${v}" aria-pressed="${tab === v}" aria-selected="${tab === v}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>${body}</div>`;
 }
 function yourRank(y) { const cs = contenders(y); const i = cs.findIndex(x => x.c.id === S.club); return i < 0 ? 99 : i; }
 function rankLabel(y) {

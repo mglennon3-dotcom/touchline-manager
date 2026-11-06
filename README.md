@@ -219,6 +219,7 @@ actual (the gap was a cup run), and a fifth-tier club to €230k against €260k
 turned you down, with your offer, today's asking price, the answer and how keen they are now, plus a New
 offer button; players you sign drop off), Scouted, Search (all players, free agents, transfer listed, loan
 targets), Selling (your listed players) and Activity. The Offers tab opens with a one-line transfer budget.
+Both the Transfers and Youth pages show this week's scouting hours above the tabs, on every tab.
 **Transfer budget** (Finances page, summarised on Transfers): the fee you can pay for a player on your starters'
 average wage over four years. It is the smaller of what your cash allows without ending the season in the
 red and the room left under the 85% cost-ratio line, shown with this season's fees in, fees out and net spend.
