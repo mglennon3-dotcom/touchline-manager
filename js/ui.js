@@ -341,7 +341,11 @@ function nextMatchCard() {
   fixUserLineup();
   const xi = S.lineup.map(id => S.players[id]).filter(Boolean), sl = slotsOf(S.formation);
   const tired = xi.filter(p => p.fit < 70).length, oop = S.lineup.filter((id, i) => id != null && FAM[P(id).pos][sl[i]] < .9).length, reg = regInfo(c);
-  const team = T => `<div class="team">${crest(T, 46)}<b>${esc(T.name)}</b><span class="tiny muted">${T.country !== HOME ? COUNTRY[T.country].name + " · " : ""}${leagueName(T.lg)}</span>${formChips(formOf(T.id))}</div>`;
+  // Each club's league standing: position, points, goals for and against (last season's finish before a ball is kicked).
+  const standLine = T => { const rows = standings(S.leagues[T.lg]), i = rows.findIndex(x => x.id === T.id), r = rows[i];
+    if (S.phase === "season" && r && r.p > 0) return `<span class="stand"><span><b>${ord(i + 1)}</b> · ${r.pts} pts</span><span class="muted">GF ${r.gf} · GA ${r.ga}</span></span>`;
+    const last = S.lastPos[T.id]; return `<span class="stand muted">${last ? `Last season: ${ord(last)}` : "No league games yet"}</span>`; };
+  const team = T => `<div class="team">${crest(T, 46)}<b>${esc(T.name)}</b><span class="tiny muted">${T.country !== HOME ? COUNTRY[T.country].name + " · " : ""}${leagueName(T.lg)}</span>${standLine(T)}${formChips(formOf(T.id))}</div>`;
   return `<section class="card" style="--club:${c.color}"><div class="card-h"><h2>Next match</h2><span class="eyebrow">${esc(compLabel(fx))} · Week ${nx.day.w + 1}${fx.neutral ? " · Neutral venue" : fx.h === S.club ? " · Home" : " · Away"}</span></div>
     ${rivalry(S.club, opp.id) ? `<p class="derby"><span class="chip rival r${rivalry(S.club, opp.id)}">${RIVAL_WORD[rivalry(S.club, opp.id)].toUpperCase()}</span> ${esc(rivalName(S.club, opp.id).replace(/^the /, "The "))} · your record ${recStr(h2hOf(c, opp.id))}. Win and the board, the fans and the dressing room will love it; lose and they won't forget.</p>` : ""}
     ${fx.ko ? `<p class="small muted" style="text-align:center">First leg: ${C(fx.a).short} ${fx.ko.aggA}–${fx.ko.aggH} ${C(fx.h).short}</p>` : ""}

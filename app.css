@@ -470,3 +470,4 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .opa{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:1px;white-space:nowrap}
 /* names wrap rather than clip, so a long name doesn't squash its XI / SUB tag into a blank chip */
 .bench-p .nm{min-width:0;white-space:normal;overflow-wrap:anywhere}
+.fixture .team .stand{display:grid;font-size:14px;line-height:1.3;margin:2px 0}.fixture .team .stand>span{white-space:nowrap}.fixture .team .stand b{font-size:15px}
