@@ -41,7 +41,8 @@ function startSeason() {
     c.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
     c.revSeason = c.revBase; c.ym = 0; c.tm = 0; c.wkMatches = 0; c.xs = { xg: 0, xga: 0 };
   }
-  for (const p of Object.values(S.players)) { p.s = newStats(); p.yc = 0; }
+  for (const p of Object.values(S.players)) { p.s = newStats(); p.yc = 0; if (p.as) p.as = null; }
+  S.acadRes = [];
   S.ko = {
     FA: newKO("FA", "cup", CUPS.FA.name, CUPS.FA.rounds, CAL.FA),
     LC: newKO("LC", "cup", CUPS.LC.name, CUPS.LC.rounds, CAL.LC),
@@ -310,10 +311,11 @@ function weekly() {
     c.fin.rev += rev; c.fin.wages += wages; c.fin.amort += amort; c.cash += rev - wages - ops;
     if (isUser(c)) { const sc = S.rec.scoutLvl * scoutCost(); c.cash -= sc * wk; c.fin.scouting += sc * wk; }
     const t = TRAIN[isUser(c) ? S.training : "bal"], acad = 1 + c.academy * .015, co = coachOf(c), coachDev = .6 + .04 * (co ? co.dev : 10);
+    if (isUser(c)) academyWeek(c);
     const possible = Math.max(1, c.wkMatches) * 90;
     for (const id of c.squad) {
       const p = P(id);
-      p.pt = .75 * p.pt + .25 * Math.min(1, p.wm / possible); p.wm = 0;
+      p.pt = .75 * p.pt + .25 * Math.min(1, p.wm / (p.acad ? 90 : possible)); p.wm = 0;  // academy minutes count against an academy match a week
       if (p.inj > 0) p.inj--;
       // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.
       if (p.ovr < p.pot) {
@@ -613,7 +615,9 @@ function summerStep() {
 }
 function newSeasonStart() {
   for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);
-  for (const c of activeClubs()) { const n = (isUser(c) ? 1 : ri(1, 2)) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) news(`Local academy graduate ${p.name} (${p.pos}) joins the youth squad.`, false, "youth"); } if (!isUser(c)) trimSquad(c, false); }
+  for (const c of activeClubs()) { const n = (isUser(c) ? 1 : ri(1, 2)) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) { p.acad = true; news(`Local academy graduate ${p.name} (${p.pos}) joins the academy.`, false, "youth"); } } if (!isUser(c)) trimSquad(c, false); }
+  // Anyone past academy age moves up to the first-team squad.
+  for (const p of me().squad.map(P)) if (p.acad && p.age > ACAD_MAX_AGE) { p.acad = false; news(`${p.name} (${p.age}) has outgrown the academy and joins the first-team squad.`, false, "youth"); }
   S.year++;
   S.seasonOver = null;
   startSeason();
@@ -692,4 +696,40 @@ function cupProgress(key) {
   if (cont && cont.groups && cont.groups.flat().includes(me_)) return comp && comp.rounds[0].ties && comp.rounds[0].ties.length ? { t: "Out in the group stage", cls: "muted" } : { t: "Group stage", cls: "" };
   if (cont && cont.entrants && cont.entrants.includes(me_)) return { t: "Qualified", cls: "" };
   return null;
+}
+
+/* ---------- your academy ---------- */
+/* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
+   as playing time for development (an academy player's weekly minutes are measured against one match, not
+   the first team's fixtures), and keeps its own appearances, goals and ratings (p.as). */
+function academyWeek(c) {
+  if (S.phase !== "season") return;
+  const kids = c.squad.map(P).filter(p => p.acad && avail(p) && !p.loan);
+  if (!kids.length) return;
+  const xi = autoPick(kids.map(p => p.id), "4-3-3").filter(x => x != null).map(P), inXI = new Set(xi.map(p => p.id));
+  const st = p => p.as || (p.as = { app: 0, g: 0, a: 0, rt: 0 });
+  // The rest of the side are unnamed trialists and schoolboys, as good as your youth development rating
+  // makes them (a new career starts with only two or three academy players).
+  const trial = 44 + c.academy * .8, opps = activeClubs().filter(o => o.id !== c.id && !isForeign(o) && o.tier <= 6), opp = pick(opps);
+  const ours = (sum(xi, p => p.ovr) + trial * (11 - xi.length)) / 11, theirs = 44 + opp.academy * .8 + rf(-3, 3), d = (ours - theirs) * .06;
+  const pois = l => { let k = 0, q = Math.exp(-l), t = q; const u = R(); while (u > t && k < 9) { k++; q *= l / k; t += q; } return k; };
+  const gf = pois(1.4 * Math.exp(d)), ga = pois(1.4 * Math.exp(-d)), scorers = [];
+  for (let g = 0; g < gf; g++) {
+    const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); st(s).g++; scorers.push(s.id);
+    const others = xi.filter(p => p !== s); if (others.length && R() < .7) st(wpick(others, p => ({ GK: .1, CB: .6, FB: 1.6, DM: 1.2, CM: 2.4, AM: 4, W: 3.4, ST: 2 })[p.pos])).a++;
+  }
+  for (const p of xi) { const x = st(p); x.app++; p.wm += 80; x.rt += clamp(6.4 + (gf > ga ? .35 : gf < ga ? -.35 : 0) + (p.ovr - ours) / 25 + scorers.filter(id => id === p.id).length * .9 - (["GK", "CB", "FB"].includes(p.pos) ? ga * .14 : 0) + gauss() * .3, 3, 10); }
+  for (const p of kids) if (!inXI.has(p.id)) p.wm += 20;  // the rest come off the bench or train
+  (S.acadRes ||= []).unshift({ y: S.year, w: S.week, opp: opp.id, gf, ga, sc: scorers });
+  if (S.acadRes.length > 12) S.acadRes.length = 12;
+}
+/* How ready an academy player is for the first team, against the senior players at his position in your
+   formation: good enough to start, to make the matchday squad (two per place), close, or not yet. */
+function acadReadiness(p, c) {
+  const slots = Math.max(1, roleSlots(S.formation, p.pos)), sen = c.squad.map(P).filter(x => !x.acad && x.id !== p.id && !x.loan && FAM[x.pos][p.pos] >= .9).map(x => x.ovr).sort((a, b) => b - a);
+  const starter = sen[slots - 1] ?? 0, squad = sen[slots * 2 - 1] ?? 0;
+  if (p.ovr >= starter) return ["Ready to start", "good", starter];
+  if (p.ovr >= squad) return ["Ready", "good", squad];
+  if (p.ovr >= squad - 4.5) return ["Close", "warn", squad];
+  return ["Not yet", "muted", squad];
 }

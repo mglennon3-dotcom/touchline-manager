@@ -3,7 +3,7 @@
 const UI = { page: "home", sel: null, modal: null, sort: {}, menu: false, busy: false, toastT: 0,
   lg: null, cupK: "FA", tab: "offers", tf: { pos: "ALL", age: 40, min: 0, fee: 0, lg: "ALL" }, sqf: "ALL",
   yf: { reg: "ENG", pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5, awY: null, awL: null };
-const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["needs", "Team Needs"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
+const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["needs", "Team Needs"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["academy", "Academy"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
 
 /* ---------- atoms ---------- */
 function crest(c, sz = 40) {
@@ -432,8 +432,8 @@ function needsAttrCard() {
     <p class="hint" style="margin-top:8px">Bars compare your XI with the division's average XI; stand-out and short-on are measured against the rest of your own side.</p></section>`;
 }
 function viewSquad() {
-  const c = me(), reg = regInfo(c);
-  let ps = c.squad.map(P);
+  const c = me(), reg = regInfo(c), acadN = c.squad.filter(id => P(id).acad).length;
+  let ps = c.squad.map(P).filter(p => !p.acad);  // academy players have their own page
   if (UI.sqf === "SEN") ps = ps.filter(isSenior); if (UI.sqf === "U21") ps = ps.filter(p => !isSenior(p));
   const xi = new Set(S.lineup), out = Object.values(S.players).filter(p => p.loan && p.loan.from === c.id);
   const cols = [
@@ -466,6 +466,7 @@ function viewSquad() {
     <span class="chips" role="group" aria-label="Filter">${[["ALL", "Everyone"], ["SEN", "Seniors (21+)"], ["U21", "Under-21"]].map(([k, l]) => `<button data-a="sqf" data-v="${k}" aria-pressed="${UI.sqf === k}">${l}</button>`).join("")}<button data-a="sqadv" aria-pressed="${!!S.set.sqAdv}" title="Shots, xG, G−xG, xG/90, key passes, xA, saves and clean sheets">Advanced stats</button></span></div>
     <div class="reg" style="margin-bottom:10px"><span>Registered seniors <b class="${reg.registered > RULES.squadMax ? "bad" : ""}">${reg.registered}/${RULES.squadMax}</b></span><span>Non-homegrown registered <b class="${reg.nonHG > RULES.nonHGMax ? "bad" : ""}">${reg.nonHG}/${RULES.nonHGMax}</b></span><span>Unregistered <b class="${reg.unregistered ? "warn" : ""}">${reg.unregistered}</b></span><span>Under-21s <b>${reg.u21}</b> (no limit)</span><span>Loans in <b>${reg.loansIn}/${RULES.loansIn}</b></span><span>Wage bill <b>${perWeek(sum(c.squad, id => P(id).wage))}</b></span></div>
     <div class="row" style="margin-bottom:10px">${windowOpen() ? `<button class="btn sm" data-a="regbest">Register my best 25</button><span class="small muted">Tap Registered / Not registered on a player to change it.</span>` : `<span class="small muted">Registration is locked until the transfer window opens (January, weeks 19–22, and the summer).</span>`}</div>
+    ${acadN ? `<p class="small muted" style="margin:0 0 8px">${acadN} more in the academy, not listed here: <button class="lnk" data-a="go" data-v="academy">Academy</button>.</p>` : ""}
     ${table("squad", cols, ps, { sort: { k: "pos", d: 1 }, tall: true })}
     <p class="hint" style="margin-top:8px"><b>Attack</b> averages Finishing, Dribbling, Technique, Vision, Passing and Composure; <b>Defence</b> Tackling, Marking and Heading; Pace, Stamina and Strength are shown as they are. For keepers, Attack is distribution and Defence is shot-stopping.</p>
     <p class="hint" style="margin-top:6px">Squads can be any size, but only 25 seniors (21 and over, at most 17 not homegrown) can be registered; under-21s are always eligible. Unregistered players can't play, grow unhappy, may ask to leave, and several of them sulking unsettles the dressing room. Ratings are out of 20: 10 is average, 20 world class. Potential is your scouts' estimate, not a promise: it depends on minutes, form, happiness and your Development rating. Homegrown (HG) means three seasons at an English club before turning 21.</p></section>
@@ -573,7 +574,7 @@ function viewTactics() {
     return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(slotRating(p, role))}</span><span class="nm">${esc(pitchName(p, S.lineup.map(id => S.players[id])))}</span><span class="fb"><i style="width:${p.fit}%;background:${fitColor(p.fit)}"></i></span></button>`;
   }).join("");
   const lines = PITCH_LINES;
-  const ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
+  const ps = c.squad.map(P).filter(p => !p.acad || S.set.acadSel).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
   /* Substitutes under the pitch: tap one to swap him for anyone not in the matchday squad. Your choices
      stick; any spot you haven't chosen is filled automatically (marked "auto"). */
   const benchIds = benchFor(c, S.lineup.filter(x => x != null)), mineB = new Set(S.bench || []);
@@ -582,7 +583,7 @@ function viewTactics() {
   const subsHtml = `<div class="card subs-card"><div class="card-h"><h3>Substitutes</h3><span class="tiny muted">tap one to change him${S.bench && S.bench.length ? ' · <button class="lnk tiny" data-a="benchauto">automatic bench</button>' : ""}</span></div>
     <div class="bench">${benchIds.map((id, i) => { const p = P(id); return `<button class="bench-p ${subSel === i ? "sel" : ""}" data-a="subslot" data-v="${i}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}${mineB.has(id) ? "" : ' <span class="tiny muted">auto</span>'}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`; }).join("")}</div>
     ${subSel != null && benchIds[subSel] != null ? `<div class="tac-pick sub-pick" style="margin-top:10px"><div class="row between"><b class="small">Replace ${esc(P(benchIds[subSel]).name)} with…</b><button class="lnk tiny" data-a="subslot" data-v="${subSel}">cancel</button></div>
-      <div class="bench" style="margin-top:6px">${outside.length ? outside.map(p => `<button class="bench-p" data-a="subpick" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`).join("") : '<p class="small muted">Everyone available is already in the matchday squad.</p>'}</div></div>` : ""}</div>`;
+      <div class="bench" style="margin-top:6px">${outside.length ? outside.map(p => `<button class="bench-p" data-a="subpick" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}${p.acad ? ' <span class="chip acad">ACA</span>' : ""}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`).join("") : '<p class="small muted">Everyone available is already in the matchday squad.</p>'}</div></div>` : ""}</div>`;
   /* Tabs, as on the Youth and Transfers pages: the pitch, the squad list, style and training each on their
      own. Tapping a shirt on the Line-up tab lists who could play there, best first, so a change never needs
      the Selection tab. */
@@ -593,12 +594,13 @@ function viewTactics() {
     <div class="pitch">${lines}${slotsHtml}</div>
     ${subsHtml}
     ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}
+    ${(n => n ? `<label class="row small" style="gap:6px"><input type="checkbox" data-c="acadsel" ${S.set.acadSel ? "checked" : ""}> Include academy players in selection <span class="tiny muted">(${n} in the academy · <button class="lnk tiny" data-a="go" data-v="academy">academy</button>)</span></label>` : "")(c.squad.filter(id => P(id).acad).length)}
     <label class="row small" style="gap:6px"><input type="checkbox" data-c="rotate" ${S.set.rotate ? "checked" : ""}> Assistant picks a fresh XI before every match <span class="tiny muted">(players at ${FRESH_FIT}%+ fitness first; your changes on match day stick)</span></label>
     <p class="hint">Tap a shirt, then a player, to swap. The number is his rating in that role; a dashed ring means he's out of position. Your formation also matters in youth recruitment: prospects want a position your shape actually uses.</p>
     ${UI.sel && UI.sel.slot != null && F[UI.sel.slot] ? (() => { const role = F[UI.sel.slot][0], cur = S.lineup[UI.sel.slot];
       const opts = ps.filter(p => p.id !== cur && avail(p)).sort((a, b) => slotRating(b, role) - slotRating(a, role));
       return `<div class="card tac-pick"><div class="card-h"><h3>Who plays ${role}? <button class="lnk tiny" data-a="slot" data-v="${UI.sel.slot}">cancel</button></h3><span class="tiny muted">rating at ${role} · tap to put him in</span></div><div class="bench">${opts.map(p => { const r = slotRating(p, role), oop = p.pos !== role;
-        return `<button class="bench-p" data-a="pick-p" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)} ${xi.has(p.id) ? '<span class="chip xi">XI</span>' : bench.has(p.id) ? '<span class="chip hg">SUB</span>' : ""}</span><span class="rt-pair"><b class="rt ${aCls(r)}">${Math.round(r)}</b>${oop ? `<span class="tiny muted">${Math.round(r20(p.ovr))} as ${p.pos}</span>` : ""}</span><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`; }).join("")}</div></div>`; })() : ""}
+        return `<button class="bench-p" data-a="pick-p" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)} ${xi.has(p.id) ? '<span class="chip xi">XI</span>' : bench.has(p.id) ? '<span class="chip hg">SUB</span>' : ""}${p.acad ? ' <span class="chip acad">ACA</span>' : ""}</span><span class="rt-pair"><b class="rt ${aCls(r)}">${Math.round(r)}</b>${oop ? `<span class="tiny muted">${Math.round(r20(p.ovr))} as ${p.pos}</span>` : ""}</span><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`; }).join("")}</div></div>`; })() : ""}
 </div>`,
     style: `<div class="card"><h3 style="margin-bottom:8px">Style of play</h3><div class="train styles">${(() => { const on = userOn(); return Object.entries(MENT).map(([k, t]) => { const f = styleFit(on, k), [, w, cls] = fitWord(f);
         return `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}"><span><b>${t.l}</b>${STYLE_KEYS[k].length ? `<br><span class="tiny ${cls}">${w} (${f >= 0 ? "+" : ""}${f.toFixed(1)})</span>` : ""}</span><span class="tiny muted">${t.d}${STYLE_KEYS[k].length ? `<br><span class="muted">Needs: ${STYLE_KEYS[k].map(x => ATTR_NAME[x]).join(", ")}</span>` : ""}</span></button>`; }).join(""); })()}</div>
@@ -1183,6 +1185,34 @@ function viewLive() {
     <div class="lv-body stack">${body}</div></section>`;
 }
 
+/* ---------- academy ---------- */
+function viewAcademy() {
+  const c = me(), kids = c.squad.map(P).filter(p => p.acad), young = c.squad.map(P).filter(p => !p.acad && p.age <= ACAD_MAX_AGE && !p.loan);
+  const as = p => p.as || { app: 0, g: 0, a: 0, rt: 0 };
+  const cols = [
+    { k: "n", l: "Name", v: p => p.name, f: p => playerA(p) },
+    { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>` },
+    { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
+    { k: "ready", l: "First team?", v: p => { const r = acadReadiness(p, c); return ["Not yet", "Close", "Ready", "Ready to start"].indexOf(r[0]); }, f: p => { const [l, k, bar] = acadReadiness(p, c); return `<span class="${k}">${l}</span><br><span class="tiny muted">${bar ? `his ${Math.round(r20(p.ovr))} v ${Math.round(r20(bar))} at ${p.pos}` : `a place is free at ${p.pos}`}</span>`; } },
+    { k: "act", l: "", f: p => `<button class="btn sm" data-a="promote" data-v="${p.id}">Promote</button>` },
+    { k: "ovr", l: "Rating", r: 1, v: p => p.ovr, f: p => ratingHtml(p) },
+    { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
+    { k: "app", l: "Apps", r: 1, v: p => as(p).app, f: p => as(p).app },
+    { k: "g", l: "G", r: 1, v: p => as(p).g, f: p => as(p).g },
+    { k: "a", l: "A", r: 1, v: p => as(p).a, f: p => as(p).a },
+    { k: "rt", l: "Avg", r: 1, v: p => as(p).app ? as(p).rt / as(p).app : 0, f: p => as(p).app ? (as(p).rt / as(p).app).toFixed(2) : "—" },
+    { k: "fit", l: "Fit", v: p => p.fit, f: p => fitBar(p.fit) },
+  ];
+  const res = (S.acadRes || []).filter(r => r.y === S.year);
+  const W = res.filter(r => r.gf > r.ga).length, D = res.filter(r => r.gf === r.ga).length, Lx = res.length - W - D;
+  return `<div class="stack"><section class="card"><div class="card-h"><h2>Academy</h2><span class="small">${kids.length} player${kids.length === 1 ? "" : "s"} · Youth development <b class="num">${c.academy}/20</b>${res.length ? ` · This season W${W} D${D} L${Lx}` : ""}</span></div>
+    <p class="small" style="margin:0 0 8px">Your academy players train and play their own unofficial match each week of the season, which counts as playing time for their development. They aren't picked for the first team unless you include them. Promote anyone who is ready; players move up automatically once they turn ${ACAD_MAX_AGE + 1}.</p>
+    <label class="small" style="display:flex;gap:8px;align-items:flex-start;margin-bottom:10px"><input type="checkbox" data-c="acadsel" style="margin-top:3px" ${S.set.acadSel ? "checked" : ""}> Include academy players in first-team selection (XI and substitutes)</label>
+    ${table("acad", cols, kids, { sort: { k: "ready", d: -1 }, empty: "Nobody in the academy. New graduates arrive each summer and youth recruits join on signing day." })}
+    <p class="hint" style="margin-top:8px"><b>First team?</b> compares him with your senior players at his position in your ${S.formation}: <b>Ready to start</b> means he's as good as your weakest starter there, <b>Ready</b> that he'd make the matchday squad, <b>Close</b> within about a point and a half.</p></section>
+    <section class="card"><div class="card-h"><h2>Academy results</h2><span class="tiny muted">unofficial under-18 matches</span></div>${res.length ? res.map(r => `<div class="res"><span class="h">${esc(c.short)} U18</span><span class="sc">${r.gf}–${r.ga}</span><span>${esc(C(r.opp).short)} U18 <span class="tiny muted">wk ${r.w + 1}${r.sc.length ? " · " + r.sc.map(id => S.players[id] ? esc(sur(S.players[id])) : "").filter(Boolean).join(", ") : ""}</span></span></div>`).join("") : '<p class="small muted">No academy matches yet this season. They are played each week of the season.</p>'}</section>
+    ${young.length ? `<section class="card"><div class="card-h"><h2>Young players in the first-team squad</h2><span class="tiny muted">${ACAD_MAX_AGE} and under</span></div>${table("acad-young", [cols[0], cols[1], cols[2], cols[5], cols[6], { k: "sapp", l: "Apps", r: 1, v: p => p.s.app, f: p => p.s.app }, { k: "act", l: "", f: p => `<button class="btn sm" data-a="demote" data-v="${p.id}">Send to academy</button>` }], young, { sort: { k: "ovr", d: -1 } })}<p class="hint" style="margin-top:8px">A young player getting few first-team minutes develops faster playing academy matches every week.</p></section>` : ""}</div>`;
+}
 function viewManager() {
   const co = S.me, c = me();
   const row = ([k, l]) => `<div class="attr"><span><b>${l}</b><br><span class="tiny muted">${COACH_EFFECT[k]}</span></span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b>${co.pts > 0 && co[k] < 20 ? `<button class="btn sm" data-a="coachpt" data-v="${k}">+1</button>` : ""}</div>`;
@@ -1198,4 +1228,4 @@ function viewManager() {
     <section class="card"><div class="card-h"><h2>Career</h2></div>${S.career.length ? table("career-m", [{ k: "y", l: "Season", f: r => seasonLabel(r.year) }, { k: "c", l: "Club", f: r => clubA(r.club) }, { k: "l", l: "League", f: r => leagueName(r.lg) }, { k: "p", l: "Finish", r: 1, f: r => ord(r.pos) }, { k: "e", l: "Target", r: 1, f: r => ord(r.exp) }, { k: "t", l: "Trophies", f: r => r.trophies.map(trophyName).join(", ") || "—" }], S.career) : '<p class="muted">Finish a season to start your record.</p>'}</section></div>
     <section class="card"><div class="card-h"><h2>Rival coaches</h2><span class="small muted">${leagueName(c.lg)}</span></div>${table("rivalco", [{ k: "c", l: "Club", f: x => clubA(x.id, { short: true }) }, { k: "n", l: "Coach", f: x => esc(x.coach.name) + `<br><span class="tiny muted">${ARCH[x.coach.arch].l}</span>` }, { k: "f", l: "System", f: x => x.coach.form }, ...COACH_KEYS.map(([k, l]) => ({ k, l: l.slice(0, 3), r: 1, f: x => x.coach[k] }))], rivals)}</section></div>`;
 }
-const VIEWS = { manager: viewManager, home: viewHome, squad: viewSquad, needs: viewNeeds, tactics: viewTactics, fixtures: viewFixtures, league: viewLeague, cups: viewCups, transfers: viewTransfers, youth: viewYouth, finances: viewFinances, news: viewNews, history: viewHistory };
+const VIEWS = { academy: viewAcademy, manager: viewManager, home: viewHome, squad: viewSquad, needs: viewNeeds, tactics: viewTactics, fixtures: viewFixtures, league: viewLeague, cups: viewCups, transfers: viewTransfers, youth: viewYouth, finances: viewFinances, news: viewNews, history: viewHistory };

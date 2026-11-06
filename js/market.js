@@ -48,7 +48,7 @@ function transfer(p, to, fee, wage, yrs) {
   to.cash -= fee * 1.05; to.fin.bought += fee; to.fin.agent += fee * .05;
   to.squad.push(p.id);
   p.club = to.id; p.yrs = yrs; p.wage = wage; p.am = fee > 0 ? { per: Math.round(fee / yrs), left: yrs } : null;
-  p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.pt = .5;
+  p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.pt = .5; p.acad = false;
   refreshRegistration(to); if (from) refreshRegistration(from);
   const big = fee >= 15e6 || isUser(to) || (from && isUser(from));
   S.tlog.unshift({ y: S.year, w: whenLabel(), pid: p.id, name: p.name, from: from ? from.id : -1, to: to.id, fee });

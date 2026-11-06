@@ -101,6 +101,15 @@ hasn't signed: your standing among his suitors, how many other offers he has, or
 **Scouted prospects** (everyone you've scouted but not offered). Offering moves a prospect from the second
 to the first; those who accept move to Committed to you.
 
+**Academy** (its own page): your youth players are kept apart from the first team. Summer graduates and
+signed youth recruits join it; players 20 and under can be sent down from the first-team squad, and anyone
+turning 21 moves up. Each season week the academy plays an unofficial under-18 match (unnamed trialists fill
+the side when it's short), which counts as playing time: over a season academy players gained about +5 on the
+internal scale against +3.4 for unused teenagers in the first-team squad. Each player shows whether he's ready
+for the first team against your senior players at his position (Ready to start, Ready for the matchday squad,
+Close, Not yet), with a Promote button. Academy players aren't picked for senior matches unless you tick
+"Include academy players in selection" (Tactics or the Academy page); they're marked ACA in the pickers.
+
 **Scouting assistant:** an on/off toggle on both Scouted lists (Youth and Transfers), off unless you
 switch it on. When on, at the end of each week it spends the scouting hours you left unused (your own
 scouting comes first) on youth prospects and transfer targets: prospects with the best potential estimates,

@@ -45,7 +45,7 @@ function takeClub(id, name, arch, form) {
   S = DRAFT; DRAFT = null; S.club = id; S.me = newManager(name || "The Manager", arch || "bal", form || "4-3-3");
   S.saveId = newSaveId(); S.created = Date.now(); UI.screen = null;
   const c = me(); S.formation = S.me.form; c.formation = S.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), S.formation);
-  startSeason();
+  startSeason(); initAcademy();
   // Every career starts with five weeks of preseason, window open, before the first match.
   S.phase = "summer"; S.summerDay = 0; S.firstPre = true; S.friendlies = []; S.friNo = [];
   news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}. Five weeks of preseason first, with the transfer window open.`, true, "board");
@@ -219,7 +219,7 @@ const ACT = {
   "confirm-yes": () => { const cf = UI.confirm; UI.confirm = null; const p = P(cf.id); if (!p) return; if (cf.act === "loan") { startLoan(p, C(cf.to)); fixUserLineup(); toast(`${p.name} joins ${C(cf.to).name} on loan.`); UI.modal = null; save(); render(); return; } if (cf.act === "sell") { const fee = sellToAbroad(p); toast(`Sold for ${money(fee)}.`); } else { releasePlayer(p); toast(`${p.name} released.`); } UI.modal = null; save(); render(); },
   scout: v => { S.rec.scoutLvl = clamp(S.rec.scoutLvl + +v, 1, 5); save(); render(); },
   academy: v => { const c = me(), cost = +v; if (c.cash < cost || c.academy >= 20) return; c.cash -= cost; c.academy++; news(`Youth development upgraded to ${c.academy}/20 at a cost of ${money(cost)}.`, false, "youth"); save(); render(); },
-  takejob: v => { const c = C(+v); S.club = c.id; S.sacked = false; S.sackReason = null; S.board = 55; S.formation = c.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), c.formation); S.expPos = expectedPos(c); S.inbox.forEach(m => m.done = true); news(`You are the new manager of ${c.name}.`, true, "board"); UI.page = "home"; save(); render(); },
+  takejob: v => { const c = C(+v); S.club = c.id; S.sacked = false; S.sackReason = null; S.board = 55; S.formation = c.formation; autoRegister(c, false); S.lineup = autoPick(eligibleIds(c), c.formation); initAcademy(); S.expPos = expectedPos(c); S.inbox.forEach(m => m.done = true); news(`You are the new manager of ${c.name}.`, true, "board"); UI.page = "home"; save(); render(); },
   // From the sacked screen: the old career stays in your saves (delete it there if you like).
   reset: async () => { await save(); S = null; DRAFT = null; LIVE = null; UI.page = "home"; UI.screen = "new"; render(); toTop(); },
   landing: async () => {
@@ -244,6 +244,8 @@ const ACT = {
   subpick: v => { const id = +v, i = UI.sel && UI.sel.sub; if (i == null) return; const cur = benchFor(me(), S.lineup.filter(x => x != null)), old = cur[i];
     cur[i] = id; S.bench = cur; S.benchNo = (S.benchNo || []).filter(x => x !== id); if (old != null && !S.benchNo.includes(old)) S.benchNo.push(old);
     UI.sel = null; save(); render(); document.querySelector(".subs-card")?.scrollIntoView({ block: "start" }); toast(`${P(id).name} on the bench in place of ${P(old).name}.`); },
+  promote: v => { const p = P(+v); p.acad = false; save(); render(); toast(`${p.name} promoted to the first-team squad.`); },
+  demote: v => { const p = P(+v); if (p.age > ACAD_MAX_AGE) return toast(`Only players aged ${ACAD_MAX_AGE} and under can join the academy.`); p.acad = true; S.bench = (S.bench || []).filter(x => x !== p.id); if (!S.set.acadSel) fixUserLineup(); save(); render(); toast(`${p.name} moved to the academy.`); },
   tactab: v => { UI.tacTab = v; UI.sel = null; render(); },
   ytab: v => { UI.ytab = v; render(); },
   livetab: v => { UI.ltab = v; render(); },
@@ -277,6 +279,7 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
+  acadsel: (v, el) => { S.set.acadSel = el.checked; if (!el.checked) { S.bench = (S.bench || []).filter(x => !P(x) || !P(x).acad); fixUserLineup(); } save(); render(); toast(el.checked ? "Academy players can now be picked for the first team." : "Academy players are out of first-team selection again."); },
   rotate: (v, el) => { S.set.rotate = el.checked; save(); render(); toast(el.checked ? "Your assistant will pick a fresh XI before every match." : "Rotation off: your XI stays as you set it."); },
   "fri-wk": v => { (UI.fri ||= {}).wk = +v; render(); }, "fri-home": v => { (UI.fri ||= {}).home = v === "H"; render(); }, "fri-opp": v => { (UI.fri ||= {}).opp = +v; render(); },
   benchgk: (v, el) => { S.set.benchGK = el.checked; save(); render(); toast(el.checked ? "A substitute goalkeeper will always be named." : "No automatic substitute goalkeeper. If your keeper goes off, an outfielder goes in goal."); },
@@ -394,9 +397,18 @@ window.claude?.hot?.snapshot?.(() => ({ S }));
 window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
 
 /* Saves from version 4 gain injury proneness, coaches' preferred formations and a preference for you. */
+/* Teenagers (18 and under) outside the matchday squad start in the academy: a new career, a new job, or a
+   save from before 5.33. */
+function initAcademy() {
+  S.acadV = 1; const c = me(), keep = new Set([...(S.lineup || []), ...benchFor(c, (S.lineup || []).filter(x => x != null))]);
+  const moved = c.squad.map(P).filter(p => p.age <= 18 && !keep.has(p.id) && !p.loan); moved.forEach(p => p.acad = true);
+  return moved.length;
+}
 function upgradeSave() {  // bring an older save up to date; runs on load and on import
   // Repairs keepers whose fitness went NaN after playing outfield (fixed in 5.22.0).
   for (const p of Object.values(S.players)) if (!isFinite(p.fit)) p.fit = 90;
+  // 5.33: the academy. Teenagers (18 and under) outside the current matchday squad move into it.
+  if (!S.acadV && S.club != null && !S.sacked) { const n = initAcademy(); if (n) news(`Your club now runs an academy: ${n} teenager${n > 1 ? "s" : ""} outside the matchday squad moved into it. Promote any of them from the Academy page.`, true, "youth"); }
   if (!S.rivalsDone) ensureRivals();
   if (!S.stadiums) ensureStadiums();
   if (!S.sponsors) ensureSponsors();

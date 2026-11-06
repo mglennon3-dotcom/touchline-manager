@@ -71,7 +71,11 @@ const isSenior = p => p.age >= 21;
 /* Squads can be any size, but only 25 seniors (at most 17 not homegrown) can be registered for competitions.
    Under-21s are always eligible. Registration can only change while a transfer window is open. */
 const isReg = (p, c) => !isSenior(p) || (c.reg || []).includes(p.id);
-const eligibleIds = c => c.squad.filter(id => isReg(P(id), c));
+/* Your academy (p.acad): youth players kept apart from the first team. They aren't picked for senior matches
+   unless you include them (S.set.acadSel), and they play their own unofficial matches (academyWeek). */
+const ACAD_MAX_AGE = 20;
+const acadOut = (p, c) => p.acad && isUser(c) && !(S.set && S.set.acadSel);
+const eligibleIds = c => c.squad.filter(id => isReg(P(id), c) && !acadOut(P(id), c));
 function regInfo(c) {
   const ps = c.squad.map(P), seniors = ps.filter(isSenior), reg = seniors.filter(p => isReg(p, c)), nonHG = reg.filter(p => !isHG(p, c.country));
   const gks = ps.filter(p => p.pos === "GK" && !p.inj && isReg(p, c)).length, eligible = ps.length - seniors.length + reg.length;
