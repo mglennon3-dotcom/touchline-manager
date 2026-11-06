@@ -90,14 +90,14 @@ function makeSide(c, opp, home, auto) {
   // si is the formation slot a player stands in; the on list itself shrinks with red cards, so it can't be the index.
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], si: i, fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));
-  return { club: c.id, form: f, ment, base: ment, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, yel: {}, mins: {}, rt: null,
+  return { club: c.id, form: f, ment, base: ment, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
 }
 /* fx: { comp, neutral, ko: {aggH, aggA} | null, needWinner } */
 function makeMatch(fx, userAuto) {
   const H = C(fx.h), A = C(fx.a);
   const M = { fx, h: makeSide(H, A, !fx.neutral, userAuto), a: makeSide(A, H, false, userAuto), min: 0, end: 90, et: false, pens: null,
-    log: [], goals: [], inj: [], reds: [], cards: [], bk: [], fit: {}, done: false, riv: rivalry(fx.h, fx.a) };
+    log: [], goals: [], inj: [], reds: [], cards: [], bk: [], ps: {}, fit: {}, done: false, riv: rivalry(fx.h, fx.a) };
   if (isUser(H) || isUser(A)) { const u = isUser(H) ? M.h : M.a; u.auto = !!userAuto; }
   return M;
 }
@@ -162,11 +162,17 @@ function sendOff(M, i, o, why, games) {
   lg(M, "red", i, `${why}! ${o.p.name} is sent off.`);
 }
 
+/* Chance quality multiplier: a gamma(2) draw divided by 2 (mean 1); about 1 shot in 9 is twice the average or better. */
+const CHANCE_SPREAD = () => -Math.log((1 - R()) * (1 - R())) / 2;
+const BIG_CHANCE = .25;  // the xG at which a chance counts as a big one: about 1 shot in 9
 function step(M) {
   if (M.done) return;
   M.min++;
   const sd = [M.h, M.a];
-  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.25 - o.p.at.sta / 40) * MENT[s.ment].tire));  // stamina 10 tires at the old rate, 20 a quarter slower
+  // Keepers have no Stamina attribute: a keeper sent on outfield (an injury with only a keeper on the bench)
+  // used to get NaN fitness, which made his side's ratings NaN in every later match: they never had the ball,
+  // and their opponents had it every minute and could never score. He tires like a stamina-8 player.
+  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .2 * (1.25 - (o.p.at.sta ?? 8) / 40) * MENT[s.ment].tire));  // stamina 10 tires at the old rate, 20 a quarter slower
   if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); }
   // Fit only changes with the players or the style, so it isn't recomputed with every fitness update.
   for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length; if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV); }
@@ -191,13 +197,26 @@ function step(M) {
     // The shooter's finishing (or heading) and the keeper's shot-stopping move each chance either way (10 is neutral).
     const shoQ = sh.p.pos === "GK" ? 2 : header ? sh.p.at.hea : sh.p.at.fin * .7 + sh.p.at.cmp * .3, ssQ = gk && gk.p.pos === "GK" ? gk.p.at.ss : 2;
     const r = r0 / ((.8 + .4 * shoQ / 20) * (1.2 - .4 * ssQ / 20));
-    if (r < pg) {
-      A.goals++; A.sot++;
-      const others = A.on.filter(o => o !== sh);
-      const as = others.length && R() < .72 ? wpick(others, o => ({ GK: .1, CB: .6, FB: 1.6, DM: 1.2, CM: 2.4, AM: 4, W: 3.4, ST: 2 })[o.slot]) : null;
+    // Each chance's quality varies around the side's average pg: most shots are half-chances, a few are
+    // tap-ins. Before, every shot in a match was within a few points of the same quality, so there was no
+    // such thing as a big chance. The spread has mean 1, so goals per game stay where they were.
+    const q = Math.min(.85, pg * CHANCE_SPREAD());
+    // Advanced stats. pg is the chance's quality before the shooter and keeper come in (with a finisher and
+    // keeper of 10 a shot scores exactly pg of the time), so xG is the chance's quality q. Measured over
+    // 1,372 matches, goals came to 0.97 of xG. (An earlier 1.2 scaling was fitted against player goal
+    // totals, which include the quick-simmed foreign leagues where no shots are taken.)
+    // The creator is picked for every shot, not just goals, so key passes and expected assists exist; a
+    // goal's assist is the same player, at the same 72% rate the assist was always given.
+    const others = A.on.filter(o => o !== sh);
+    const as = others.length && R() < .72 ? wpick(others, o => ({ GK: .1, CB: .6, FB: 1.6, DM: 1.2, CM: 2.4, AM: 4, W: 3.4, ST: 2 })[o.slot]) : null;
+    const st = id => (M.ps = M.ps || {})[id] || (M.ps[id] = { sh: 0, sot: 0, xg: 0, kp: 0, xa: 0, sv: 0 });
+    const xg = q, xs = st(sh.p.id); xs.sh++; xs.xg += xg; A.xg = (A.xg || 0) + xg; if (xg >= BIG_CHANCE) A.big = (A.big || 0) + 1; if (header) A.hdr = (A.hdr || 0) + 1;
+    if (as) { const xc = st(as.p.id); xc.kp++; xc.xa += xg; }
+    if (r < q) {
+      A.goals++; A.sot++; xs.sot++;
       M.goals.push({ side: k, pid: sh.p.id, ast: as ? as.p.id : null, min: M.min, n: sur(sh.p) });
       lg(M, "goal", k, "GOAL! " + fillT(pick(header ? T_HEAD : T_GOAL), { s: sh.p.name }) + (as ? `, set up by ${sur(as.p)}.` : "."));
-    } else if (r < pg + .23) { A.sot++; if (R() < .4 && gk) lg(M, "save", k, fillT(pick(T_SAVE), { s: sur(sh.p), k: sur(gk.p) }) + "."); }
+    } else if (r < q + .23) { A.sot++; xs.sot++; if (gk) { st(gk.p.id).sv++; D.sav = (D.sav || 0) + 1; } if (R() < .4 && gk) lg(M, "save", k, fillT(pick(T_SAVE), { s: sur(sh.p), k: sur(gk.p) }) + "."); }
     else if (R() < .25) lg(M, "miss", k, fillT(pick(T_MISS), { s: sur(sh.p) }) + ".");
   }
   for (let i = 0; i < 2; i++) {
@@ -288,6 +307,8 @@ function applyMatch(M) {
     }
     c.wkMatches++;
   }
+  for (const [id, x] of Object.entries(M.ps || {})) { const p = P(id); if (p) for (const k in x) if (x[k]) p.s[k] = Math.round(((p.s[k] || 0) + x[k]) * 100) / 100; }  // rounded: full-precision xG added 6% to the save
+  if (league) for (let i = 0; i < 2; i++) { const c = C((i ? M.a : M.h).club), xs = c.xs || (c.xs = { xg: 0, xga: 0 }); xs.xg = Math.round((xs.xg + ((i ? M.a : M.h).xg || 0)) * 100) / 100; xs.xga = Math.round((xs.xga + ((i ? M.h : M.a).xg || 0)) * 100) / 100; }
   for (const g of M.goals) { const p = P(g.pid); p.s.g++; if (league) p.s.lg++; if (g.ast) P(g.ast).s.a++; }
   for (const id of M.cards) {
     const p = P(id); p.s.yc++;

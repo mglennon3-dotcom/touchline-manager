@@ -14,7 +14,7 @@ const sur = p => { const parts = p.name.split(" "); return parts.slice(1).join("
 const pitchName = (p, xi) => xi.some(q => q && q !== p && sur(q) === sur(p)) ? p.name[0] + ". " + sur(p) : sur(p);
 const activeClubs = () => S.clubs.filter(c => !c.gone);
 
-function newStats() { return { app: 0, min: 0, g: 0, lg: 0, a: 0, yc: 0, rc: 0, rt: 0, cs: 0 }; }
+function newStats() { return { app: 0, min: 0, g: 0, lg: 0, a: 0, yc: 0, rc: 0, rt: 0, cs: 0 }; }  // sh, sot, xg, kp, xa, sv are added by applyMatch when first non-zero: as zeros on every player they cost 650 KB of save
 function nameFor(nat) { const N = NAMES[nat] || NAMES.ENG; return pick(N[0]) + " " + pick(N[1]); }
 /* No two players at one club share a name: the name pools are small enough that a quarter of squads had
    a pair of identical names, impossible to tell apart on the squad page. New players get a name nobody

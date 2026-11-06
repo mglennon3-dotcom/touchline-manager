@@ -453,6 +453,7 @@ function viewSquad() {
     { k: "g", l: "G", r: 1, v: p => p.s.g, f: p => p.s.g },
     { k: "a", l: "A", r: 1, v: p => p.s.a, f: p => p.s.a, cls: "hide-sm" },
     { k: "rt", l: "Avg", r: 1, v: p => p.s.app ? p.s.rt / p.s.app : 0, f: p => p.s.app ? (p.s.rt / p.s.app).toFixed(2) : "—", cls: "hide-sm" },
+    ...ADV_COLS,
   ];
   return `<div class="stack">${needsCard(false)}<section class="card"><div class="card-h"><h2>Squad</h2>
     <span class="chips" role="group" aria-label="Filter">${[["ALL", "Everyone"], ["SEN", "Seniors (21+)"], ["U21", "Under-21"]].map(([k, l]) => `<button data-a="sqf" data-v="${k}" aria-pressed="${UI.sqf === k}">${l}</button>`).join("")}</span></div>
@@ -609,6 +610,7 @@ function viewLeague() {
     { k: "gf", l: "GF", r: 1, v: r => r.gf, f: r => r.gf, cls: "hide-sm" }, { k: "ga", l: "GA", r: 1, v: r => r.ga, f: r => r.ga, cls: "hide-sm" },
     { k: "gd", l: "GD", r: 1, v: r => r.gf - r.ga, f: r => (r.gf - r.ga > 0 ? "+" : "") + (r.gf - r.ga) },
     { k: "pts", l: "Pts", r: 1, v: r => r.pts, f: r => `<b>${r.pts}</b>` },
+    ...(LG[key].foreign ? [] : [{ k: "xg", l: "xGF", r: 1, v: r => (C(r.id).xs || {}).xg || 0, f: r => ((C(r.id).xs || {}).xg || 0).toFixed(1), cls: "hide-sm" }, { k: "xga", l: "xGA", r: 1, v: r => (C(r.id).xs || {}).xga || 0, f: r => ((C(r.id).xs || {}).xga || 0).toFixed(1), cls: "hide-sm" }]),
     { k: "form", l: "Form", f: r => formChips(r.form), cls: "hide-sm" },
   ];
   const ps = L.clubs.flatMap(id => C(id).squad.map(P));
@@ -621,6 +623,9 @@ function viewLeague() {
     <div class="legend">${zoneLegend(key)}</div><p class="tiny muted" style="margin-top:6px">Ties are split by goal difference, goals scored, then head-to-head points.</p></section>
     ${last >= 0 ? `<section class="card"><div class="card-h"><h2>Round ${last + 1} results</h2></div>${L.results[last].map(r => `<div class="res"><span class="h">${clubA(r.h)}</span><span class="sc">${r.hg}–${r.ag}</span><span>${clubA(r.a)}</span></div>`).join("")}</section>` : ""}</div>
     <div class="stack"><section class="card"><div class="card-h"><h2>Golden boot</h2></div>${table("ts-" + key, [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "c", l: "Club", f: p => clubA(p.club, { short: true }) }, { k: "g", l: "Goals", r: 1, f: p => `<b>${p.s.lg}</b>` }], scorers, { empty: "No goals yet." })}</section>
+    ${LG[key].foreign ? "" : (() => { const xgL = ps.filter(p => p.s.xg > 0).sort((a, b) => b.s.xg - a.s.xg).slice(0, 10), xaL = ps.filter(p => p.s.xa > 0).sort((a, b) => b.s.xa - a.s.xa).slice(0, 10);
+      return `<section class="card"><div class="card-h"><h2>Expected goals</h2><span class="tiny muted">all competitions</span></div>${table("txg-" + key, [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "c", l: "Club", f: p => clubA(p.club, { short: true }) }, { k: "g", l: "G", r: 1, f: p => p.s.g }, { k: "x", l: "xG", r: 1, f: p => `<b>${p.s.xg.toFixed(1)}</b>` }, { k: "d", l: "G−xG", r: 1, f: p => (d => `<span class="${d >= 1 ? "good" : d <= -1 ? "bad" : ""}">${d > 0 ? "+" : ""}${d.toFixed(1)}</span>`)(p.s.g - p.s.xg) }], xgL, { empty: "No shots yet." })}</section>
+      <section class="card"><div class="card-h"><h2>Chance creators</h2><span class="tiny muted">all competitions</span></div>${table("txa-" + key, [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "c", l: "Club", f: p => clubA(p.club, { short: true }) }, { k: "k", l: "Key passes", r: 1, f: p => p.s.kp || 0 }, { k: "a", l: "A", r: 1, f: p => p.s.a }, { k: "x", l: "xA", r: 1, f: p => `<b>${p.s.xa.toFixed(1)}</b>` }], xaL, { empty: "No chances created yet." })}</section>`; })()}
     <section class="card"><div class="card-h"><h2>Best rated</h2><span class="tiny muted">min. 5 apps</span></div>${table("tr-" + key, [{ k: "n", l: "Player", f: p => playerA(p) }, { k: "c", l: "Club", f: p => clubA(p.club, { short: true }) }, { k: "r", l: "Avg", r: 1, f: p => (p.s.rt / p.s.app).toFixed(2) }], rated, { empty: "Not enough games yet." })}</section></div></div>`;
 }
 
@@ -847,7 +852,7 @@ function modalPlayer(p) {
     <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${injHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
       <div><dt>Value</dt><dd class="num">${money(value(p))}</dd></div><div><dt>Wage</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Contract</dt><dd>${c ? p.yrs + " yr" + (p.yrs === 1 ? "" : "s") : "—"}</dd></div>
       <div><dt>Fitness</dt><dd>${fitBar(p.fit)} ${Math.round(p.fit)}</dd></div><div><dt>Mood</dt><dd>${moodTag(p)}</dd></div><div><dt>Homegrown</dt><dd>${Object.entries(p.yt).filter(([, v]) => v >= RULES.hgYears).map(([k]) => COUNTRY[k] ? COUNTRY[k].name : k).join(", ") || "No"}</dd></div>
-      <div><dt>Season</dt><dd class="num">${p.s.app} apps · ${p.s.g} g · ${p.s.a} a</dd></div><div><dt>Avg rating</dt><dd class="num">${avg}</dd></div><div><dt>Career</dt><dd class="num">${p.tot[0] + p.s.app} apps · ${p.tot[1] + p.s.g} g</dd></div></dl>
+      <div><dt>Season</dt><dd class="num">${p.s.app} apps · ${p.s.g} g · ${p.s.a} a</dd></div>${p.s.sh || p.s.kp || p.s.sv ? `<div><dt>Advanced</dt><dd class="num small">${p.pos === "GK" ? `${p.s.sv || 0} saves · ${p.s.cs} clean sheets` : `${p.s.sh || 0} shots (${p.s.sot || 0} on) · ${(p.s.xg || 0).toFixed(1)} xG · ${p.s.kp || 0} key passes · ${(p.s.xa || 0).toFixed(1)} xA`}</dd></div>` : ""}<div><dt>Avg rating</dt><dd class="num">${avg}</dd></div><div><dt>Career</dt><dd class="num">${p.tot[0] + p.s.app} apps · ${p.tot[1] + p.s.g} g</dd></div></dl>
     ${attrPanel(p)}
     ${p.inj ? `<p class="small bad">${esc(p.injT ? p.injT.charAt(0).toUpperCase() + p.injT.slice(1) : "Injured")}: out for ${injLength(p.inj)}.</p>` : ""}
     ${statusChips(p, c) ? `<div>${statusChips(p, c)}</div>` : ""}
@@ -924,13 +929,37 @@ function modalBid(p) {
 const mrCls = r => r >= 8 ? "mr4" : r >= 7 ? "mr3" : r >= 6 ? "mr2" : "mr1";
 /* Match ratings for everyone who has played, both sides: still on, subbed off (and the minute) or sent off,
    with goals, assists and bookings. Shown from kick-off. */
+/* One player's advanced numbers in a match, only those that happened: "3 sh (1 on) · 0.62 xG · 2 KP · 0.31 xA · 4 saves". */
+function advLine(x) {
+  if (!x) return "";
+  const t = [];
+  if (x.sh) t.push(`${x.sh} sh${x.sot ? ` (${x.sot} on)` : ""}`, `${x.xg.toFixed(2)} xG`);
+  if (x.kp) t.push(`${x.kp} KP`, `${x.xa.toFixed(2)} xA`);
+  if (x.sv) t.push(`${x.sv} save${x.sv > 1 ? "s" : ""}`);
+  return t.join(" · ");
+}
+/* Season advanced stats, for the squad table. G−xG is finishing: above zero, he scores more than his chances
+   are worth. Per 90 figures need 450 minutes, so a cameo doesn't top the column. */
+const per90 = (p, v) => p.s.min >= 450 ? v / p.s.min * 90 : null;
+const f2 = v => v == null ? "—" : v.toFixed(2);
+const ADV_COLS = [
+  { k: "sh", l: "Shots", r: 1, v: p => p.s.sh || 0, f: p => p.s.sh || 0 },
+  { k: "sot", l: "On tgt", r: 1, v: p => p.s.sot || 0, f: p => p.s.sot || 0 },
+  { k: "xg", l: "xG", r: 1, v: p => p.s.xg || 0, f: p => (p.s.xg || 0).toFixed(1) },
+  { k: "gxg", l: "G−xG", r: 1, v: p => p.s.g - (p.s.xg || 0), f: p => p.s.sh ? (d => `<span class="${d >= 1 ? "good" : d <= -1 ? "bad" : ""}">${d > 0 ? "+" : ""}${d.toFixed(1)}</span>`)(p.s.g - p.s.xg) : "—" },
+  { k: "xg90", l: "xG/90", r: 1, v: p => per90(p, p.s.xg || 0) ?? -1, f: p => f2(per90(p, p.s.xg || 0)) },
+  { k: "kp", l: "Key passes", r: 1, v: p => p.s.kp || 0, f: p => p.s.kp || 0 },
+  { k: "xa", l: "xA", r: 1, v: p => p.s.xa || 0, f: p => (p.s.xa || 0).toFixed(1) },
+  { k: "sv", l: "Saves", r: 1, v: p => p.s.sv || 0, f: p => p.pos === "GK" ? p.s.sv || 0 : "" },
+  { k: "cs", l: "Clean sheets", r: 1, v: p => p.s.cs || 0, f: p => p.s.cs || 0 },
+];
 function liveRatings(M) {
   const side = i => { const s = i ? M.a : M.h, onIds = new Set(s.on.map(o => o.p.id)), rows = s.used.map(id => P(id)).filter(Boolean).map(p => {
       const g = M.goals.filter(x => x.pid === p.id).length, a = M.goals.filter(x => x.ast === p.id).length, red = M.reds.some(r => r[0] === p.id), sub = !onIds.has(p.id) && !red;
       const came = (s.on.find(o => o.p.id === p.id) || {}).from;
       return { p, r: matchRating(M, i, p.id), g, a, y: M.cards.includes(p.id), red, sub, came: came > 0 ? came : null };
     }).sort((x, y) => ROLE_ORDER[x.p.pos] - ROLE_ORDER[y.p.pos]);
-    return `<div><h3 style="margin:0 0 6px">${esc(C(s.club).short)}${s.club === S.club ? " <span class=\"tiny muted\">you</span>" : ""}</h3>${rows.map(x => `<div class="mr-row${x.sub || x.red ? " off" : ""}"><span class="pos">${x.p.pos}</span><span class="nm">${s.club === S.club || M.fx.h === S.club || M.fx.a === S.club ? playerA(x.p) : esc(x.p.name)}${"⚽".repeat(x.g)}${x.a ? ` <span class="tiny muted">${x.a}A</span>` : ""}${x.y && !x.red ? ' <span class="yc-i" title="Booked"></span>' : ""}${x.red ? ' <span class="rc-i" title="Sent off"></span>' : ""}${x.came ? ` <span class="tiny muted">on ${x.came}′</span>` : ""}${x.sub ? ' <span class="tiny muted">off</span>' : ""}</span><b class="mr ${mrCls(x.r)}">${x.r.toFixed(1)}</b></div>`).join("")}</div>`; };
+    return `<div><h3 style="margin:0 0 6px">${esc(C(s.club).short)}${s.club === S.club ? " <span class=\"tiny muted\">you</span>" : ""}</h3>${rows.map(x => `<div class="mr-row${x.sub || x.red ? " off" : ""}"><span class="pos">${x.p.pos}</span><span class="nm">${s.club === S.club || M.fx.h === S.club || M.fx.a === S.club ? playerA(x.p) : esc(x.p.name)}${"⚽".repeat(x.g)}${x.a ? ` <span class="tiny muted">${x.a}A</span>` : ""}${x.y && !x.red ? ' <span class="yc-i" title="Booked"></span>' : ""}${x.red ? ' <span class="rc-i" title="Sent off"></span>' : ""}${x.came ? ` <span class="tiny muted">on ${x.came}′</span>` : ""}${x.sub ? ' <span class="tiny muted">off</span>' : ""}${(t => t ? `<span class="mr-adv">${t}</span>` : "")(advLine((M.ps || {})[x.p.id]))}</span><b class="mr ${mrCls(x.r)}">${x.r.toFixed(1)}</b></div>`).join("")}</div>`; };
   return `<div class="card lv-rat"><div class="card-h"><h2>Match ratings</h2><span class="tiny muted">out of 10${M.done ? " · final" : " · live"}</span></div>${M.min > 0 ? `<div class="mr-grid">${side(LIVE.k)}${side(1 - LIVE.k)}</div>` : '<p class="small muted">Ratings appear once the match kicks off.</p>'}</div>`;
 }
 function liveTeam(M, k) {
@@ -976,7 +1005,7 @@ function viewLive() {
     <p class="small muted" style="margin:6px 0 0">${esc(C((k ? M.h : M.a).club).short)} are playing ${MENT[(k ? M.h : M.a).ment].l.toLowerCase()}.</p></div>`;
   }
   const feed = `<div class="card lv-feed"><ul class="feed" aria-live="polite">${M.log.slice().reverse().map((e, i) => `<li class="${e.type === "goal" ? "goal" : ""} ${i === 0 && !M.done ? "new" : ""}"><span class="m">${e.m}′</span><span><span class="tag" style="background:${cl(e)}"></span>${esc(e.text)}</span></li>`).join("") || '<li><span class="m">0′</span><span>The teams are out. Press kick off when ready.</span></li>'}</ul></div>`;
-  const stats = `<div class="card lv-stats"><table class="stats"><tbody>${stat("Possession", hp + "%", 100 - hp + "%")}${stat("Shots", M.h.shots, M.a.shots)}${stat("On target", M.h.sot, M.a.sot)}${stat("Yellow cards", (M.bk || []).filter(b => !b.side && !b.red).length, (M.bk || []).filter(b => b.side && !b.red).length)}${stat("Red cards", M.reds.filter(r => (M.bk || []).some(b => b.pid === r[0] && !b.side)).length, M.reds.filter(r => (M.bk || []).some(b => b.pid === r[0] && b.side)).length)}${stat("Subs", M.h.subs, M.a.subs)}</tbody></table></div>`;
+  const stats = `<div class="card lv-stats"><table class="stats"><tbody>${stat("Possession", hp + "%", 100 - hp + "%")}${stat("Expected goals (xG)", (M.h.xg || 0).toFixed(2), (M.a.xg || 0).toFixed(2))}${stat("Shots", M.h.shots, M.a.shots)}${stat("On target", M.h.sot, M.a.sot)}${stat("Big chances", M.h.big || 0, M.a.big || 0)}${stat("Headed shots", M.h.hdr || 0, M.a.hdr || 0)}${stat("Saves", M.h.sav || 0, M.a.sav || 0)}${stat("Yellow cards", (M.bk || []).filter(b => !b.side && !b.red).length, (M.bk || []).filter(b => b.side && !b.red).length)}${stat("Red cards", M.reds.filter(r => (M.bk || []).some(b => b.pid === r[0] && !b.side)).length, M.reds.filter(r => (M.bk || []).some(b => b.pid === r[0] && b.side)).length)}${stat("Subs", M.h.subs, M.a.subs)}</tbody></table></div>`;
   const body = tab === "tactics" ? style + liveTeam(M, k) : tab === "stats" ? stats + liveRatings(M) : feed;
   const he = liveEvents(M, 0), ae = liveEvents(M, 1);
   return `<section style="--hc:${H.color};--ac:${A.color}"><div class="board"><span class="comp eyebrow">${esc(compLabel(M.fx))}${M.fx.ko ? ` · 1st leg ${M.fx.ko.aggA}–${M.fx.ko.aggH}` : ""}</span><div class="t">${crest(H, 40)}<b>${esc(H.name)}</b></div>

@@ -117,6 +117,16 @@ The scoreboard lists each side's scorers and bookings with the minute, and goals
 your players on the pitch too. Below the play controls, three tabs replace the long page: Commentary,
 Tactics (style, formation, team and bench) and Stats (possession, shots, cards, subs and match ratings).
 
+**Advanced stats.** Every shot in an English match has an expected-goals value: the chance of an average
+finisher scoring it against an average keeper, so over a season a league's goals come to within a few
+percent of its xG. A striker well above his xG is finishing better than the chances he gets; one below is
+wasting them. The player who set up a shot gets a key pass and its xG as expected assists (xA). Shots of
+0.25 xG or more count as big chances. In a match, the Stats tab adds xG, big chances, headed shots and
+saves, and each player's line in the ratings shows his shots, xG, key passes, xA or saves. The Squad page
+adds season Shots, On target, xG, G−xG, xG/90 (from 450 minutes), Key passes, xA, Saves and Clean
+sheets. Each English league page lists the xG and chance-creation leaders, and the table shows each
+club's league xG for and against. Foreign leagues are quick-simmed without shots, so they have none.
+
 **Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development, and each has a preferred
 formation: teams play about 2% better in their coach's own system. Twelve modern shapes are available
 (4-3-3, 4-2-3-1, 4-4-2, 4-4-1-1, 4-1-4-1, 4-3-2-1, 4-1-2-1-2, 3-4-2-1, 3-4-3, 3-5-2, 5-3-2, 5-4-1), and AI

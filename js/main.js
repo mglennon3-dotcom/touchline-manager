@@ -377,6 +377,8 @@ window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.
 
 /* Saves from version 4 gain injury proneness, coaches' preferred formations and a preference for you. */
 function upgradeSave() {  // bring an older save up to date; runs on load and on import
+  // Repairs keepers whose fitness went NaN after playing outfield (fixed in 5.22.0).
+  for (const p of Object.values(S.players)) if (!isFinite(p.fit)) p.fit = 90;
   if (!S.rivalsDone) ensureRivals();
   if (!S.stadiums) ensureStadiums();
   if (!S.sponsors) ensureSponsors();
