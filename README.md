@@ -208,6 +208,17 @@ wages, amortised fees and agent fees against revenue plus player-sale profit, wi
 and points deductions above 115%. AI clubs heading for a charge sell players before the accounts close, as real
 clubs do, so charges are rare: one or two every few seasons across England.
 
+**Season projection** (top of the Finances page): the season's income and costs so far and projected to the
+end, with the projected profit or loss and closing cash. Known flows are projected: broadcast and commercial
+income, sponsorship, league gates at today's ticket forecast, the merit payment for your current position,
+wages at today's bill, running costs, scouting, stadium works and any cost-ratio levy. Cup runs, sponsor
+bonuses and future transfers count once they happen. In preseason it projects the coming season. Checked
+by projecting at week 6 and playing the season out: a Premier club came to €34.4M projected against €38.9M
+actual (the gap was a cup run), and a fifth-tier club to €230k against €260k.
+**Transfer budget** (Finances and Transfers pages): the fee you can pay for a player on your starters'
+average wage over four years. It is the smaller of what your cash allows without ending the season in the
+red and the room left under the 85% cost-ratio line, shown with this season's fees in, fees out and net spend.
+
 ## Code
 
 Plain JavaScript, no build step. `index.html` is the standalone page; `artifact.html` is the same game

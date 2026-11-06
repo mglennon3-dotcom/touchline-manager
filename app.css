@@ -444,3 +444,10 @@ body{padding-top:env(safe-area-inset-top,0px)}
 .tab-n{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--line);color:var(--ink);font-size:11px;line-height:18px;font-family:var(--f-mono)}
 .y-tabs button[aria-pressed="true"] .tab-n{background:var(--surface);color:var(--ink)}
 @media (max-width:420px){.y-tabs button{font-size:13px;padding:8px 4px}}
+
+/* season projection and transfer budget */
+.proj-head{display:grid;gap:2px;margin-bottom:10px}.proj-head>span:first-child{font-size:13px;color:var(--muted)}
+.proj-head>b{font-family:var(--f-display);font-size:34px;line-height:1.05}
+table.proj{width:100%;table-layout:auto}table.proj td,table.proj th{padding:5px 6px;white-space:normal}table.proj td.num,table.proj th.num{white-space:nowrap;text-align:right;width:1%}
+.proj-wrap{overflow:visible}table.proj tr.sec td{font-family:var(--f-display);text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding-top:12px;font-size:13px}
+table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}

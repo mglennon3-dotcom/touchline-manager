@@ -690,7 +690,7 @@ function viewTransfers() {
         { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"}>Ask to loan</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
       ], pool, { empty: UI.tab === "scouted" && !scouted.length ? "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here." : "No players match these filters." })}`;
   }
-  return `${needsCard(true)}<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
+  return `${transferBudgetCard(c)}${needsCard(true)}<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
     <div class="row" style="margin-bottom:12px"><span class="seg" role="group">${tabs.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</span></div>
     ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Ratings outside your division are estimates until you scout a player (open him, 2 hours). Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section>`;
 }
@@ -773,12 +773,91 @@ function cupIncomeCard(c) {
       <p class="tiny muted" style="margin-top:6px">Domestic cup gates are shared with the other club (finals at a neutral venue too); European and play-off home gates are yours. Cup gates also count in ticket sales above, and prize money (including for qualifying for Europe) in Prize money.</p>`
       : '<p class="small muted">No cup matches yet this season.</p>'}</section>`;
 }
+/* ---------- season projections ---------- */
+/* The full financial year (season start to the summer share paid at season's end), on a cash basis: what has
+   come in and gone out so far, plus what the club's settings say will come and go in the weeks left. Known
+   flows are projected (broadcast and commercial income, sponsorship, league gates at today's ticket forecast,
+   the merit payment for your current position, wages, running costs, scouting, stadium works, the cost-ratio
+   levy). Money that depends on what hasn't happened (cup runs, sponsor bonuses, future transfers) counts only
+   once it's real. In the summer it projects the coming season from zero, since the accounts reset at kick-off. */
+function finProjection(c) {
+  const summer = S.phase !== "season", f = summer ? {} : c.fin, g = k => f[k] || 0;
+  const lastW = S.days.length ? S.days[S.days.length - 1].w : 41, remWk = summer ? lastW + 1 : Math.max(0, lastW + 1 - S.week);
+  const share = (remWk + 10) / 52;  // weekly flows for the rest of the season, plus the ten-week summer share
+  const rs = summer ? c.revBase : c.revSeason, wageBill = sum(c.squad, id => P(id).wage);
+  const L = S.leagues[c.lg], rounds = summer ? [] : L.fixtures.slice((L.results || []).length);
+  const homeLeft = summer ? homeGames(c) : sum(rounds, rd => rd.filter(([h]) => h === c.id).length);
+  const perGate = c.cap ? ticketForecast(c, c.tkt || 1).income : 0;
+  const n = L.clubs.length, pos = summer ? clamp(S.expPos || Math.ceil(n / 2), 1, n) : standings(L).findIndex(r => r.id === c.id) + 1;
+  const merit = c.revBase * (LG[c.lg].tier === 1 ? .2 : .06) * (n - pos) / (n - 1);
+  const cupGate = g("cupGate"), lgGate = g("gate") - cupGate, spons = g("spons"), other = g("rev") - g("gate") - spons;
+  const inc = [
+    ["Broadcast and commercial", other, rs * share],
+    ["Sponsorship", spons, sponsorTotal(c) * share],
+    ["League ticket sales", lgGate, perGate * homeLeft, `${homeLeft} home game${homeLeft === 1 ? "" : "s"} left at about ${money(perGate)}`],
+    ["League merit payment", 0, merit, `paid at the end of the season; ${ord(pos)} ${summer ? "(the board's target)" : "as things stand"}`],
+    ["Cups: gates and prize money", cupGate + g("prize"), 0, "only what you've earned: a cup run adds more"],
+    ["Player sales", g("sold"), 0, "fees received"],
+  ];
+  if (g("scheme")) inc.push(["Owner deals", g("scheme"), 0]);
+  const b = c.build, cost = [
+    ["Wages", g("wages"), wageBill * share, `${perWeek(wageBill)} today`],
+    ["Staff and running costs", g("ops"), rs * .2 * share],
+    ["Scouting network", g("scouting"), S.rec.scoutLvl * scoutCost() * remWk / 52],
+    ["Stadium works", g("stadium"), b ? b.perWeek * Math.min(b.left, remWk) : 0],
+    ["Transfer fees paid", g("bought"), 0],
+    ["Agent fees", g("agent"), 0],
+  ];
+  const ratio = scr(c), rev = annualIncome(c) + g("prize") + g("merit") + g("scheme") + Math.max(0, g("sales"));
+  const levy = ratio > RULES.scrLimit && ratio <= RULES.scrSporting ? Math.round((ratio - RULES.scrLimit) * rev * .5) : 0;
+  cost.push(["Cost-ratio levy", g("levy"), levy, ratio > RULES.scrSporting ? `ratio ${pct(ratio)}: above ${pct(RULES.scrSporting)} that's a charge and a points deduction, not a levy` : levy ? `ratio ${pct(ratio)} against ${pct(RULES.scrLimit)}` : ""]);
+  const tot = rows => rows.reduce((a, r) => [a[0] + r[1], a[1] + r[1] + r[2]], [0, 0]);
+  const [incSo, incAll] = tot(inc), [costSo, costAll] = tot(cost);
+  // The board takes half of any cash above a year's base income at the end of the season: without it the
+  // first test overstated a Premier club's closing cash by 13M (94.2M projected, 80.9M actual).
+  const pre = c.cash + (incAll - incSo) - (costAll - costSo), invest = Math.max(0, (pre - c.revBase) * .5);
+  return { summer, inc, cost, incSo, incAll, costSo, costAll, net: incAll - costAll, endCash: pre - invest, invest, ratio, remWk, wageBill };
+}
+function projectionCard(c) {
+  const P_ = finProjection(c), row = r => `<tr><td>${r[0]}${r[3] ? `<br><span class="tiny muted">${r[3]}</span>` : ""}</td>${P_.summer ? "" : `<td class="num">${money(r[1])}</td>`}<td class="num">${r[1] + r[2] ? money(r[1] + r[2]) : "—"}</td></tr>`;
+  const cols = P_.summer ? "<th></th><th class=\"num\">Projected</th>" : "<th></th><th class=\"num\">So far</th><th class=\"num\">Full season</th>";
+  const sub = (l, a, b2, cls) => `<tr class="tot"><td>${l}</td>${P_.summer ? "" : `<td class="num">${money(a)}</td>`}<td class="num ${cls || ""}">${money(b2)}</td></tr>`;
+  return `<section class="card"><div class="card-h"><h2>Season projection</h2><span class="eyebrow">${P_.summer ? `${seasonLabel(S.year + (S.phase === "summer" ? 0 : 1))} ahead` : `${P_.remWk} weeks left`}</span></div>
+    <div class="proj-head"><span>Projected ${P_.net >= 0 ? "profit" : "loss"}</span><b class="${P_.net >= 0 ? "good" : "bad"}">${P_.net >= 0 ? "+" : "−"}${money(Math.abs(P_.net))}</b><span class="small muted">Cash at the end of the season: about <b>${money(P_.endCash)}</b>${P_.invest ? ` (after the board invests ${money(P_.invest)} of surplus)` : ""}</span></div>
+    <div class="proj-wrap"><table class="proj"><thead><tr>${cols}</tr></thead><tbody>
+      <tr class="sec"><td colspan="3">Income</td></tr>${P_.inc.map(row).join("")}${sub("Total income", P_.incSo, P_.incAll)}
+      <tr class="sec"><td colspan="3">Costs</td></tr>${P_.cost.map(row).join("")}${sub("Total costs", P_.costSo, P_.costAll)}
+      ${sub(P_.net >= 0 ? "Profit" : "Loss", P_.incSo - P_.costSo, P_.net, P_.net >= 0 ? "good" : "bad")}</tbody></table></div>
+    <p class="tiny muted" style="margin-top:6px">${P_.summer ? "Preseason: this is the coming season from kick-off, at today's squad, wages and prices. Fees paid this summer count in last season's accounts." : "Cash basis: transfer fees count when paid, not spread over the contract."} Sponsor bonuses (promotion, Europe, a cup) and cup runs come on top. Cash above a year's base income at the end of the season: the board invests half of it in the club.</p></section>`;
+}
+/* Transfer budget: the smaller of what your cash can pay without ending the season in the red, and what the
+   Squad Cost Ratio has room for before the levy line (fees count in the ratio as fee ÷ contract years). */
+function transferBudget(c) {
+  const pj = finProjection(c), f = c.fin || {}, rev = annualIncome(c) + (f.prize || 0) + (f.merit || 0) + (f.scheme || 0) + Math.max(0, f.sales || 0);
+  const cost = sum(c.squad, id => P(id).wage + (P(id).am ? P(id).am.per : 0)), room = RULES.scrLimit * rev - cost;
+  const xi = (S.lineup || []).filter(x => x != null).map(P), wage = xi.length ? sum(xi, p => p.wage) / xi.length : c.squad.length ? sum(c.squad, id => P(id).wage) / c.squad.length : 0;
+  const yrs = 4, wkLeft = (pj.remWk + 10) / 52;
+  // Cash: a signing costs fee × 1.05 now plus his wages for the rest of this season.
+  const byCash = Math.max(0, (pj.endCash - wage * wkLeft) / 1.05), byRatio = Math.max(0, (room - wage) * yrs);
+  return { pj, room, wage, yrs, byCash, byRatio, budget: Math.min(byCash, byRatio), net: (f.sold || 0) - (f.bought || 0) - (f.agent || 0), sold: f.sold || 0, bought: f.bought || 0, agent: f.agent || 0, ratio: scr(c) };
+}
+function transferBudgetCard(c) {
+  const t = transferBudget(c), lim = t.byCash <= t.byRatio ? "cash" : "ratio";
+  return `<section class="card"><div class="card-h"><h2>Transfer budget</h2><span class="eyebrow">${t.pj.summer ? "for the coming season" : "rest of this season"}</span></div>
+    <div class="proj-head"><span>You can spend about</span><b class="${t.budget > 0 ? "good" : "bad"}">${money(Math.round(t.budget / 1e5) * 1e5)}</b><span class="small muted">on a fee for a player on ${perWeek(t.wage)} (your starters' average) over ${t.yrs} years · limited by ${lim === "cash" ? "cash" : "the cost ratio"}</span></div>
+    <dl class="ledger small">
+      <dt>Cash: keeps you out of the red at season's end</dt><dd>${money(t.byCash)}</dd>
+      <dt>Cost ratio: room under ${pct(RULES.scrLimit)} (now ${pct(t.ratio)})</dt><dd class="${t.room < 0 ? "bad" : ""}">${t.room < 0 ? `over by ${money(-t.room)} a year` : `${money(t.room)} a year → ${money(t.byRatio)} fee`}</dd>
+      <dt>Fees received this season</dt><dd class="good">${money(t.sold)}</dd><dt>Fees and agents paid</dt><dd class="bad">${money(-(t.bought + t.agent))}</dd>
+      <dt class="tot">Net transfer spend</dt><dd class="tot ${t.net >= 0 ? "good" : "bad"}">${t.net >= 0 ? "+" : "−"}${money(Math.abs(t.net))}</dd></dl>
+    <p class="tiny muted" style="margin-top:6px">A fee counts in the cost ratio as fee ÷ contract years, plus his wage; selling a player adds the profit over his book value to revenue. Projected season result: <b class="${t.pj.net >= 0 ? "good" : "bad"}">${t.pj.net >= 0 ? "+" : "−"}${money(Math.abs(t.pj.net))}</b> (Finances page).</p></section>`;
+}
 function viewFinances() {
   const c = me(), f = c.fin, ratio = scr(c);
   const mk = v => clamp(v / 1.5 * 100, 0, 100);
   const cases = S.cases.filter(k => !isForeign(C(k.club))).slice(-12).reverse();
   const acadCost = Math.round((c.academy + 1) * 1.5e6 * [0, 1, .4, .2, .1, .06, .05][c.tier]);
-  return `<div class="grid2"><div class="stack"><section class="card"><div class="card-h"><h2>Squad Cost Ratio</h2><span class="eyebrow">${seasonLabel(S.year)}</span></div>
+  return `<div class="grid2"><div class="stack">${projectionCard(c)}${transferBudgetCard(c)}<section class="card"><div class="card-h"><h2>Squad Cost Ratio</h2><span class="eyebrow">${seasonLabel(S.year)}</span></div>
     <div class="prose"><p>Wages, transfer amortisation and agent fees, as a share of football revenue plus profit on player sales. Above <b>${pct(RULES.scrLimit)}</b> you pay a levy at the end of the season; above <b>${pct(RULES.scrSporting)}</b> you are charged and face a points deduction the following season.</p></div>
     <div class="gauge" role="img" aria-label="Projected ratio ${pct(ratio)}"><span class="tick" style="left:${mk(.85)}%">85%</span><span class="tick" style="left:${mk(1.15)}%">115%</span><span class="mk" style="left:${mk(ratio)}%"><span>${pct(ratio)}</span></span></div>
     <p class="small muted">Projected for the full season at today's wage bill and income. ${c.lastSCR ? `Last season: ${pct(c.lastSCR)}.` : ""}</p></section>
