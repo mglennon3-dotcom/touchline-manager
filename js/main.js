@@ -322,12 +322,12 @@ const phoneWidth = () => matchMedia("(max-width:760px)").matches;
 let lastY = 0, upRun = 0, downRun = 0;
 // Going to a new page starts at the top with the full masthead. Restoring it first matters: restoring it
 // at the top would otherwise scroll the new page down by the amount it grew.
-function toTop() { UI.mastCompact = false; const m = document.querySelector(".mast"); if (m) m.classList.remove("compact"); syncMastHeight(); window.scrollTo(0, 0); lastY = 0; upRun = downRun = 0; }
+function toTop() { UI.mastCompact = false; const m = document.querySelector(".mast"); if (m) m.classList.remove("compact"); syncMastHeight(); restoreNav(); window.scrollTo(0, 0); lastY = 0; upRun = downRun = 0; }
 function setCompact(on) {
   const m = document.querySelector(".mast"); UI.mastCompact = on; if (!m) return;
   const before = m.getBoundingClientRect().height;
   m.classList.toggle("compact", on); syncMastHeight();
-  if (!on) { const n = m.querySelector("nav.tabs"); if (n) n.scrollLeft = UI.navX || 0; }  // hidden links lose their sideways scroll
+  if (!on) restoreNav();  // hidden links lose their sideways scroll
   // The masthead is sticky, so it takes up room in the page: shrinking it would make everything below
   // jump up. Scroll by the difference so what you were reading stays where it was.
   const d = before - m.getBoundingClientRect().height; if (d) window.scrollBy(0, -d);

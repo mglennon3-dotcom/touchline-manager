@@ -95,7 +95,7 @@ function render() {
   const ratio = scr(c), dec = openDecisions().length;
   // The section links scroll sideways on a phone. render() rebuilds them, which reset the scroll to Home
   // every time: keep where you'd scrolled to (UI.navX, updated as you scroll).
-  const navOld = document.querySelector("nav.tabs"); if (navOld && navOld.offsetParent) UI.navX = navOld.scrollLeft;  // not while hidden by the compact masthead
+  const navOld = document.querySelector("nav.tabs"); if (navOld && navOld.offsetParent && navOld.scrollLeft > 0) navSave(navOld.scrollLeft);  // not while hidden by the compact masthead
   app.innerHTML = `<header class="mast${UI.mastCompact ? " compact" : ""}" style="--club:${c.color}"><div class="wrap gut">
     <div class="mast-in"><div class="ident">${crest(c, 34)}<div><div class="eyebrow">${seasonLabel(S.year)} · ${leagueName(c.lg)} · ${when}</div><h1>${esc(c.name)}</h1></div></div>
     <div class="mast-r"><dl class="kpis"><div><dt>Cash</dt><dd class="${c.cash < 0 ? "bad" : ""}">${money(c.cash)}</dd></div>
@@ -108,13 +108,26 @@ function render() {
   </div></header><main class="wrap gut">${LIVE ? viewLive() : (VIEWS[UI.page] || viewHome)()}</main>`;
   const nav = document.querySelector("nav.tabs");
   if (nav) {
-    nav.scrollLeft = UI.navX || 0;
-    // If the current section's link is off-screen (opened from a button elsewhere), bring it into view.
-    const cur = nav.querySelector('[aria-current="page"]');
-    if (cur && (cur.offsetLeft < nav.scrollLeft || cur.offsetLeft + cur.offsetWidth > nav.scrollLeft + nav.clientWidth)) nav.scrollLeft = UI.navX = Math.max(0, cur.offsetLeft - 16);
-    nav.addEventListener("scroll", () => { UI.navX = nav.scrollLeft; }, { passive: true });
+    // Only a visible row records where it's scrolled: iOS reports 0 while the compact masthead hides it, and
+    // again as it reappears, which sent the row back to Home on the next tap.
+    nav.addEventListener("scroll", () => { if (nav.offsetParent && !UI.navRestoring) { navSave(nav.scrollLeft); UI.navUser = Date.now(); } }, { passive: true });
+    restoreNav();
+    // iOS can ignore a scroll position set before the new row is laid out: set it again once it has been,
+    // unless you've started swiping it in the meantime.
+    const t0 = Date.now(), again = () => { if (!(UI.navUser > t0)) restoreNav(); };
+    requestAnimationFrame(again); setTimeout(again, 150);
   }
   renderModal();
+}
+function navSave(x) { UI.navX = x; try { sessionStorage.setItem("navX", String(Math.round(x))); } catch (e) { /* private mode */ } }
+function restoreNav() {
+  const nav = document.querySelector("nav.tabs"); if (!nav || !nav.offsetParent) return;
+  if (UI.navX == null) { try { UI.navX = +sessionStorage.getItem("navX") || 0; } catch (e) { UI.navX = 0; } }  // after the app reloads itself
+  UI.navRestoring = true; nav.scrollLeft = UI.navX;
+  // The current section's link must be on screen (opened from a button elsewhere, or after a reload).
+  const cur = nav.querySelector('[aria-current="page"]');
+  if (cur) { const nr = nav.getBoundingClientRect(), r = cur.getBoundingClientRect(); if (r.left < nr.left || r.right > nr.right) { nav.scrollLeft += r.left - nr.left - 16; UI.navX = nav.scrollLeft; } }
+  setTimeout(() => { UI.navRestoring = false; }, 0);
 }
 function playControl() {
   const dec = openDecisions().length;
