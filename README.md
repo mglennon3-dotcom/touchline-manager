@@ -113,6 +113,9 @@ cards, bans or ratings.
 (fitness included), fitness bars and bookings, with the bench below. Tap a player and then a substitute to
 bring him on, or two players to swap their positions; change formation from the menu above the pitch. Any of
 these pauses the match until you resume.
+The scoreboard lists each side's scorers and bookings with the minute, and goals and bookings show on
+your players on the pitch too. Below the play controls, three tabs replace the long page: Commentary,
+Tactics (style, formation, team and bench) and Stats (possession, shots, cards, subs and match ratings).
 
 **Coaches** are rated out of 20 for Attack, Defence, Recruitment and Development, and each has a preferred
 formation: teams play about 2% better in their coach's own system. Twelve modern shapes are available

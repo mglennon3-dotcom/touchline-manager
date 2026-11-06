@@ -97,7 +97,7 @@ function makeSide(c, opp, home, auto) {
 function makeMatch(fx, userAuto) {
   const H = C(fx.h), A = C(fx.a);
   const M = { fx, h: makeSide(H, A, !fx.neutral, userAuto), a: makeSide(A, H, false, userAuto), min: 0, end: 90, et: false, pens: null,
-    log: [], goals: [], inj: [], reds: [], cards: [], fit: {}, done: false, riv: rivalry(fx.h, fx.a) };
+    log: [], goals: [], inj: [], reds: [], cards: [], bk: [], fit: {}, done: false, riv: rivalry(fx.h, fx.a) };
   if (isUser(H) || isUser(A)) { const u = isUser(H) ? M.h : M.a; u.auto = !!userAuto; }
   return M;
 }
@@ -158,7 +158,7 @@ function changeForm(M, i, form) {
 function bestBench(M, i, slot) { const b = benchAvail(M, i); if (!b.length) return null; return b.reduce((x, y) => eff(y, slot) > eff(x, slot) ? y : x); }
 function sendOff(M, i, o, why, games) {
   const s = i ? M.a : M.h; M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from;
-  s.on.splice(s.on.indexOf(o), 1); s.rt = null; M.reds.push([o.p.id, games]);
+  s.on.splice(s.on.indexOf(o), 1); s.rt = null; M.reds.push([o.p.id, games]); (M.bk = M.bk || []).push({ side: i, pid: o.p.id, min: M.min, red: 1, n: sur(o.p) });
   lg(M, "red", i, `${why}! ${o.p.name} is sent off.`);
 }
 
@@ -205,7 +205,7 @@ function step(M) {
     if (outf.length && R() < .021 * (1 + .15 * M.riv)) {  // derbies are feistier
       const o = pick(outf);
       if (s.yel[o.p.id]) sendOff(M, i, o, "Second yellow", RULES.secondYellow);
-      else { s.yel[o.p.id] = 1; M.cards.push(o.p.id); lg(M, "card", i, `Yellow card for ${o.p.name}.`); }
+      else { s.yel[o.p.id] = 1; M.cards.push(o.p.id); (M.bk = M.bk || []).push({ side: i, pid: o.p.id, min: M.min, n: sur(o.p) }); lg(M, "card", i, `Yellow card for ${o.p.name}.`); }
     } else if (outf.length && R() < .0005) sendOff(M, i, pick(outf), "Straight red", RULES.straightRed);
     for (const o of s.on.slice()) {
       const risk = .00011 * (o.fit < 75 ? 1 + (75 - o.fit) / 12 : 1) * injMult(o.p);
