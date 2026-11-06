@@ -87,7 +87,11 @@ function render() {
   if (!S || S.club == null) { app.innerHTML = UI.screen === "landing" && SAVES.list.length ? viewLanding() : viewStart(); renderModal(); return; }
   if (S.sacked) { app.innerHTML = viewSacked(); renderModal(); return; }
   const c = me(), L = S.leagues[c.lg], pos = S.phase === "season" ? posIn(L, c.id) : S.lastPos[c.id];
-  const when = S.phase === "summer" ? `Preseason · week ${S.summerDay + 1} of ${CAL.summerDays}` : `Week ${S.week + 1}${CAL.jan.includes(S.week) ? " · window open" : ""}`;
+  // The transfer window as a badge after the week, so it can't be missed: "Week 20 · Transfer window open
+  // to week 22" (it was a plain " · window open" in the same grey as the rest of the line).
+  const janEnd = CAL.jan[CAL.jan.length - 1] + 1;
+  const winBadge = windowOpen() ? ` <span class="win-badge">Transfer window open${S.phase === "season" ? ` to week ${janEnd}` : ""}</span>` : "";
+  const when = (S.phase === "summer" ? `Preseason · week ${S.summerDay + 1} of ${CAL.summerDays}` : `Week ${S.week + 1}`) + winBadge;
   const ratio = scr(c), dec = openDecisions().length;
   app.innerHTML = `<header class="mast${UI.mastCompact ? " compact" : ""}" style="--club:${c.color}"><div class="wrap gut">
     <div class="mast-in"><div class="ident">${crest(c, 34)}<div><div class="eyebrow">${seasonLabel(S.year)} · ${leagueName(c.lg)} · ${when}</div><h1>${esc(c.name)}</h1></div></div>
