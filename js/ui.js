@@ -1206,6 +1206,10 @@ function viewLive() {
     ${he || ae ? `<div class="evs">${he}</div><div></div><div class="evs away">${ae}</div>` : ""}</div>
     <div class="poss"><span class="h" style="width:${hp}%"></span><span class="a" style="width:${100 - hp}%"></span></div>
     <div class="row small muted between"><span>Possession ${hp}%</span><span>${100 - hp}%</span></div>
+    ${M.injWait && M.injWait.side === k ? (() => { const w = M.injWait, out = P(w.pid), subs = benchAvail(M, k).sort((a, b) => slotRating(b, w.slot) - slotRating(a, w.slot));
+      return `<div class="card inj-ask"><h3 style="margin:0 0 4px">Injury: ${esc(out.name)} can't continue</h3><p class="small muted" style="margin:0 0 8px">Who comes on at ${ROLE_NAME[w.slot].toLowerCase()}? ${RULES.subs - mine.subs} substitution${RULES.subs - mine.subs === 1 ? "" : "s"} left. Ratings are at ${w.slot}.</p>
+        <div class="bench">${subs.map(p => { const r = slotRating(p, w.slot); return `<button class="bench-p" data-a="injsub" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><b class="rt ${aCls(r)}">${Math.round(r)}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`; }).join("")}</div>
+        <button class="btn sm" data-a="injon" style="margin-top:8px">Play on with ${mine.on.length} for now</button></div>`; })() : ""}
     <div class="card ctrl lv-bar">${ctrl}</div>
     <div class="seg lv-tabs" role="tablist">${LIVE_TABS.map(([v, l]) => `<button role="tab" data-a="livetab" data-v="${v}" aria-pressed="${tab === v}" aria-selected="${tab === v}">${l}</button>`).join("")}</div>
     <div class="lv-body stack">${body}</div></section>`;

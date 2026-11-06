@@ -462,3 +462,4 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 
 .win-badge{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:var(--accent);color:#1a1300;font-weight:700;letter-spacing:.04em;white-space:nowrap}
 .chip.acad{background:var(--accent);color:#1a1300;border-color:transparent}
+.inj-ask{border:2px solid var(--loss,#c0392b);margin-top:10px}

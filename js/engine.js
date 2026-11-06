@@ -109,6 +109,15 @@ const T_MISS = ["{s} drags a shot wide", "{s} skies it over the bar", "{s} hits 
 const fillT = (t, o) => t.replace(/\{(\w)\}/g, (_, k) => o[k]);
 
 function benchAvail(M, i) { const s = i ? M.a : M.h; return s.bench.map(P).filter(p => avail(p) && !s.used.includes(p.id)); }
+// A substitute into a position nobody is in: after an injury you chose to cover later, or a gap you made.
+function subIntoSlot(M, i, si, newId, why) {
+  const s = i ? M.a : M.h, p = P(newId), sl = slotsOf(s.form);
+  if (s.subs >= RULES.subs || sl[si] == null || s.on.some(o => o.si === si) || !p) return false;
+  s.on.push({ p, slot: sl[si], si, fit: p.fit, from: M.min }); s.used.push(newId); s.subs++; s.rt = null; s.fitK = null;
+  if (M.injWait && M.injWait.side === i && M.injWait.si === si) M.injWait = null;
+  lg(M, "sub", i, `${why || "Change"}: ${p.name} comes on at ${ROLE_NAME[sl[si]].toLowerCase()}.`);
+  return true;
+}
 function doSub(M, i, idx, newId, why) {
   const s = i ? M.a : M.h, o = s.on[idx], p = P(newId);
   M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from;
@@ -241,7 +250,10 @@ function step(M) {
         M.inj.push(o.p.id); const idx = s.on.indexOf(o);
         lg(M, "inj", i, `${o.p.name} goes down injured.`);
         const b = s.subs < RULES.subs ? bestBench(M, i, o.slot) : null;
-        if (b) doSub(M, i, idx, b.id, "Forced change");
+        // Your side in a match you're watching (not auto): he goes off and the match waits for you to choose
+        // who comes on (M.injWait), instead of the assistant sending on the best fit.
+        if (b && !s.auto) { M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from; s.on.splice(idx, 1); s.rt = null; s.fitK = null; M.injWait = { side: i, si: o.si, slot: o.slot, pid: o.p.id }; lg(M, "inj", i, `${o.p.name} can't continue.`); }
+        else if (b) doSub(M, i, idx, b.id, "Forced change");
         else { M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from; s.on.splice(idx, 1); s.rt = null; lg(M, "inj", i, `${C(s.club).short} are down to ${s.on.length}.`); }
       }
     }

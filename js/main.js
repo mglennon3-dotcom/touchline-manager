@@ -132,6 +132,7 @@ function tick() {
   const before = LIVE.M.end;
   step(LIVE.M);
   if ((LIVE.M.min === 45 || (LIVE.M.min === 90 && LIVE.M.end > before)) && !LIVE.M.done) LIVE.paused = true;
+  if (LIVE.M.injWait && LIVE.M.injWait.side === LIVE.k) { LIVE.paused = true; UI.lsel = null; }  // an injury: you choose the substitute
   render();
   if (!LIVE.paused && !LIVE.M.done) LIVE.t = setTimeout(tick, LIVE.speed);
 }
@@ -240,7 +241,9 @@ const ACT = {
     SAVES.list = SAVES.list.filter(x => x.id !== v); await DB.put("saves", SAVES.list);
     UI.delAsk = null; toast(`${m ? m.club : "Save"} deleted.`); render();
   },
-  liveresume: () => { LIVE.paused = false; tick(); },
+  liveresume: () => { if (LIVE.M.injWait) LIVE.M.injWait = null; LIVE.paused = false; tick(); },  // resuming without choosing plays on short
+  injsub: v => { const M = LIVE.M, w = M.injWait; if (!w) return; subIntoSlot(M, LIVE.k, w.si, +v, "Injury"); M.injWait = null; UI.lsel = null; render(); },
+  injon: () => { LIVE.M.injWait = null; render(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   sqadv: () => { S.set.sqAdv = !S.set.sqAdv; save(); render(); },
   // Substitutes on the Line-up tab: pick a bench spot, then anyone outside the matchday squad to take it.
@@ -267,19 +270,22 @@ const ACT = {
   },
   liveempty: v => { const M = LIVE.M, k = LIVE.k, si = +v, sel = UI.lsel || {}; livePause();
     if (sel.on != null) { moveToSlot(M, k, sel.on, si); UI.lsel = null; }
+    else if (sel.bench != null && M.min > 0) { subIntoSlot(M, k, si, sel.bench); UI.lsel = null; }
     else UI.lsel = sel.empty === si ? null : { empty: si };
     render(); },
   liveout: v => { livePause(); if (LIVE.M.min === 0) livePre({ out: +v }); },
   livebench: v => {
     const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, id = +v, sel = UI.lsel || {}; livePause();
     if (M.min === 0) return livePre({ bench: id });
-    if (sel.on != null && s.subs < RULES.subs) { doSub(M, k, sel.on, id); UI.lsel = null; }
+    if (sel.empty != null && s.subs < RULES.subs) { subIntoSlot(M, k, sel.empty, id); UI.lsel = null; }
+    else if (sel.on != null && s.subs < RULES.subs) { doSub(M, k, sel.on, id); UI.lsel = null; }
     else UI.lsel = sel.bench === id ? null : { bench: id };
     render();
   },
   liveme: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.ment = v; s.rt = null; S.mentality = v; render(); },
   livesub: () => { const off = +document.getElementById("sub-off").value, on = +document.getElementById("sub-on").value; doSub(LIVE.M, LIVE.k, off, on); render(); },
-  liveskip: () => { clearTimeout(LIVE.t); const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.auto = true; runToEnd(LIVE.M); render(); },
+  liveskip: () => { clearTimeout(LIVE.t); const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.auto = true;
+    { const w = LIVE.M.injWait; if (w) { const b = bestBench(LIVE.M, LIVE.k, w.slot); if (b) subIntoSlot(LIVE.M, LIVE.k, w.si, b.id, "Injury"); LIVE.M.injWait = null; } } runToEnd(LIVE.M); render(); },
   livecont: () => finishLive(),
 };
 const CHG = {
