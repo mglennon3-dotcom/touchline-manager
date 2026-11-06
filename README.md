@@ -111,6 +111,11 @@ coaches have watched one of your players aged 23 and under for 30 weeks they giv
 the Academy page (from "Slow to develop" to "Picks things up very quickly"): right 73% of the time at
 Development 10 and 86% at 20, never more than one band out.
 
+**Young players' development** rewards playing well in the first team: for players 21 and under the match-rating
+boost is full at a season average of 6.8 (rising from 6.0), and a breakout season (60%+ of minutes) that raises
+potential needs a 6.7 average. Older players need 7.8 and 7.0. Averages bunch tightly: among regulars the median
+is 6.34, the top 10% 6.70 and the top 5% 6.83.
+
 **Academy** (its own page): your youth players are kept apart from the first team. Summer graduates and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
 Academy page or the player's own card, which also has Promote to first team). Academy

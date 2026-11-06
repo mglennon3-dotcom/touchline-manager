@@ -320,7 +320,10 @@ function weekly() {
       if (p.inj > 0) p.inj--;
       // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.
       if (p.ovr < p.pot) {
-        const form = p.s.app >= 3 ? clamp((p.s.rt / p.s.app - 6) / 1.2, 0, 1.5) : .5;
+        // Match ratings: the full boost (x1.15) at a season average of 6.8 for players 21 and under, 7.8 for the rest.
+        // Averages bunch tightly (regulars: median 6.34, top 10% 6.70, top 5% 6.83, 7.0+ only 2-3%), so a youngster
+        // needing 7.8 (as before) or even 7.0 had to be among the league's best.
+        const form = p.s.app >= 3 ? clamp((p.s.rt / p.s.app - 6) / (p.age <= 21 ? .533 : 1.2), 0, 1.5) : .5;
         const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * 1.12 * t.grow * (p.age <= 21 ? acad : 1)
           * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * (.85 + .2 * form) * gsMult(p);
         if (R() < ch) growAttrs(p, 1);
@@ -556,7 +559,7 @@ function ageAndContracts() {
       let d = ri(-2, 1);
       if (p.age >= 18 && p.pt < .25) d -= ri(1, 3);
       if (p.mood < 35) d -= ri(0, 2);
-      if (p.pt > .6 && avg >= 7) d += ri(1, 3);
+      if (p.pt > .6 && avg >= (p.age <= 22 ? 6.7 : 7)) d += ri(1, 3);  // a breakout season: for youngsters (21 and under before today's birthday) a top-10% average (6.7) is enough
       p.pot = clamp(p.pot + d, p.ovr, 95);
     }
     p.fit = 100; p.sus = 0; p.inj = Math.max(0, p.inj - 10); p.yc = 0; p.req = p.req && p.mood < 40; p.promise = null;
