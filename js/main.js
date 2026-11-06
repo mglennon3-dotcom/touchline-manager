@@ -147,7 +147,10 @@ function assignSlot(i, id) {
   const p = P(id); if (!avail(p)) { toast(`${p.name} is ${p.inj ? "injured" : "suspended"}.`); return; }
   if (!isReg(p, me())) { toast(`${p.name} isn't registered, so he can't play.`); return; }
   const j = S.lineup.indexOf(id); if (j >= 0) [S.lineup[i], S.lineup[j]] = [S.lineup[j], S.lineup[i]]; else S.lineup[i] = id;
+  const fromPicker = UI.page === "tactics" && document.querySelector(".tac-pick");
   UI.sel = null; save(); render();
+  // On the Line-up tab the picker sits below the pitch: return to the pitch to show the change.
+  if (fromPicker) window.scrollTo(0, 0);
 }
 const ACT = {
   regbest: () => { autoRegister(me(), false); fixUserLineup(); save(); render(); toast("Your best 25 seniors are registered."); },
@@ -192,7 +195,9 @@ const ACT = {
   benchauto: () => { S.bench = null; S.benchNo = []; save(); render(); toast("Bench back to automatic: your best available players."); },
   freshpick: () => { const c = me(); S.lineup = freshPick(eligibleIds(c), S.formation); UI.sel = null; save(); render(); const tired = S.lineup.filter(id => id != null && P(id).fit < FRESH_FIT).length; toast(tired ? `Fresh XI picked. ${tired} position${tired > 1 ? "s" : ""} had no one at ${FRESH_FIT}%+ fitness.` : `Fresh XI picked: everyone at ${FRESH_FIT}%+ fitness.`); },
   autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
-  slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render(); },
+  slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render();
+    // The "who plays here" list is below the pitch, off-screen on a phone: bring it into view.
+    if (UI.sel) document.querySelector(".tac-pick")?.scrollIntoView({ block: "start" }); },
   "pick-p": v => { const id = +v; if (UI.sel && UI.sel.slot != null) return assignSlot(UI.sel.slot, id); UI.sel = UI.sel && UI.sel.pid === id ? null : { pid: id }; render(); },
   sqf: v => { UI.sqf = v; render(); }, ttab: v => { UI.tab = v; render(); }, nf: v => { UI.nf = v; render(); },
   morehist: () => { UI.histN += 10; render(); },
@@ -234,6 +239,7 @@ const ACT = {
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   sqadv: () => { S.set.sqAdv = !S.set.sqAdv; save(); render(); },
+  tactab: v => { UI.tacTab = v; UI.sel = null; render(); },
   ytab: v => { UI.ytab = v; render(); },
   livetab: v => { UI.ltab = v; render(); },
   livespeed: v => { LIVE.speed = +v; render(); },

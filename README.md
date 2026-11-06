@@ -68,6 +68,8 @@ worst choice on the board. The Tactics page and the match card show each style's
 squads: those without a strong leaning pick possession or counter-attacking when it suits, and none of them
 switch, before or during a match, to a style their players plainly can't play.
 
+The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
+there, best first, and tap one to put him in), Selection (the squad list with bench picks), Style and Training.
 Picking a side: "Pick best XI" (Tactics page) asks your assistant for the strongest side, and it will move a
 player out of his usual position when his attributes make him better there than the specialist, say a
 tough-tackling midfielder at centre-back. AI clubs pick the same way. "Pick fresh XI" (Tactics page and the
@@ -220,7 +222,8 @@ turned you down, with your offer, today's asking price, the answer and how keen 
 offer button; players you sign drop off), Scouted, Search (all players, free agents, transfer listed, loan
 targets), Selling (your listed players) and Activity. The Offers tab opens with a one-line transfer budget.
 Both the Transfers and Youth pages show this week's scouting hours above the tabs, on every tab.
-The search filters include Interest: Keen, Open or keen, Would sign (everyone but Not interested, who turn
+Sorting a search sorts every player who matches, then shows the first 200, so the cheapest-first order is the
+whole market's. The search filters include Interest: Keen, Open or keen, Would sign (everyone but Not interested, who turn
 any offer down) or Not interested.
 **Transfer budget** (Finances page, summarised on Transfers): the fee you can pay for a player on your starters'
 average wage over four years. It is the smaller of what your cash allows without ending the season in the

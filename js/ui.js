@@ -72,7 +72,9 @@ const lgOpts = (sel, keys = Object.keys(LG)) => keys.map(k => `<option value="${
 /* Sortable table. cols: {k,l,v:row=>sortValue,f:row=>html,r:bool,cls}. */
 function table(id, cols, rows, opt = {}) {
   const st = UI.sort[id] || opt.sort || null;
-  if (st) { const col = cols.find(c => c.k === st.k); if (col && col.v) rows = rows.slice().sort((a, b) => { const x = col.v(a), y = col.v(b); return (x < y ? -1 : x > y ? 1 : 0) * (st.d); }); }
+  // Each row's sort key is computed once: the transfer market sorts up to 15,000 players by asking price or
+  // interest, and calling those inside the comparator took seconds.
+  if (st) { const col = cols.find(c => c.k === st.k); if (col && col.v) rows = rows.map(r => [col.v(r), r]).sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0) * st.d).map(x => x[1]); }
   if (opt.limit) rows = rows.slice(0, opt.limit);
   return `<div class="tbl-wrap${opt.tall ? " tall" : ""}"><table><thead><tr>${cols.map(c => `<th class="${c.r ? "r" : ""} ${c.cls || ""}" ${st && st.k === c.k ? `aria-sort="${st.d > 0 ? "ascending" : "descending"}"` : ""}>${c.v ? `<button data-a="sort" data-v="${id}|${c.k}">${c.l}${st && st.k === c.k ? (st.d > 0 ? " ▲" : " ▼") : ""}</button>` : c.l}</th>`).join("")}</tr></thead><tbody>
     ${rows.map(r => `<tr class="${opt.rowCls ? opt.rowCls(r) : ""}">${cols.map(c => `<td class="${c.r ? "r num" : ""} ${c.cls || ""}">${c.f(r)}</td>`).join("")}</tr>`).join("") || `<tr><td colspan="${cols.length}" class="muted">${opt.empty || "Nothing to show."}</td></tr>`}</tbody></table></div>`;
@@ -567,23 +569,36 @@ function viewTactics() {
   }).join("");
   const lines = PITCH_LINES;
   const ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
-  return `<div class="squad" style="--club:${c.color}"><div class="stack" style="gap:10px">
+  /* Tabs, as on the Youth and Transfers pages: the pitch, the squad list, style and training each on their
+     own. Tapping a shirt on the Line-up tab lists who could play there, best first, so a change never needs
+     the Selection tab. */
+  const tab = UI.tacTab || "lineup", TABS = [["lineup", "Line-up"], ["squad", "Selection"], ["style", "Style"], ["training", "Training"]];
+  const parts = {
+    lineup: `<div class="stack" style="gap:10px">
     <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${formOpts(S.formation)}</select></label><span class="row" style="gap:6px"><button class="btn sm" data-a="autopick">Pick best XI</button><button class="btn sm" data-a="freshpick" title="Best side from players at ${FRESH_FIT}%+ fitness">Pick fresh XI</button></span></div>
     <div class="pitch">${lines}${slotsHtml}</div>
     ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}
     <label class="row small" style="gap:6px"><input type="checkbox" data-c="rotate" ${S.set.rotate ? "checked" : ""}> Assistant picks a fresh XI before every match <span class="tiny muted">(players at ${FRESH_FIT}%+ fitness first; your changes on match day stick)</span></label>
     <p class="hint">Tap a shirt, then a player, to swap. The number is his rating in that role; a dashed ring means he's out of position. Your formation also matters in youth recruitment: prospects want a position your shape actually uses.</p>
-    <div class="card"><h3 style="margin-bottom:8px">Style of play</h3><div class="train styles">${(() => { const on = userOn(); return Object.entries(MENT).map(([k, t]) => { const f = styleFit(on, k), [, w, cls] = fitWord(f);
+    ${UI.sel && UI.sel.slot != null && F[UI.sel.slot] ? (() => { const role = F[UI.sel.slot][0], cur = S.lineup[UI.sel.slot];
+      const opts = ps.filter(p => p.id !== cur && avail(p)).sort((a, b) => slotRating(b, role) - slotRating(a, role));
+      return `<div class="card tac-pick"><div class="card-h"><h3>Who plays ${role}? <button class="lnk tiny" data-a="slot" data-v="${UI.sel.slot}">cancel</button></h3><span class="tiny muted">rating at ${role} · tap to put him in</span></div><div class="bench">${opts.map(p => { const r = slotRating(p, role), oop = p.pos !== role;
+        return `<button class="bench-p" data-a="pick-p" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)} ${xi.has(p.id) ? '<span class="chip xi">XI</span>' : bench.has(p.id) ? '<span class="chip hg">SUB</span>' : ""}</span><span class="rt-pair"><b class="rt ${aCls(r)}">${Math.round(r)}</b>${oop ? `<span class="tiny muted">${Math.round(r20(p.ovr))} as ${p.pos}</span>` : ""}</span><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`; }).join("")}</div></div>`; })() : ""}
+</div>`,
+    style: `<div class="card"><h3 style="margin-bottom:8px">Style of play</h3><div class="train styles">${(() => { const on = userOn(); return Object.entries(MENT).map(([k, t]) => { const f = styleFit(on, k), [, w, cls] = fitWord(f);
         return `<button data-a="ment" data-v="${k}" aria-pressed="${S.mentality === k}"><span><b>${t.l}</b>${STYLE_KEYS[k].length ? `<br><span class="tiny ${cls}">${w} (${f >= 0 ? "+" : ""}${f.toFixed(1)})</span>` : ""}</span><span class="tiny muted">${t.d}${STYLE_KEYS[k].length ? `<br><span class="muted">Needs: ${STYLE_KEYS[k].map(x => ATTR_NAME[x]).join(", ")}</span>` : ""}</span></button>`; }).join(""); })()}</div>
       <p class="hint" style="margin-top:8px">Fit compares your XI's key attributes with what's usual for their positions and ratings. A good fit strengthens a style's benefits and softens its costs; a poor one does the opposite, so a style your players can't play is worse than Neutral. More attacking means more goals at both ends. It pays when you're the stronger side or need a goal; against better teams a deeper style keeps games close. Counter-attacking feeds on opponents who commit forward.</p>
-      <label class="row small" style="margin-top:8px"><input type="checkbox" data-c="autostyle" ${S.set.autoStyle !== false ? "checked" : ""}> In matches you don't watch live, your assistant changes style with the score (chasing a deficit, protecting a lead)</label></div>
-    <div class="card"><h3 style="margin-bottom:8px">Training focus</h3><div class="train">${Object.entries(TRAIN).map(([k, t]) => `<button data-a="train" data-v="${k}" aria-pressed="${S.training === k}"><b>${t.l}</b><span class="tiny muted">${t.d}</span></button>`).join("")}</div>
-      <p class="hint" style="margin-top:8px">A full match costs an outfield player about 18 fitness. Midweek rounds and cup ties mean rotating.</p></div></div>
-    <section class="card"><div class="card-h"><h2>Selection</h2><span class="small muted">XI, then the nine on the bench (5 substitutions allowed)</span></div>
+      <label class="row small" style="margin-top:8px"><input type="checkbox" data-c="autostyle" ${S.set.autoStyle !== false ? "checked" : ""}> In matches you don't watch live, your assistant changes style with the score (chasing a deficit, protecting a lead)</label></div>`,
+    training: `<div class="card"><h3 style="margin-bottom:8px">Training focus</h3><div class="train">${Object.entries(TRAIN).map(([k, t]) => `<button data-a="train" data-v="${k}" aria-pressed="${S.training === k}"><b>${t.l}</b><span class="tiny muted">${t.d}</span></button>`).join("")}</div>
+      <p class="hint" style="margin-top:8px">A full match costs an outfield player about 18 fitness. Midweek rounds and cup ties mean rotating.</p></div>`,
+    squad: `<section class="card"><div class="card-h"><h2>Selection</h2><span class="small muted">XI, then the nine on the bench (5 substitutions allowed)</span></div>
     ${(() => { const picked = (S.bench || []).filter(id => bench.has(id)).length; return `<div class="row small" style="margin-bottom:8px;gap:10px"><span>Bench: <b>${picked}</b> chosen by you${picked < RULES.benchSize ? `, <b>${RULES.benchSize - picked}</b> filled automatically` : ""}.</span>${S.bench && S.bench.length ? '<button class="btn sm" data-a="benchauto">Reset to automatic</button>' : ""}<span class="tiny muted">Use Bench on a player to add or remove him.</span><label class="row tiny" style="gap:6px"><input type="checkbox" data-c="benchgk" ${S.set.benchGK !== false ? "checked" : ""}> Always include a substitute goalkeeper</label>${S.set.benchGK === false && !benchFor(me(), S.lineup).some(id => P(id).pos === "GK") ? '<span class="tiny warn">No keeper on the bench: if yours is injured or sent off, an outfielder goes in goal.</span>' : ""}</div>`; })()}
     <div class="tbl-wrap"><table><thead><tr><th></th><th>Pos</th><th>Name</th><th class="r">Age</th><th class="r">Rating</th><th>Fit</th><th>Mood</th><th></th></tr></thead><tbody>
     ${ps.map(p => `<tr class="click ${UI.sel && UI.sel.pid === p.id ? "sel" : ""}" data-a="pick-p" data-v="${p.id}"><td>${xi.has(p.id) ? '<span class="chip xi">XI</span>' : bench.has(p.id) ? ((S.bench || []).includes(p.id) ? '<span class="chip hg">SUB</span>' : '<span class="chip hg" style="opacity:.6" title="Filled automatically">SUB auto</span>') : ""}</td><td><span class="pos">${p.pos}</span></td><td>${esc(p.name)} ${statusChips(p)}</td><td class="r num">${p.age}</td><td class="r num">${ratingHtml(p)}</td><td>${fitBar(p.fit)} <span class="tiny num">${Math.round(p.fit)}</span></td><td>${moodTag(p)}</td><td>${xi.has(p.id) || !avail(p) || !eligibleIds(c).includes(p.id) ? "" : `<button class="btn sm ${(S.bench || []).includes(p.id) ? "primary" : ""}" data-a="benchtoggle" data-v="${p.id}">${(S.bench || []).includes(p.id) ? "On bench ✓" : "Bench"}</button>`}</td></tr>`).join("")}
-    </tbody></table></div></section></div>`;
+    </tbody></table></div></section>`,
+  };
+  return `<div class="stack" style="--club:${c.color}"><div class="seg lv-tabs y-tabs" role="tablist">${TABS.map(([k, l]) => `<button role="tab" data-a="tactab" data-v="${k}" aria-pressed="${tab === k}" aria-selected="${tab === k}">${l}</button>`).join("")}</div>
+    <div class="squad tac-one">${parts[tab] || parts.lineup}</div></div>`;
 }
 
 /* ---------- fixtures ---------- */
@@ -693,7 +708,10 @@ function viewTransfers() {
     // since a player below .3 turns any offer down.
     const INT = { keen: w => w >= .7, open: w => w >= .45, sign: w => w >= .3, no: w => w < .3 };
     if (INT[f.int]) pool = pool.filter(p => INT[f.int](willingness(p, c)));
-    pool.sort((a, b) => ratingMid(b) - ratingMid(a)); pool = pool.slice(0, 200);
+    // The whole filtered market goes to the table, which sorts it and then shows the first 200. It used to be
+    // cut to the 200 best-rated first, so sorting by asking price only reordered those 200: "All players"
+    // sorted cheapest-first showed dearer players than the Max fee 200k filter did.
+    pool.sort((a, b) => ratingMid(b) - ratingMid(a)); const poolN = pool.length;
     const loans = UI.tab === "loans";
     body = `${UI.tab === "scouted" ? scoutAssistHtml() : ""}<div class="filters"><label class="f">Position<select id="tf-pos" data-c="tf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Max age<select id="tf-age" data-c="tf-age">${[40, 30, 27, 24, 21].map(a => `<option value="${a}" ${f.age === a ? "selected" : ""}>${a === 40 ? "Any" : a}</option>`).join("")}</select></label>
@@ -701,6 +719,7 @@ function viewTransfers() {
       <label class="f">Interest<select id="tf-int" data-c="tf-int">${[["ALL", "Any"], ["keen", "Keen"], ["open", "Open or keen"], ["sign", "Would sign (not Not interested)"], ["no", "Not interested"]].map(([k, l]) => `<option value="${k}" ${(f.int || "ALL") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
       ${UI.tab !== "fa" ? `<label class="f">League<select id="tf-lg" data-c="tf-lg"><option value="ALL">All leagues</option><option value="ABROAD" ${f.lg === "ABROAD" ? "selected" : ""}>All foreign leagues</option>${lgOpts(f.lg)}</select></label>` : ""}</div>
+      ${poolN > 200 ? `<p class="tiny muted" style="margin:0 0 6px">${poolN.toLocaleString()} players match: showing the first 200 in the order you sort by.</p>` : ""}
       ${table("t-" + UI.tab, [
         { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) },
         { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>` },
@@ -715,7 +734,7 @@ function viewTransfers() {
         loans ? { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage) } : { k: "ask", l: "Asking", r: 1, v: p => askingPrice(p), f: p => p.club >= 0 ? money(askingPrice(p)) : "Free" },
         { k: "w", l: "Interest", v: p => willingness(p, c), f: p => { const [l, k] = willingLabel(willingness(p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
         { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"}>Ask to loan</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
-      ], pool, { empty: UI.tab === "scouted" && !scouted.length ? "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here." : "No players match these filters." })}`;
+      ], pool, { limit: 200,  empty: UI.tab === "scouted" && !scouted.length ? "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here." : "No players match these filters." })}`;
   }
   const title = { offers: "Offers", scouted: "Scouted players", search: "Search the market", mine: "Selling", log: "Activity" }[group];
   return `<div class="stack">${hoursStrip()}<div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-a="ttab" data-v="${k}" aria-pressed="${group === k}" aria-selected="${group === k}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>
