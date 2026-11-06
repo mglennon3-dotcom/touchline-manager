@@ -458,3 +458,4 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 /* tactics tabs: one column, pitch kept to phone width on desktop */
 .squad.tac-one{grid-template-columns:minmax(0,1fr)}.squad.tac-one .pitch{max-width:440px;margin:0 auto;width:100%}
 .tac-pick{scroll-margin-top:90px}
+.subs-card,.sub-pick{scroll-margin-top:90px}

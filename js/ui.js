@@ -569,6 +569,15 @@ function viewTactics() {
   }).join("");
   const lines = PITCH_LINES;
   const ps = c.squad.map(P).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
+  /* Substitutes under the pitch: tap one to swap him for anyone not in the matchday squad. Your choices
+     stick; any spot you haven't chosen is filled automatically (marked "auto"). */
+  const benchIds = benchFor(c, S.lineup.filter(x => x != null)), mineB = new Set(S.bench || []);
+  const subSel = UI.sel && UI.sel.sub != null ? UI.sel.sub : null;
+  const outside = ps.filter(p => !xi.has(p.id) && !bench.has(p.id) && avail(p) && isReg(p, c));
+  const subsHtml = `<div class="card subs-card"><div class="card-h"><h3>Substitutes</h3><span class="tiny muted">tap one to change him${S.bench && S.bench.length ? ' · <button class="lnk tiny" data-a="benchauto">automatic bench</button>' : ""}</span></div>
+    <div class="bench">${benchIds.map((id, i) => { const p = P(id); return `<button class="bench-p ${subSel === i ? "sel" : ""}" data-a="subslot" data-v="${i}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}${mineB.has(id) ? "" : ' <span class="tiny muted">auto</span>'}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`; }).join("")}</div>
+    ${subSel != null && benchIds[subSel] != null ? `<div class="tac-pick sub-pick" style="margin-top:10px"><div class="row between"><b class="small">Replace ${esc(P(benchIds[subSel]).name)} with…</b><button class="lnk tiny" data-a="subslot" data-v="${subSel}">cancel</button></div>
+      <div class="bench" style="margin-top:6px">${outside.length ? outside.map(p => `<button class="bench-p" data-a="subpick" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`).join("") : '<p class="small muted">Everyone available is already in the matchday squad.</p>'}</div></div>` : ""}</div>`;
   /* Tabs, as on the Youth and Transfers pages: the pitch, the squad list, style and training each on their
      own. Tapping a shirt on the Line-up tab lists who could play there, best first, so a change never needs
      the Selection tab. */
@@ -577,6 +586,7 @@ function viewTactics() {
     lineup: `<div class="stack" style="gap:10px">
     <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${formOpts(S.formation)}</select></label><span class="row" style="gap:6px"><button class="btn sm" data-a="autopick">Pick best XI</button><button class="btn sm" data-a="freshpick" title="Best side from players at ${FRESH_FIT}%+ fitness">Pick fresh XI</button></span></div>
     <div class="pitch">${lines}${slotsHtml}</div>
+    ${subsHtml}
     ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}
     <label class="row small" style="gap:6px"><input type="checkbox" data-c="rotate" ${S.set.rotate ? "checked" : ""}> Assistant picks a fresh XI before every match <span class="tiny muted">(players at ${FRESH_FIT}%+ fitness first; your changes on match day stick)</span></label>
     <p class="hint">Tap a shirt, then a player, to swap. The number is his rating in that role; a dashed ring means he's out of position. Your formation also matters in youth recruitment: prospects want a position your shape actually uses.</p>

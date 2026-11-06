@@ -239,6 +239,11 @@ const ACT = {
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   sqadv: () => { S.set.sqAdv = !S.set.sqAdv; save(); render(); },
+  // Substitutes on the Line-up tab: pick a bench spot, then anyone outside the matchday squad to take it.
+  subslot: v => { const i = +v; UI.sel = UI.sel && UI.sel.sub === i ? null : { sub: i }; render(); if (UI.sel) document.querySelector(".sub-pick")?.scrollIntoView({ block: "start" }); },
+  subpick: v => { const id = +v, i = UI.sel && UI.sel.sub; if (i == null) return; const cur = benchFor(me(), S.lineup.filter(x => x != null)), old = cur[i];
+    cur[i] = id; S.bench = cur; S.benchNo = (S.benchNo || []).filter(x => x !== id); if (old != null && !S.benchNo.includes(old)) S.benchNo.push(old);
+    UI.sel = null; save(); render(); document.querySelector(".subs-card")?.scrollIntoView({ block: "start" }); toast(`${P(id).name} on the bench in place of ${P(old).name}.`); },
   tactab: v => { UI.tacTab = v; UI.sel = null; render(); },
   ytab: v => { UI.ytab = v; render(); },
   livetab: v => { UI.ltab = v; render(); },

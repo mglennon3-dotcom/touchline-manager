@@ -69,7 +69,8 @@ squads: those without a strong leaning pick possession or counter-attacking when
 switch, before or during a match, to a style their players plainly can't play.
 
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
-there, best first, and tap one to put him in), Selection (the squad list with bench picks), Style and Training.
+there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
+everyone outside the matchday squad and swap him in), Selection (the squad list with bench picks), Style and Training.
 Picking a side: "Pick best XI" (Tactics page) asks your assistant for the strongest side, and it will move a
 player out of his usual position when his attributes make him better there than the specialist, say a
 tough-tackling midfielder at centre-back. AI clubs pick the same way. "Pick fresh XI" (Tactics page and the
