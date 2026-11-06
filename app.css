@@ -463,3 +463,7 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .win-badge{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:var(--accent);color:#1a1300;font-weight:700;letter-spacing:.04em;white-space:nowrap}
 .chip.acad{background:var(--accent);color:#1a1300;border-color:transparent}
 .inj-ask{border:2px solid var(--loss,#c0392b);margin-top:10px}
+
+/* cup ties: the competition as a badge on the live scoreboard */
+.board .cup-badge{display:inline-block;padding:3px 12px;border-radius:12px;background:var(--accent);color:#1a1300;font-family:var(--f-display);font-weight:800;letter-spacing:.05em;text-transform:uppercase;font-size:14px}
+.board .cup-sub{display:block;margin-top:4px;font-size:12px;color:var(--board-muted)}
