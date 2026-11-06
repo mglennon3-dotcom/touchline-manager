@@ -598,7 +598,7 @@ function viewTactics() {
     return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(slotRating(p, role))}</span><span class="nm">${esc(pitchName(p, S.lineup.map(id => S.players[id])))}</span><span class="fb"><i style="width:${p.fit}%;background:${fitColor(p.fit)}"></i></span></button>`;
   }).join("");
   const lines = PITCH_LINES;
-  const ps = c.squad.map(P).filter(p => !p.acad || S.set.acadSel).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
+  const ps = c.squad.map(P).filter(p => !p.acad || S.set.acadSel || (S.acadPick || []).includes(p.id)).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
   /* Substitutes under the pitch: tap one to swap him for anyone not in the matchday squad. Your choices
      stick; any spot you haven't chosen is filled automatically (marked "auto"). */
   const benchIds = benchFor(c, S.lineup.filter(x => x != null)), mineB = new Set(S.bench || []);
@@ -614,7 +614,7 @@ function viewTactics() {
   const tab = UI.tacTab || "lineup", TABS = [["lineup", "Line-up"], ["squad", "Selection"], ["style", "Style"], ["training", "Training"]];
   const parts = {
     lineup: `<div class="stack" style="gap:10px">
-    <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${formOpts(S.formation)}</select></label><span class="row" style="gap:6px"><button class="btn sm" data-a="autopick">Pick best XI</button><button class="btn sm" data-a="freshpick" title="Best side from players at ${FRESH_FIT}%+ fitness">Pick fresh XI</button></span></div>
+    <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${formOpts(S.formation)}</select></label><span class="row" style="gap:6px"><button class="btn sm" data-a="autopick">Pick best XI</button><button class="btn sm" data-a="freshpick" title="Best side from players at ${FRESH_FIT}%+ fitness">Pick fresh XI</button><button class="btn sm" data-a="potpick" title="Favours players 23 and under with room to grow; academy players who are ready can start or sit on the bench">Pick high-potential XI</button></span></div>
     <div class="pitch">${lines}${slotsHtml}</div>
     ${subsHtml}
     ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}

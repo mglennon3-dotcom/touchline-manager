@@ -75,7 +75,10 @@ Picking a side: "Pick best XI" (Tactics page) asks your assistant for the strong
 player out of his usual position when his attributes make him better there than the specialist, say a
 tough-tackling midfielder at centre-back. AI clubs pick the same way. "Pick fresh XI" (Tactics page and the
 match card) picks the best side from players at 80%+ fitness, using tired players only where nobody fresh can
-fill a spot. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
+fill a spot. "Pick high-potential XI" favours players 23 and under with room to grow (up to about 4 points of credit for a
+teenager far below his ceiling): academy players rated Ready to start can start and those rated Ready can be
+substitutes, and the bench takes young prospects first. Across 15 clubs it changed 0-3 players, costing 0-0.4
+of team strength. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
 the morning of each match day, so any change you make after that stands.
 
 **Team needs** has its own tab. Each role in your formation is ranked by priority: your weakest starter

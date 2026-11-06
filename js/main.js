@@ -193,8 +193,12 @@ const ACT = {
   friask: () => { const f = UI.fri || {}; if (f.opp == null) return toast("Choose an opponent first."); const r = bookFriendly(f.wk ?? S.summerDay, f.opp, f.home !== false); UI.fri = { home: f.home }; save(); render(); toast(r); },
   fricancel: v => { const r = cancelFriendly(+v); save(); render(); toast(r); },
   benchauto: () => { S.bench = null; S.benchNo = []; save(); render(); toast("Bench back to automatic: your best available players."); },
-  freshpick: () => { const c = me(); S.lineup = freshPick(eligibleIds(c), S.formation); UI.sel = null; save(); render(); const tired = S.lineup.filter(id => id != null && P(id).fit < FRESH_FIT).length; toast(tired ? `Fresh XI picked. ${tired} position${tired > 1 ? "s" : ""} had no one at ${FRESH_FIT}%+ fitness.` : `Fresh XI picked: everyone at ${FRESH_FIT}%+ fitness.`); },
-  autopick: () => { S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
+  potpick: () => { const c = me(), r = potentialPick(c); UI.sel = null; save(); render();
+    const xi = S.lineup.filter(id => id != null).map(P), young = xi.filter(p => p.age <= 23).length, age = (xi.reduce((s, p) => s + p.age, 0) / xi.length).toFixed(1);
+    const parts = [r.acadXI ? `${r.acadXI} academy player${r.acadXI > 1 ? "s" : ""} starting` : "", r.acadBench ? `${r.acadBench} academy player${r.acadBench > 1 ? "s" : ""} on the bench` : ""].filter(Boolean);
+    toast(`High-potential XI: ${young} of 11 aged 23 or under, average age ${age}.${parts.length ? " " + parts.join(", ") + "." : ""}`); },
+  freshpick: () => { const c = me(); S.acadPick = []; S.lineup = freshPick(eligibleIds(c), S.formation); UI.sel = null; save(); render(); const tired = S.lineup.filter(id => id != null && P(id).fit < FRESH_FIT).length; toast(tired ? `Fresh XI picked. ${tired} position${tired > 1 ? "s" : ""} had no one at ${FRESH_FIT}%+ fitness.` : `Fresh XI picked: everyone at ${FRESH_FIT}%+ fitness.`); },
+  autopick: () => { S.acadPick = []; S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render();
     // The "who plays here" list is below the pitch, off-screen on a phone: bring it into view.
     if (UI.sel) document.querySelector(".tac-pick")?.scrollIntoView({ block: "start" }); },
@@ -279,7 +283,7 @@ const ACT = {
   livecont: () => finishLive(),
 };
 const CHG = {
-  acadsel: (v, el) => { S.set.acadSel = el.checked; if (!el.checked) { S.bench = (S.bench || []).filter(x => !P(x) || !P(x).acad); fixUserLineup(); } save(); render(); toast(el.checked ? "Academy players can now be picked for the first team." : "Academy players are out of first-team selection again."); },
+  acadsel: (v, el) => { S.set.acadSel = el.checked; if (!el.checked) { S.acadPick = []; S.bench = (S.bench || []).filter(x => !P(x) || !P(x).acad); fixUserLineup(); } save(); render(); toast(el.checked ? "Academy players can now be picked for the first team." : "Academy players are out of first-team selection again."); },
   rotate: (v, el) => { S.set.rotate = el.checked; save(); render(); toast(el.checked ? "Your assistant will pick a fresh XI before every match." : "Rotation off: your XI stays as you set it."); },
   "fri-wk": v => { (UI.fri ||= {}).wk = +v; render(); }, "fri-home": v => { (UI.fri ||= {}).home = v === "H"; render(); }, "fri-opp": v => { (UI.fri ||= {}).opp = +v; render(); },
   benchgk: (v, el) => { S.set.benchGK = el.checked; save(); render(); toast(el.checked ? "A substitute goalkeeper will always be named." : "No automatic substitute goalkeeper. If your keeper goes off, an outfielder goes in goal."); },

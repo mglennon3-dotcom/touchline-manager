@@ -90,7 +90,8 @@ const isReg = (p, c) => !isSenior(p) || (c.reg || []).includes(p.id);
 /* Your academy (p.acad): youth players kept apart from the first team. They aren't picked for senior matches
    unless you include them (S.set.acadSel), and they play their own unofficial matches (academyWeek). */
 const ACAD_MAX_AGE = 20;
-const acadOut = (p, c) => p.acad && isUser(c) && !(S.set && S.set.acadSel);
+// S.acadPick: academy players a high-potential pick brought in for selection, without the general switch.
+const acadOut = (p, c) => p.acad && isUser(c) && !(S.set && S.set.acadSel) && !(S.acadPick || []).includes(p.id);
 const eligibleIds = c => c.squad.filter(id => isReg(P(id), c) && !acadOut(P(id), c));
 function regInfo(c) {
   const ps = c.squad.map(P), seniors = ps.filter(isSenior), reg = seniors.filter(p => isReg(p, c)), nonHG = reg.filter(p => !isHG(p, c.country));
@@ -263,6 +264,23 @@ function optimisePick(pool, sl, out, score) {
 }
 function autoPick(ids, f, fixed) {
   return optimisePick(ids.map(P).filter(avail), slotsOf(f), fixed ? fixed.slice() : Array(11).fill(null), eff);
+}
+/* A high-potential side: the strongest XI once players 23 and under get credit for their room to grow, up to
+   about 4 points on the 20 scale for a teenager far below his ceiling (so a promising 19-year-old beats a
+   somewhat better veteran, not a far better one). A gentler first version (up to 2) changed no one at most clubs. Academy players rated Ready to start can play, those rated
+   Ready can be substitutes; the bench takes them and other high-potential youngsters first. */
+const youthBonus = p => p.age <= 23 ? Math.min(10, Math.max(0, p.pot - p.ovr) * .5) + (p.age <= 20 ? 2 : 0) : 0;
+function potentialPick(c) {
+  const acad = c.squad.map(P).filter(p => p.acad && avail(p) && !p.loan).map(p => [p, acadReadiness(p, c)[0]]);
+  const starters = acad.filter(([, r]) => r === "Ready to start").map(([p]) => p.id), benchers = acad.filter(([, r]) => r === "Ready").map(([p]) => p.id);
+  S.acadPick = [...starters, ...benchers];
+  const pool = eligibleIds(c).filter(id => !P(id).acad || starters.includes(id) || (S.set && S.set.acadSel)).map(P).filter(avail);
+  S.lineup = optimisePick(pool, slotsOf(S.formation), Array(11).fill(null), (p, role) => eff(p, role) + youthBonus(p));
+  const xi = new Set(S.lineup);
+  S.bench = eligibleIds(c).map(P).filter(p => !xi.has(p.id) && avail(p) && (S.acadPick.includes(p.id) || (p.age <= 23 && p.pot - p.ovr >= 8)))
+    .sort((a, b) => b.pot - a.pot).slice(0, 5).map(p => p.id);
+  S.benchNo = [];
+  return { acadXI: S.lineup.filter(id => id != null && P(id).acad).length, acadBench: S.bench.filter(id => P(id).acad).length };
 }
 /* A fresh XI: the same optimiser, but anyone under 80% fitness counts only once every fresher option is used
    (including moving a fresh player out of position). "Pick best XI" weighs fitness lightly: a player at 60%
