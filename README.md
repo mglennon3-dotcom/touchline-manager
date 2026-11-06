@@ -121,6 +121,11 @@ cards, bans or ratings.
 (fitness included), fitness bars and bookings, with the bench below. Tap a player and then a substitute to
 bring him on, or two players to swap their positions; change formation from the menu above the pitch. Any of
 these pauses the match until you resume.
+Substitutes sit directly under the pitch, above the Starting XI. Before kick-off, tap a sub (or a starter)
+to list everyone outside the matchday squad and swap one in.
+**Fitness** recovers day by day between fixtures (Recovery about +4.5 a day, Balanced +3.5, Intense +2.3;
+a full match costs 18-22). With Balanced training a side playing once a week is fresh each time, and a
+midweek game leaves regulars a few points down. Over a season, starting XIs average 94-98% at kick-off.
 The scoreboard lists each side's scorers and bookings with the minute, and goals and bookings show on
 your players on the pitch too. Below the play controls, three tabs replace the long page: Commentary,
 Tactics (style, formation, team and bench) and Stats (possession, shots, cards, subs and match ratings).

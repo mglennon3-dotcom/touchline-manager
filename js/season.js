@@ -277,7 +277,20 @@ function playOthers(day, fxs) {
   for (const fx of fxs) { if (fx.h === S.club || fx.a === S.club) continue; const M = runToEnd(makeMatch(fx, true)); applyMatch(M); recordResult(fx, M); }
 }
 function userFixture(fxs) { return fxs.find(fx => fx.h === S.club || fx.a === S.club) || null; }
+/* Fitness recovers day by day between fixtures. It used to come as one weekly top-up of +17 (balanced
+   training) against 18-22 for a full match, so a player starting every week ended each one a little worse
+   off and midweek rounds sank him: starters averaged 87-90% at kick-off, with one or two under 75% in most
+   matches. Each fixture slot has a weekday (European and cup ties midweek, league midweek on Tuesday, league
+   weekends on Saturday) and recovery is per day elapsed. */
+const SLOT_DAY = [2, 3, 2, 6];  // ord 0 European, 1 cup, 2 midweek league, 3 weekend league
+const dayNo = d => d.w * 7 + SLOT_DAY[d.ord ?? 3];
+function recoverDays(days) {
+  if (days <= 0) return;
+  for (const c of activeClubs()) { const per = TRAIN[isUser(c) ? S.training : "bal"].fit / 7 * days; for (const id of c.squad) { const p = P(id); if (p && p.fit < 100) p.fit = Math.min(100, Math.round((p.fit + per) * 10) / 10); } }
+}
 function finishDay() {
+  const cur = S.days[S.di], nxt = S.days[S.di + 1];
+  recoverDays(nxt ? dayNo(nxt) - dayNo(cur) : 7);
   S.di++;
   if (S.di >= S.days.length) { weekly(); endSeason(); return; }
   if (S.days[S.di].w > S.week) { weekly(); S.week = S.days[S.di].w; }
@@ -296,7 +309,6 @@ function weekly() {
     const possible = Math.max(1, c.wkMatches) * 90;
     for (const id of c.squad) {
       const p = P(id);
-      p.fit = Math.min(100, p.fit + t.fit);
       p.pt = .75 * p.pt + .25 * Math.min(1, p.wm / possible); p.wm = 0;
       if (p.inj > 0) p.inj--;
       // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.

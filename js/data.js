@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.29.0";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.30.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -102,9 +102,10 @@ const STYLE_KEYS = { vatt: ["fin", "dri", "pac", "sta"], att: ["fin", "dri", "vi
   ctr: ["pac", "dri", "fin", "vis"], def: ["tac", "mar", "hea", "str"], vdef: ["tac", "mar", "hea", "cmp"] };
 const STYLE_BY_AG = { 3: "vatt", 2: "att", 1: "pos", 0: "bal", "-1": "ctr", "-2": "def", "-3": "vdef" };
 const TRAIN = {
-  rec: { l: "Recovery", fit: 24, grow: .45, d: "+24 fitness a week. Players barely develop." },
-  bal: { l: "Balanced", fit: 17, grow: 1, d: "+17 fitness a week. Steady development." },
-  int: { l: "Intense", fit: 10, grow: 1.6, d: "+10 fitness a week. Fastest development; occasional training knocks." },
+  // fit is recovery per week, paid out day by day (see recoverDays). A full match costs 18-22.
+  rec: { l: "Recovery", fit: 32, grow: .45, d: "About +4.5 fitness a day: fresh even after a midweek game. Players barely develop." },
+  bal: { l: "Balanced", fit: 24, grow: 1, d: "About +3.5 fitness a day: fresh for a game a week, a few points down after a midweek one. Steady development." },
+  int: { l: "Intense", fit: 16, grow: 1.6, d: "About +2.3 fitness a day: a game every week slowly wears players down. Fastest development; occasional training knocks." },
 };
 // Squad shape every generated club starts from (24 senior-ish players)
 const ROLE_MIX = { GK: 3, CB: 4, FB: 4, DM: 2, CM: 3, AM: 2, W: 3, ST: 3 };
