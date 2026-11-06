@@ -438,3 +438,9 @@ body{padding-top:env(safe-area-inset-top,0px)}
 @media (max-width:560px){.board .evs{font-size:11.5px}}
 
 .mr-adv{display:block;white-space:normal;overflow-wrap:anywhere;font-size:11px;color:var(--muted);font-weight:400;font-family:var(--f-mono);margin-top:1px}
+
+/* youth page tabs */
+.y-tabs{margin:0}.y-tabs button{padding:8px 6px;white-space:nowrap}
+.tab-n{display:inline-block;min-width:18px;padding:0 5px;border-radius:9px;background:var(--line);color:var(--ink);font-size:11px;line-height:18px;font-family:var(--f-mono)}
+.y-tabs button[aria-pressed="true"] .tab-n{background:var(--surface);color:var(--ink)}
+@media (max-width:420px){.y-tabs button{font-size:13px;padding:8px 4px}}
