@@ -233,6 +233,7 @@ const ACT = {
   },
   liveresume: () => { LIVE.paused = false; tick(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
+  sqadv: () => { S.set.sqAdv = !S.set.sqAdv; save(); render(); },
   livetab: v => { UI.ltab = v; render(); },
   livespeed: v => { LIVE.speed = +v; render(); },
   // Tapping your team pauses the match: pick a player, then a substitute (or the other way round), or two

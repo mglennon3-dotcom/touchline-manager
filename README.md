@@ -122,8 +122,8 @@ finisher scoring it against an average keeper, so over a season a league's goals
 percent of its xG. A striker well above his xG is finishing better than the chances he gets; one below is
 wasting them. The player who set up a shot gets a key pass and its xG as expected assists (xA). Shots of
 0.25 xG or more count as big chances. In a match, the Stats tab adds xG, big chances, headed shots and
-saves, and each player's line in the ratings shows his shots, xG, key passes, xA or saves. The Squad page
-adds season Shots, On target, xG, G−xG, xG/90 (from 450 minutes), Key passes, xA, Saves and Clean
+saves, and each player's line in the ratings shows his shots, xG, key passes, xA or saves. The Squad page's
+Advanced stats button (off by default, remembered per career) adds season Shots, On target, xG, G−xG, xG/90 (from 450 minutes), Key passes, xA, Saves and Clean
 sheets. Each English league page lists the xG and chance-creation leaders, and the table shows each
 club's league xG for and against. Foreign leagues are quick-simmed without shots, so they have none.
 
