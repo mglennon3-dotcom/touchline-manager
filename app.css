@@ -467,3 +467,6 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 /* cup ties: the competition as a badge on the live scoreboard */
 .board .cup-badge{display:inline-block;padding:3px 12px;border-radius:12px;background:var(--accent);color:#1a1300;font-family:var(--f-display);font-weight:800;letter-spacing:.05em;text-transform:uppercase;font-size:14px}
 .board .cup-sub{display:block;margin-top:4px;font-size:12px;color:var(--board-muted)}
+.opa{display:block;font-size:12px;font-weight:400;color:var(--muted);margin-top:1px;white-space:nowrap}
+/* names wrap rather than clip, so a long name doesn't squash its XI / SUB tag into a blank chip */
+.bench-p .nm{min-width:0;white-space:normal;overflow-wrap:anywhere}
