@@ -215,7 +215,11 @@ wages at today's bill, running costs, scouting, stadium works and any cost-ratio
 bonuses and future transfers count once they happen. In preseason it projects the coming season. Checked
 by projecting at week 6 and playing the season out: a Premier club came to €34.4M projected against €38.9M
 actual (the gap was a cup run), and a fifth-tier club to €230k against €260k.
-**Transfer budget** (Finances and Transfers pages): the fee you can pay for a player on your starters'
+**Transfers page** is laid out like the Youth page, in tabs with counts: Offers (players you bid for who
+turned you down, with your offer, today's asking price, the answer and how keen they are now, plus a New
+offer button; players you sign drop off), Scouted, Search (all players, free agents, transfer listed, loan
+targets), Selling (your listed players) and Activity. The Offers tab opens with a one-line transfer budget.
+**Transfer budget** (Finances page, summarised on Transfers): the fee you can pay for a player on your starters'
 average wage over four years. It is the smaller of what your cash allows without ending the season in the
 red and the room left under the 85% cost-ratio line, shown with this season's fees in, fees out and net spend.
 

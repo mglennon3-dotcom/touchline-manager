@@ -1,7 +1,7 @@
 "use strict";
 /* Rendering. Every page is a function returning HTML; actions are wired by data-a attributes in main.js. */
 const UI = { page: "home", sel: null, modal: null, sort: {}, menu: false, busy: false, toastT: 0,
-  lg: null, cupK: "FA", tab: "search", tf: { pos: "ALL", age: 40, min: 0, fee: 0, lg: "ALL" }, sqf: "ALL",
+  lg: null, cupK: "FA", tab: "offers", tf: { pos: "ALL", age: 40, min: 0, fee: 0, lg: "ALL" }, sqf: "ALL",
   yf: { reg: "ENG", pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5, awY: null, awL: null };
 const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["needs", "Team Needs"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
 
@@ -655,10 +655,32 @@ function viewCups() {
 function viewTransfers() {
   // Scouted: everyone your scouts have filed a report on, wherever he plays now (players you've signed drop off).
   const scouted = Object.keys(S.scout || {}).map(id => S.players[id]).filter(p => p && S.scout[p.id] > 0 && p.club !== S.club && !(p.loan && p.loan.from === S.club));
-  const c = me(), tabs = [["search", "Search players"], ["scouted", `Scouted (${scouted.length})`], ["fa", "Free agents"], ["listed", "Available"], ["loans", "Loan targets"], ["mine", "Your listed players"], ["log", "Activity"]];
+  const c = me();
+  // Laid out like the Youth page: tabs with counts instead of one long page. Offers is your working list of
+  // players you've bid for who haven't joined; Search holds the four ways of browsing the market.
+  const offers = Object.entries(S.bids || {}).map(([id, b]) => ({ p: S.players[id], b })).filter(o => o.p && o.b.res !== "signed" && o.p.club !== S.club && o.b.y >= S.year - 1);
+  const SEARCH = [["search", "All players"], ["fa", "Free agents"], ["listed", "Transfer listed"], ["loans", "Loan targets"]];
+  const group = SEARCH.some(([k]) => k === UI.tab) ? "search" : UI.tab;
+  const listedMine = c.squad.map(P).filter(p => p.listed || p.req).length;
+  const tabs = [["offers", "Offers", offers.length], ["scouted", "Scouted", scouted.length], ["search", "Search", null], ["mine", "Selling", listedMine], ["log", "Activity", null]];
   const open = windowOpen();
   let body;
-  if (UI.tab === "log") body = table("tlog", [{ k: "w", l: "When", f: t => `${seasonLabel(t.y)} · ${t.w}` }, { k: "n", l: "Player", f: t => S.players[t.pid] ? playerA(S.players[t.pid]) : esc(t.name) }, { k: "f", l: "From", f: t => t.from >= 0 ? clubA(t.from, { flag: 1 }) : "Free agent" }, { k: "t", l: "To", f: t => clubA(t.to, { flag: 1 }) }, { k: "fee", l: "Fee", r: 1, v: t => t.fee, f: t => t.fee ? money(t.fee) : "Free" }], S.tlog, { limit: 150, empty: "No transfers yet." });
+  if (UI.tab === "offers") {
+    const t = transferBudget(c);
+    body = `<div class="small" style="margin-bottom:8px">Budget about <b class="num">${money(Math.round(t.budget / 1e5) * 1e5)}</b> for a player on ${perWeek(t.wage)} · <button class="lnk" data-a="go" data-v="finances">details</button></div>` + table("toffers", [
+      { k: "n", l: "Player", v: o => o.p.name, f: o => playerA(o.p) },
+      { k: "pos", l: "Pos", v: o => ROLE_ORDER[o.p.pos], f: o => `<span class="pos">${o.p.pos}</span>` },
+      { k: "age", l: "Age", r: 1, v: o => o.p.age, f: o => o.p.age },
+      { k: "ovr", l: "Rating", r: 1, v: o => o.p.ovr, f: o => ratingHtml(o.p) },
+      { k: "club", l: "Club", v: o => o.p.club, f: o => o.p.club >= 0 ? clubA(o.p.club, { flag: 1 }) : "Free agent" },
+      { k: "fee", l: "Your offer", r: 1, v: o => o.b.fee, f: o => o.b.fee ? money(o.b.fee) : "Contract" },
+      { k: "ask", l: "Asking now", r: 1, v: o => o.p.club >= 0 ? askingPrice(o.p) : 0, f: o => o.p.club >= 0 ? money(askingPrice(o.p)) : "—" },
+      { k: "res", l: "Answer", v: o => o.b.res, f: o => o.p.club !== o.b.club ? `<span class="muted">Moved to</span> ${o.p.club >= 0 ? clubA(o.p.club, { short: true }) : "free agency"}` : o.b.res === "refused" ? '<span class="bad">He refused</span>' : '<span class="warn">Club rejected the fee</span>' },
+      { k: "when", l: "When", v: o => o.b.y * 100 + o.b.w, f: o => `${seasonLabel(o.b.y)}${o.b.w >= 0 ? ` · wk ${o.b.w + 1}` : " · summer"}` },
+      { k: "w", l: "Interest now", v: o => willingness(o.p, c), f: o => { const [l, k] = willingLabel(willingness(o.p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
+      { k: "act", l: "", f: o => `<button class="btn sm" data-a="bid" data-v="${o.p.id}" ${windowOpen() && o.p.club !== S.club ? "" : "disabled"}>New offer</button>` },
+    ], offers, { sort: { k: "when", d: -1 }, empty: "No open offers. Players you bid for who turn you down are kept here, with your offer, today's asking price and how keen they are now, so you can come back with a better one. Those who sign drop off." });
+  } else if (UI.tab === "log") body = table("tlog", [{ k: "w", l: "When", f: t => `${seasonLabel(t.y)} · ${t.w}` }, { k: "n", l: "Player", f: t => S.players[t.pid] ? playerA(S.players[t.pid]) : esc(t.name) }, { k: "f", l: "From", f: t => t.from >= 0 ? clubA(t.from, { flag: 1 }) : "Free agent" }, { k: "t", l: "To", f: t => clubA(t.to, { flag: 1 }) }, { k: "fee", l: "Fee", r: 1, v: t => t.fee, f: t => t.fee ? money(t.fee) : "Free" }], S.tlog, { limit: 150, empty: "No transfers yet." });
   else if (UI.tab === "mine") body = table("tmine", [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => p.pos }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], c.squad.map(P).filter(p => p.listed || p.req), { empty: "None of your players are listed. List a player from his profile and clubs will start bidding during transfer windows." });
   else {
     const f = UI.tf;
@@ -690,9 +712,11 @@ function viewTransfers() {
         { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"}>Ask to loan</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
       ], pool, { empty: UI.tab === "scouted" && !scouted.length ? "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here." : "No players match these filters." })}`;
   }
-  return `${transferBudgetCard(c)}${needsCard(true)}<section class="card"><div class="card-h"><h2>Transfers</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
-    <div class="row" style="margin-bottom:12px"><span class="seg" role="group">${tabs.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</span></div>
-    ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Ratings outside your division are estimates until you scout a player (open him, 2 hours). Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section>`;
+  const title = { offers: "Offers", scouted: "Scouted players", search: "Search the market", mine: "Selling", log: "Activity" }[group];
+  return `<div class="stack"><div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-a="ttab" data-v="${k}" aria-pressed="${group === k}" aria-selected="${group === k}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>
+    ${group === "search" ? needsCard(true) : ""}<section class="card"><div class="card-h"><h2>${title}</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
+    ${group === "search" ? `<div class="chips" role="group" aria-label="Browse" style="margin-bottom:10px">${SEARCH.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</div>` : ""}
+    ${body}<p class="hint" style="margin-top:10px">${UI.tab === "loans" ? `Young players (${RULES.loanMaxAge} and under) who aren't starting for their clubs. Parent clubs lend them only where they'll play, and want them at a level that tests them. You pay the wages; up to ${RULES.loansIn} loans at once.` : `Ratings outside your division are estimates until you scout a player (open him, 2 hours). Interest reflects more than money: your standing against his current club, whether he'd start in your ${S.formation}, European football, his mood and loyalty.`}</p></section></div>`;
 }
 
 /* ---------- youth recruitment ---------- */

@@ -113,20 +113,29 @@ function canBuy(p) {
   if (S.tried && S.tried[p.id] === S.year + ":" + S.week + ":" + S.phase + S.summerDay) return "His club has already turned you down this week.";
   return null;
 }
+/* Every offer you make that gets an answer is kept for the Offers tab: the fee, the asking price then, and the
+   outcome (club rejected the fee, player refused, or signed). Refusals before an answer (no cash, window shut)
+   aren't offers. */
+function logBid(p, fee, yrs, res, msg) { (S.bids ||= {})[p.id] = { y: S.year, w: S.phase === "season" ? S.week : -1, fee, ask: p.club >= 0 ? askingPrice(p) : 0, yrs, res, msg, club: p.club }; }
 function userBid(p, fee, yrs) {
+  const r = userBidInner(p, fee, yrs);
+  if (r.res) logBid(p, fee, yrs, r.res, r.msg);
+  return r;
+}
+function userBidInner(p, fee, yrs) {
   const err = canBuy(p); if (err) return { ok: false, msg: err };
   const c = me(), ask = askingPrice(p), w = willingness(p, c);
   if (fee * 1.05 > c.cash) return { ok: false, msg: `You can't cover ${money(fee)} plus agent fees with ${money(c.cash)} in the bank.` };
   if (p.club >= 0 && fee < ask) {
     const ok = fee >= ask * .88 && R() < .45;
-    if (!ok) { (S.tried ||= {})[p.id] = S.year + ":" + S.week + ":" + S.phase + S.summerDay; return { ok: false, msg: `${C(p.club).name} reject ${money(fee)}. They want around ${money(ask)}.` }; }
+    if (!ok) { (S.tried ||= {})[p.id] = S.year + ":" + S.week + ":" + S.phase + S.summerDay; return { ok: false, res: "rejected", msg: `${C(p.club).name} reject ${money(fee)}. They want around ${money(ask)}.` }; }
   }
-  if (w < .3) return { ok: false, msg: `${p.name} doesn't want to join. ${whyNot(p, c)}` };
+  if (w < .3) return { ok: false, res: "refused", msg: `${p.name} doesn't want to join. ${whyNot(p, c)}` };
   const wage = contractDemand(p, c, w), fromRival = p.club >= 0 ? rivalry(p.club, c.id) : 0, rivalClub = p.club >= 0 ? C(p.club) : null;
   transfer(p, c, fee, wage, yrs);
   if (fromRival) { S.board = clamp(S.board - fromRival, 0, 100); news(`Signing ${p.name} from ${rivalClub.name} divides opinion. Some supporters will never accept a player from across the divide.`, true, "transfer"); }
   fixUserLineup();
-  return { ok: true, msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}.` };
+  return { ok: true, res: "signed", msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}.` };
 }
 function whyNot(p, b) {
   const cur = p.club >= 0 ? C(p.club) : null, out = [];
