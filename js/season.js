@@ -540,10 +540,14 @@ function endSeason() {
 }
 
 function ageAndContracts() {
+  // Anyone turning 21 moves up from the academy as the season ends, so he can be registered in preseason
+  // (moving up at the next kick-off, with the window shut, left him unregistered and unable to play).
+  const up = [];
   for (const p of Object.values(S.players)) {
     const c = p.club >= 0 ? C(p.club) : null;
     if (c && p.age <= 20) p.yt[c.country] = (p.yt[c.country] || 0) + 1;
     p.age++;
+    if (p.acad && p.age > ACAD_MAX_AGE) { p.acad = false; if (c && isUser(c)) up.push(p); }
     if (p.age >= 29) { declineAttrs(p, ri(0, Math.min(4, p.age - 27))); p.pot = p.ovr; }
     else if (p.age <= 24) {
       // Young players who don't play, or are miserable, lose some of their ceiling; a breakout season raises it.
@@ -571,6 +575,7 @@ function ageAndContracts() {
   S.fa = S.fa.filter(id => S.players[id]);
   if (S.fa.length > 300) { const drop = S.fa.map(P).sort((a, b) => value(a) - value(b)).slice(0, S.fa.length - 300); for (const p of drop) retirePlayer(p); }
   for (const id of S.lineup) if (id != null && !S.players[id]) S.lineup = S.lineup.map(x => x === id ? null : x);
+  if (up.length) news(`${up.map(p => p.name).join(", ")} ${up.length > 1 ? "have" : "has"} turned 21 and moved up from the academy to the first-team squad. Register ${up.length > 1 ? "them" : "him"} on the Squad page before the season starts.`, true, "youth");
 }
 /* AI clubs refill thin positions, stay inside the registration rules, and trim costs their owner won't carry. */
 function aiMaintain(c) {
@@ -616,8 +621,6 @@ function summerStep() {
 function newSeasonStart() {
   for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);
   for (const c of activeClubs()) { const n = (isUser(c) ? 1 : ri(1, 2)) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) { p.acad = true; news(`Local academy graduate ${p.name} (${p.pos}) joins the academy.`, false, "youth"); } } if (!isUser(c)) trimSquad(c, false); }
-  // Anyone past academy age moves up to the first-team squad.
-  for (const p of me().squad.map(P)) if (p.acad && p.age > ACAD_MAX_AGE) { p.acad = false; news(`${p.name} (${p.age}) has outgrown the academy and joins the first-team squad.`, false, "youth"); }
   S.year++;
   S.seasonOver = null;
   startSeason();

@@ -66,7 +66,8 @@ function value(p) {
 }
 function wageDemand(p, rep) { return Math.max(15000, Math.round(baseValue(p) * .16 * (.75 + rep / 200) / 1000) * 1000); }
 const isHG = (p, country) => (p.yt[country] || 0) >= RULES.hgYears;
-const isSenior = p => p.age >= 21;
+// Academy players never need registering, whatever their age (they move up at 21, at the season's end).
+const isSenior = p => p.age >= 21 && !p.acad;
 
 /* Squads can be any size, but only 25 seniors (at most 17 not homegrown) can be registered for competitions.
    Under-21s are always eligible. Registration can only change while a transfer window is open. */
