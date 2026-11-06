@@ -176,7 +176,9 @@ function changeForm(M, i, form) {
 function bestBench(M, i, slot) { const b = benchAvail(M, i); if (!b.length) return null; return b.reduce((x, y) => eff(y, slot) > eff(x, slot) ? y : x); }
 function sendOff(M, i, o, why, games) {
   const s = i ? M.a : M.h; M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from;
-  s.on.splice(s.on.indexOf(o), 1); s.rt = null; M.reds.push([o.p.id, games]); (M.bk = M.bk || []).push({ side: i, pid: o.p.id, min: M.min, red: 1, n: sur(o.p) });
+  s.on.splice(s.on.indexOf(o), 1); s.rt = null; M.reds.push([o.p.id, games]);
+  // In a match you're watching (your side not on auto), a red card for either side pauses it for you to adjust.
+  if (!(M.h.auto && M.a.auto)) M.redWait = { side: i, pid: o.p.id, slot: o.slot }; (M.bk = M.bk || []).push({ side: i, pid: o.p.id, min: M.min, red: 1, n: sur(o.p) });
   lg(M, "red", i, `${why}! ${o.p.name} is sent off.`);
 }
 

@@ -147,7 +147,8 @@ bring him on, or two players to swap their positions; change formation from the 
 these pauses the match until you resume.
 When one of your players is injured in a match you're watching, the match pauses and asks who comes on,
 listing your substitutes by their rating in his position; or play on short and bring someone on later (tap a
-sub, then the empty position). Matches you don't watch, or skip, are left to your assistant. After a red card (or an injury with no subs left) the gap shows on the pitch as an empty position: tap a
+sub, then the empty position). A red card for either side pauses the match too, with a button to the Tactics tab (your ten, or a more
+attacking style against their ten). Matches you don't watch, or skip, are left to your assistant. After a red card (or an injury with no subs left) the gap shows on the pitch as an empty position: tap a
 player and then the gap (or the gap, then a player) to move him there, keeper included, or change formation
 and then arrange the ten as you like. Substitutes sit directly under the pitch, above the Starting XI. Before kick-off, tap a sub (or a starter)
 to list everyone outside the matchday squad and swap one in.

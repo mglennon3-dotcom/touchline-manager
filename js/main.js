@@ -133,6 +133,7 @@ function tick() {
   step(LIVE.M);
   if ((LIVE.M.min === 45 || (LIVE.M.min === 90 && LIVE.M.end > before)) && !LIVE.M.done) LIVE.paused = true;
   if (LIVE.M.injWait && LIVE.M.injWait.side === LIVE.k) { LIVE.paused = true; UI.lsel = null; }  // an injury: you choose the substitute
+  if (LIVE.M.redWait) { LIVE.paused = true; UI.lsel = null; }  // a red card: time to rethink
   render();
   if (!LIVE.paused && !LIVE.M.done) LIVE.t = setTimeout(tick, LIVE.speed);
 }
@@ -241,9 +242,11 @@ const ACT = {
     SAVES.list = SAVES.list.filter(x => x.id !== v); await DB.put("saves", SAVES.list);
     UI.delAsk = null; toast(`${m ? m.club : "Save"} deleted.`); render();
   },
-  liveresume: () => { if (LIVE.M.injWait) LIVE.M.injWait = null; LIVE.paused = false; tick(); },  // resuming without choosing plays on short
+  liveresume: () => { if (LIVE.M.injWait) LIVE.M.injWait = null; LIVE.M.redWait = null; LIVE.paused = false; tick(); },  // resuming without choosing plays on short
   injsub: v => { const M = LIVE.M, w = M.injWait; if (!w) return; subIntoSlot(M, LIVE.k, w.si, +v, "Injury"); M.injWait = null; UI.lsel = null; render(); },
   injon: () => { LIVE.M.injWait = null; render(); },
+  redtac: () => { LIVE.M.redWait = null; UI.ltab = "tactics"; render(); },
+  redok: () => { LIVE.M.redWait = null; render(); },
   livepause: () => { LIVE.paused = true; clearTimeout(LIVE.t); render(); },
   sqadv: () => { S.set.sqAdv = !S.set.sqAdv; save(); render(); },
   // Substitutes on the Line-up tab: pick a bench spot, then anyone outside the matchday squad to take it.
@@ -284,7 +287,7 @@ const ACT = {
   },
   liveme: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.ment = v; s.rt = null; S.mentality = v; render(); },
   livesub: () => { const off = +document.getElementById("sub-off").value, on = +document.getElementById("sub-on").value; doSub(LIVE.M, LIVE.k, off, on); render(); },
-  liveskip: () => { clearTimeout(LIVE.t); const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.auto = true;
+  liveskip: () => { clearTimeout(LIVE.t); const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.auto = true; LIVE.M.redWait = null;
     { const w = LIVE.M.injWait; if (w) { const b = bestBench(LIVE.M, LIVE.k, w.slot); if (b) subIntoSlot(LIVE.M, LIVE.k, w.si, b.id, "Injury"); LIVE.M.injWait = null; } } runToEnd(LIVE.M); render(); },
   livecont: () => finishLive(),
 };

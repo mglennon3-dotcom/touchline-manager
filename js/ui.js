@@ -1210,6 +1210,10 @@ function viewLive() {
       return `<div class="card inj-ask"><h3 style="margin:0 0 4px">Injury: ${esc(out.name)} can't continue</h3><p class="small muted" style="margin:0 0 8px">Who comes on at ${ROLE_NAME[w.slot].toLowerCase()}? ${RULES.subs - mine.subs} substitution${RULES.subs - mine.subs === 1 ? "" : "s"} left. Ratings are at ${w.slot}.</p>
         <div class="bench">${subs.map(p => { const r = slotRating(p, w.slot); return `<button class="bench-p" data-a="injsub" data-v="${p.id}"><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><b class="rt ${aCls(r)}">${Math.round(r)}</b><span class="tiny muted">fit ${Math.round(p.fit)}</span></button>`; }).join("")}</div>
         <button class="btn sm" data-a="injon" style="margin-top:8px">Play on with ${mine.on.length} for now</button></div>`; })() : ""}
+    ${M.redWait && !M.done ? (() => { const w = M.redWait, who = P(w.pid), ours = w.side === k, n = mine.on.length, them = (k ? M.h : M.a).on.length;
+      return `<div class="card inj-ask red-ask"><h3 style="margin:0 0 4px">Red card: ${esc(who.name)} ${ours ? "is sent off" : `(${esc(C((w.side ? M.a : M.h).club).short)}) is sent off`}</h3>
+        <p class="small muted" style="margin:0 0 8px">${ours ? `You're down to ${n}. Change formation or move players to cover his ${ROLE_NAME[w.slot].toLowerCase()} position, or make a substitution, on the Tactics tab.` : `They're down to ${them}. A more attacking style could make the extra man count.`}</p>
+        <div class="row" style="gap:8px">${ours ? '<button class="btn primary sm" data-a="redtac">Rearrange on Tactics</button>' : '<button class="btn primary sm" data-a="redtac">Tactics and style</button>'}<button class="btn sm" data-a="redok">Carry on as we are</button></div></div>`; })() : ""}
     <div class="card ctrl lv-bar">${ctrl}</div>
     <div class="seg lv-tabs" role="tablist">${LIVE_TABS.map(([v, l]) => `<button role="tab" data-a="livetab" data-v="${v}" aria-pressed="${tab === v}" aria-selected="${tab === v}">${l}</button>`).join("")}</div>
     <div class="lv-body stack">${body}</div></section>`;
