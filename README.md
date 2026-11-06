@@ -220,6 +220,8 @@ turned you down, with your offer, today's asking price, the answer and how keen 
 offer button; players you sign drop off), Scouted, Search (all players, free agents, transfer listed, loan
 targets), Selling (your listed players) and Activity. The Offers tab opens with a one-line transfer budget.
 Both the Transfers and Youth pages show this week's scouting hours above the tabs, on every tab.
+The search filters include Interest: Keen, Open or keen, Would sign (everyone but Not interested, who turn
+any offer down) or Not interested.
 **Transfer budget** (Finances page, summarised on Transfers): the fee you can pay for a player on your starters'
 average wage over four years. It is the smaller of what your cash allows without ending the season in the
 red and the room left under the 85% cost-ratio line, shown with this season's fees in, fees out and net spend.
