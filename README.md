@@ -103,8 +103,10 @@ to the first; those who accept move to Committed to you.
 
 **Growth speed** is a hidden trait (1-20, average 10) that sets how quickly a player closes on his
 potential: 1 develops at 55% of the normal rate, 20 at 150%. Over two seasons, 17-20-year-olds with slow growth
-speed closed 31% of the gap to their potential, average 38%, quick 45%. It never appears on screen: you find
-out by watching who kicks on.
+speed closed 31% of the gap to their potential, average 38%, quick 45%. The number never appears, but once your
+coaches have watched one of your players aged 23 and under for 30 weeks they give a rough read on his card and
+the Academy page (from "Slow to develop" to "Picks things up very quickly"): right 73% of the time at
+Development 10 and 86% at 20, never more than one band out.
 
 **Academy** (its own page): your youth players are kept apart from the first team. Summer graduates and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the

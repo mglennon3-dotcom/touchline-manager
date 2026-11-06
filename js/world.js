@@ -38,6 +38,16 @@ function dedupeNames(c) {
    55% of it and 20 at 150%, so two players with the same potential can be years apart in reaching it. */
 const newGrowthSpeed = () => clamp(Math.round(10 + gauss() * 3.2), 1, 20);
 const gsMult = p => .5 + (p.gs ?? 10) / 20;
+/* Your youth coaches' rough read on growth speed, for your own players 23 and under once they've watched him
+   for 30 weeks (p.seen, counted weekly). The estimate is off by up to ±2 at Development 10, ±1 at 20, and
+   stays the same for a given player, so it doesn't flicker. */
+const GS_SEEN = 30;
+function gsHint(p) {
+  if (!S.me || p.club !== S.club || p.age > 23) return null;
+  if ((p.seen || 0) < GS_SEEN) return ["Too early to tell", "muted"];
+  const w = Math.max(2, 6 - S.me.dev * .2), est = (p.gs ?? 10) + (seedOf(p.id, 17) - .5) * w;
+  return est >= 15 ? ["Picks things up very quickly", "good"] : est >= 12 ? ["A quick learner", "good"] : est > 8 ? ["Developing at a normal pace", ""] : est > 5 ? ["A late developer: be patient", "warn"] : ["Slow to develop", "bad"];
+}
 function makePlayer(o) {
   const age = o.age ?? ri(18, 33);
   let ovr = Math.round((o.base ?? 65) + gauss() * 3.4 + (age <= 17 ? -9 : age <= 19 ? -5 : age <= 21 ? -2.5 : age >= 33 ? -2 : 0));

@@ -315,6 +315,7 @@ function weekly() {
     const possible = Math.max(1, c.wkMatches) * 90;
     for (const id of c.squad) {
       const p = P(id);
+      if (isUser(c)) p.seen = (p.seen || 0) + 1;  // weeks your coaches have watched him (gsHint)
       p.pt = .75 * p.pt + .25 * Math.min(1, p.wm / (p.acad ? 90 : possible)); p.wm = 0;  // academy minutes count against an academy match a week
       if (p.inj > 0) p.inj--;
       // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.

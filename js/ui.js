@@ -1041,6 +1041,7 @@ function modalPlayer(p) {
     <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${injHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
       <div><dt>Value</dt><dd class="num">${money(value(p))}</dd></div><div><dt>Wage</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Contract</dt><dd>${c ? p.yrs + " yr" + (p.yrs === 1 ? "" : "s") : "—"}</dd></div>
       <div><dt>Fitness</dt><dd>${fitBar(p.fit)} ${Math.round(p.fit)}</dd></div><div><dt>Mood</dt><dd>${moodTag(p)}</dd></div><div><dt>Homegrown</dt><dd>${Object.entries(p.yt).filter(([, v]) => v >= RULES.hgYears).map(([k]) => COUNTRY[k] ? COUNTRY[k].name : k).join(", ") || "No"}</dd></div>
+      ${(h => h ? `<div><dt>Coaches' view</dt><dd class="${h[1]}">${h[0]}</dd></div>` : "")(gsHint(p))}
       <div><dt>Season</dt><dd class="num">${p.s.app} apps · ${p.s.g} g · ${p.s.a} a</dd></div>${p.s.sh || p.s.kp || p.s.sv ? `<div><dt>Advanced</dt><dd class="num small">${p.pos === "GK" ? `${p.s.sv || 0} saves · ${p.s.cs} clean sheets` : `${p.s.sh || 0} shots (${p.s.sot || 0} on) · ${(p.s.xg || 0).toFixed(1)} xG · ${p.s.kp || 0} key passes · ${(p.s.xa || 0).toFixed(1)} xA`}</dd></div>` : ""}<div><dt>Avg rating</dt><dd class="num">${avg}</dd></div><div><dt>Career</dt><dd class="num">${p.tot[0] + p.s.app} apps · ${p.tot[1] + p.s.g} g</dd></div></dl>
     ${attrPanel(p)}
     ${p.inj ? `<p class="small bad">${esc(p.injT ? p.injT.charAt(0).toUpperCase() + p.injT.slice(1) : "Injured")}: out for ${injLength(p.inj)}.</p>` : ""}
@@ -1222,6 +1223,7 @@ function viewAcademy() {
     { k: "act", l: "", f: p => `<button class="btn sm" data-a="promote" data-v="${p.id}">Promote</button>` },
     { k: "ovr", l: "Rating", r: 1, v: p => p.ovr, f: p => ratingHtml(p) },
     { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
+    { k: "gs", l: "Coaches' view", v: p => { const h = gsHint(p); return h ? ["Slow to develop", "A late developer: be patient", "Too early to tell", "Developing at a normal pace", "A quick learner", "Picks things up very quickly"].indexOf(h[0]) : -1; }, f: p => { const h = gsHint(p); return h ? `<span class="small ${h[1]}">${h[0]}</span>` : ""; } },
     { k: "app", l: "Apps", r: 1, v: p => as(p).app, f: p => as(p).app },
     { k: "g", l: "G", r: 1, v: p => as(p).g, f: p => as(p).g },
     { k: "a", l: "A", r: 1, v: p => as(p).a, f: p => as(p).a },
