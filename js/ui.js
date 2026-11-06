@@ -1228,6 +1228,9 @@ function viewAcademy() {
     { k: "g", l: "G", r: 1, v: p => as(p).g, f: p => as(p).g },
     { k: "a", l: "A", r: 1, v: p => as(p).a, f: p => as(p).a },
     { k: "rt", l: "Avg", r: 1, v: p => as(p).app ? as(p).rt / as(p).app : 0, f: p => as(p).app ? (as(p).rt / as(p).app).toFixed(2) : "—" },
+    // Playing time as development sees it: a rolling share of the minutes on offer each week (academy matches
+    // for academy players, first-team fixtures for the rest).
+    { k: "pt", l: "Playing time", r: 1, v: p => p.pt, f: p => `<span class="bar" title="${Math.round(p.pt * 100)}%"><i style="width:${p.pt * 100}%"></i></span> <span class="tiny num">${Math.round(p.pt * 100)}%</span>` },
     { k: "fit", l: "Fit", v: p => p.fit, f: p => fitBar(p.fit) },
   ];
   const res = (S.acadRes || []).filter(r => r.y === S.year);
@@ -1238,7 +1241,7 @@ function viewAcademy() {
     ${table("acad", cols, kids, { sort: { k: "ready", d: -1 }, empty: "Nobody in the academy. New graduates arrive each summer and youth recruits join on signing day." })}
     <p class="hint" style="margin-top:8px"><b>First team?</b> compares him with your senior players at his position in your ${S.formation}: <b>Ready to start</b> means he's as good as your weakest starter there, <b>Ready</b> that he'd make the matchday squad, <b>Close</b> within about a point and a half.</p></section>
     <section class="card"><div class="card-h"><h2>Academy results</h2><span class="tiny muted">unofficial under-18 matches</span></div>${res.length ? res.map(r => `<div class="res"><span class="h">${esc(c.short)} U18</span><span class="sc">${r.gf}–${r.ga}</span><span>${esc(C(r.opp).short)} U18 <span class="tiny muted">wk ${r.w + 1}${r.sc.length ? " · " + r.sc.map(id => S.players[id] ? esc(sur(S.players[id])) : "").filter(Boolean).join(", ") : ""}</span></span></div>`).join("") : '<p class="small muted">No academy matches yet this season. They are played each week of the season.</p>'}</section>
-    ${young.length ? `<section class="card"><div class="card-h"><h2>Young players in the first-team squad</h2><span class="tiny muted">${ACAD_MAX_AGE} and under</span></div>${table("acad-young", [cols[0], cols[1], cols[2], cols[5], cols[6], { k: "sapp", l: "Apps", r: 1, v: p => p.s.app, f: p => p.s.app }, { k: "act", l: "", f: p => `<button class="btn sm" data-a="demote" data-v="${p.id}">Send to academy</button>` }], young, { sort: { k: "ovr", d: -1 } })}<p class="hint" style="margin-top:8px">A young player getting few first-team minutes develops faster playing academy matches every week.</p></section>` : ""}</div>`;
+    ${young.length ? `<section class="card"><div class="card-h"><h2>Young players in the first-team squad</h2><span class="tiny muted">${ACAD_MAX_AGE} and under</span></div>${table("acad-young", [cols[0], cols[1], cols[2], cols[5], cols[6], cols.find(x => x.k === "gs"), { k: "sapp", l: "Apps", r: 1, v: p => p.s.app, f: p => p.s.app }, { k: "savg", l: "Avg", r: 1, v: p => p.s.app ? p.s.rt / p.s.app : 0, f: p => p.s.app ? (p.s.rt / p.s.app).toFixed(2) : "—" }, cols.find(x => x.k === "pt"), { k: "act", l: "", f: p => `<button class="btn sm" data-a="demote" data-v="${p.id}">Send to academy</button>` }], young, { sort: { k: "ovr", d: -1 } })}<p class="hint" style="margin-top:8px">Development weighs playing time, match ratings and happiness. A youngster on under about two-thirds of the first team's minutes, or rating below 7, usually develops faster in the academy, where he plays every week. Academy players you also pick for the first team get both.</p></section>` : ""}</div>`;
 }
 function viewManager() {
   const co = S.me, c = me();
