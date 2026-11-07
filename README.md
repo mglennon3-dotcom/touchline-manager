@@ -116,8 +116,9 @@ player did in the match counts: goals, assists, chances he got (xG), key passes,
 interceptions, blocks, a keeper's saves, clean sheets and goals conceded, the result and cards. Ability counts only
 through what it lets him do, so a modest striker who wins the golden boot out-rates a star who plays badly. All but
 his own actions scale with his minutes, so a late substitute sits near 6; a red card costs 2. Chances missed cost
-points: xG well above his goals is taken off. A 10 is a hat-trick or two goals and an assist (one goal is about
-7.4, two 8.8). Measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%. Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
+points: xG well above his goals is taken off. A 10 is a performance on the level of a hat-trick or two goals and
+an assist (one goal is about 7.4, two 8.8): about 40% of 10s go to defenders and keepers, for displays like 13
+clearances and a clean sheet, or 7 saves and a clean sheet. Measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%. Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
 air; about 4 a game for a centre-back), blocks, and the defender beaten for each goal conceded (more often a weak
 one). The ratings line shows each player's shots, xG, key passes, xA, tackles, interceptions, clearances, blocks,
 goals he was beaten for, or saves; the Squad page's Advanced stats adds season Tackles, Interceptions, Clearances,

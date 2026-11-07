@@ -327,9 +327,11 @@ const matchWinner = M => M.pens ? (M.pens[0] > M.pens[1] ? M.h.club : M.a.club) 
    with his minutes, so a late substitute sits near 6 unless he does something. (5.40 rated quality, (ovr - level)
    / 4.1: a good centre-back got 9.4 for an ordinary game, a weaker substitute 4.8 the minute he came on.) */
 // A wide curve, measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%
-// (median 6.23). One goal is about 7.4, two 8.8, two and an assist 9.9, a hat-trick 10. Late substitutes 6.0, a
+// (median 6.23). One goal is about 7.4, two 8.8, two and an assist 9.9, a hat-trick 10. A 10 isn't only goals: about
+// 40% of them are defensive or goalkeeping displays (13 clearances and a clean sheet; 8 tackles and 9 interceptions;
+// 7 saves and a clean sheet). Late substitutes 6.0, a
 // red card about 3.9. (5.41 sat too many games between 5 and 7: under 5 in only 4%.)
-const RTW = { base: 6, off: .4, res: .4, q: 9, qcap: 0, g: 1.15, a: .75, xg: .25, miss: .4, kp: .2, sot: .08, tk: .2, int: .18, clr: .08, bk: .25, bt: .45, sv: .22, cs: .8, ga: .25, noise: .45 };
+const RTW = { base: 6, off: .4, res: .4, q: 9, qcap: 0, g: 1.15, a: .75, xg: .25, miss: .4, kp: .2, sot: .08, tk: .2, int: .18, clr: .08, bk: .25, bt: .45, sv: .3, cs: .8, ga: .25, noise: .45 };
 function matchRating(M, i, id, W = RTW) {
   const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), on = s.on.find(o => o.p.id === id);
   const mins = on ? M.min - on.from : (s.mins[id] ?? 0), m = clamp(mins / Math.max(30, M.done ? M.end : M.min), 0, 1);
