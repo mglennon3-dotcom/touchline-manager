@@ -50,8 +50,12 @@ function transfer(p, to, fee, wage, yrs, plan = 1) {
   to.cash -= now + fee * .05; to.fin.bought += now; to.fin.agent += fee * .05;
   if (plan > 1) (S.dues ||= []).push({ pid: p.id, name: p.name, payer: to.id, payee: from ? from.id : -1, per: Math.round((fee - now) / (plan - 1)), left: plan - 1, fee, plan, y: S.year });
   to.squad.push(p.id);
-  p.club = to.id; p.yrs = yrs; p.wage = wage; p.am = fee > 0 ? { per: Math.round(fee / yrs), left: yrs } : null;
-  p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.pt = .5; p.acad = false;
+  p.club = to.id; p.yrs = yrs; p.wage = wage;
+ p.am = fee > 0 ? { per: Math.round(fee / yrs), left: yrs } : null;
+  p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.acad = false;
+  // A fresh start: playing time begins at what he expects at the new club. A flat .5 (before 5.54.1) read as
+  // "wants more playing time" on day one for anyone signed to start, before he'd had a game.
+  p.pt = expectedShare(p, to);
   refreshRegistration(to); if (from) refreshRegistration(from);
   const big = fee >= 15e6 || isUser(to) || (from && isUser(from));
   S.tlog.unshift({ y: S.year, w: whenLabel(), pid: p.id, name: p.name, from: from ? from.id : -1, to: to.id, fee });
@@ -280,7 +284,7 @@ function assessSCR() {
 function startLoan(p, to) {
   const from = C(p.club);
   from.squad = from.squad.filter(id => id !== p.id); to.squad.push(p.id);
-  p.loan = { from: from.id, y: S.year }; p.club = to.id; p.pt = .5; p.listed = false;
+  p.loan = { from: from.id, y: S.year }; p.club = to.id; p.pt = expectedShare(p, to); p.listed = false;  // a fresh start, as for a transfer
   refreshRegistration(to); refreshRegistration(from);
   if (isUser(from)) S.lineup = S.lineup.map(id => id === p.id ? null : id);
   bumpTick();
