@@ -476,3 +476,8 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .cmp-labels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}.cmp-labels>span:last-child{text-align:right}
 /* fitness as a number on the Tactics pitch: a small pill in the fitness colour */
 .slot .fpct{font:700 11px/1 var(--f-mono);color:#fff;background:var(--fc);border-radius:7px;padding:2px 5px;margin-top:1px}
+
+/* Transfer search: country toggles */
+.cty-tog{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
+.cty-tog .cty{font:600 12px/1 var(--f-body);padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;text-decoration:line-through}
+.cty-tog .cty.on{background:var(--ink);color:var(--surface);border-color:var(--ink);text-decoration:none}

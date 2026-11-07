@@ -196,6 +196,8 @@ const ACT = {
   yunscout: v => { const y = S.prospects.find(x => x.id === v); if (!y) return; y.hide = true; save(); render(); toast(`${y.name} removed from your scouted prospects. His report is kept: Show removed to restore him.`); },
   yunhide: v => { const y = S.prospects.find(x => x.id === v); if (!y) return; y.hide = false; save(); render(); toast(`${y.name} is back on your scouted prospects.`); },
   yshowremoved: () => { UI.yShowRemoved = !UI.yShowRemoved; render(); },
+  ctytog: v => { const off = new Set(S.set.ctyOff || []); off.has(v) ? off.delete(v) : off.add(v); if (off.size >= KNOW_KEYS.length) return toast("Keep at least one country switched on."); S.set.ctyOff = [...off]; save(); render(); },
+  ctyall: () => { S.set.ctyOff = []; save(); render(); },
   unscout: v => { const p = P(+v); (S.scoutHide ||= {})[p.id] = 1; save(); render(); toast(`${p.name} removed from your scouted list. His report is kept: Show removed to restore him.`); },
   unhide: v => { const p = P(+v); if (S.scoutHide) delete S.scoutHide[p.id]; save(); render(); toast(`${p.name} is back on your scouted list.`); },
   showremoved: () => { UI.showRemoved = !UI.showRemoved; render(); },

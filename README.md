@@ -293,6 +293,10 @@ filling other gaps with journeymen, so the free-agent pool is still full when yo
 has asked to leave, at your club or any other. Yours leave as free agents when the contract ends. AI clubs
 otherwise keep most of their under-32s who are good enough for the side, and the rest join the free-agent pool,
 which AI clubs draw on at once to fill thin positions.
+**Countries to search.** Under the search filters on the Transfers page, a toggle for each country (and the rest
+of the world) switches it on or off for every search tab: All players, Free agents, Transfer listed and Loan
+targets. A player counts by his club's country (a free agent by his nationality). Your choice is saved; "All on"
+resets it, and the Scouted tab always lists everyone.
 **Scouted list.** The ✕ on a row of the Transfers Scouted tab takes a player you've decided against off the list.
 His report is kept, and the scouting assistant won't scout him again. "Show removed" lists them with Restore, and
 scouting him again yourself puts him back. The Youth page's Scouted tab works the same way for prospects.

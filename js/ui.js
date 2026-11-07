@@ -760,6 +760,9 @@ function viewTransfers() {
     let pool = UI.tab === "scouted" ? scouted : UI.tab === "fa" ? S.fa.map(P) : Object.values(S.players).filter(p => p.club >= 0 && p.club !== S.club && p.age >= 17 && !p.loan);
     if (UI.tab === "listed") pool = pool.filter(p => p.listed || p.req);
     if (UI.tab === "loans") pool = pool.filter(p => loanable(p) && !wouldStart(p, C(p.club)));
+    // Countries you've switched off (S.set.ctyOff) drop out of every search tab; the Scouted list keeps everyone.
+    const ctyOff = new Set(UI.tab !== "scouted" ? S.set.ctyOff || [] : []);
+    if (ctyOff.size) pool = pool.filter(p => !ctyOff.has(playerCountry(p)));
     pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && (!f.min || (!ratingBlank(p) && ratingMid(p) >= f.min)) && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
     if (f.fee && UI.tab !== "loans") pool = pool.filter(p => askingPrice(p) <= f.fee);
     // Interest, using the same bands as the Interest column: "would sign" is everyone but Not interested,
@@ -777,6 +780,7 @@ function viewTransfers() {
       <label class="f">Interest<select id="tf-int" data-c="tf-int">${[["ALL", "Any"], ["keen", "Keen"], ["open", "Open or keen"], ["sign", "Would sign (not Not interested)"], ["no", "Not interested"]].map(([k, l]) => `<option value="${k}" ${(f.int || "ALL") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
       ${UI.tab !== "fa" ? `<label class="f">League<select id="tf-lg" data-c="tf-lg"><option value="ALL">All leagues</option><option value="ABROAD" ${f.lg === "ABROAD" ? "selected" : ""}>All foreign leagues</option>${lgOpts(f.lg)}</select></label>` : ""}</div>
+      ${UI.tab !== "scouted" ? `<div class="cty-tog" role="group" aria-label="Countries to search"><span class="small muted">Countries</span>${KNOW_KEYS.map(k => { const on = !(S.set.ctyOff || []).includes(k); return `<button class="cty ${on ? "on" : ""}" data-a="ctytog" data-v="${k}" aria-pressed="${on}" title="${on ? "Searching" : "Not searching"} ${esc(KNOW_NAME(k))}: tap to switch">${k === "ROW" ? "Rest of world" : esc(COUNTRY[k].name)}</button>`; }).join("")}${(S.set.ctyOff || []).length ? '<button class="lnk small" data-a="ctyall">All on</button>' : ""}</div>` : ""}
       ${poolN > 200 ? `<p class="tiny muted" style="margin:0 0 6px">${poolN.toLocaleString()} players match: showing the first 200 in the order you sort by.</p>` : ""}
       ${table("t-" + UI.tab, [
         { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) },
