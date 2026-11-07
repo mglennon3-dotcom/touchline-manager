@@ -455,6 +455,8 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // 5.50: graduates come as a pool at the end of the season. A save already in preseason missed that step, and the
   // old one-or-two at kick-off is gone, so it gets this year's pools now (every club, yours included).
   if (S.phase === "summer" && !S.firstPre && S.club != null && !S.sacked && S.intakeY !== S.year && !S.intake) graduateIntakes();
+  // 5.51: free agents leave the game after three years unsigned. Ones already free start counting now.
+  for (const id of S.fa || []) { const p = S.players[id]; if (p && p.faY == null) p.faY = S.year; }
 }
 function migrate4(d) {
   const keep = S; S = d;

@@ -580,10 +580,14 @@ function ageAndContracts() {
     }
   }
   S.fa = S.fa.filter(id => S.players[id]);
+  // Three years unsigned and he's out of the game: at the end of the third season after he went free (p.faY).
+  for (const p of S.fa.map(id => S.players[id]).filter(Boolean)) if (S.year - (p.faY ?? S.year) >= FA_YEARS) retirePlayer(p);
+  S.fa = S.fa.filter(id => S.players[id]);
   if (S.fa.length > 300) { const drop = S.fa.map(P).sort((a, b) => value(a) - value(b)).slice(0, S.fa.length - 300); for (const p of drop) retirePlayer(p); }
   for (const id of S.lineup) if (id != null && !S.players[id]) S.lineup = S.lineup.map(x => x === id ? null : x);
   if (up.length) news(`${up.map(p => p.name).join(", ")} ${up.length > 1 ? "have" : "has"} turned 21 and moved up from the academy to the first-team squad. Register ${up.length > 1 ? "them" : "him"} on the Squad page before the season starts.`, true, "youth");
 }
+const FA_YEARS = 3;  // free agents unsigned this many seasons leave the game
 /* Graduate intake, at the end of every season. Each club's academy puts up a pool of five local 16-year-olds
    (academyPlayer: potential from its Youth development rating); it keeps up to three. Yours wait on the Academy
    page for you to choose (S.intake) until the end of preseason week 2 (INTAKE_DEADLINE), which leaves three weeks of
