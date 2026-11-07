@@ -281,6 +281,10 @@ first look to a few points, a full report to the exact rating and a tight potent
 Min rating filter use the middle of the band (a blank rating sorts last and fails the filter), and Team Needs
 upgrades need even the bottom of the band to be an upgrade. Attributes and injury risk still need scouting.
 Match stats (apps, goals, average rating) are public.
+**Contracts running out.** A player whose deal is ending won't sign again if he's unhappy (mood under 45) or
+has asked to leave, at your club or any other. Yours leave as free agents when the contract ends. AI clubs
+otherwise keep most of their under-32s who are good enough for the side, and the rest join the free-agent pool,
+which AI clubs draw on at once to fill thin positions.
 **Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
 commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed
