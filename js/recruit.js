@@ -109,7 +109,7 @@ function recAct(y, act) {
   if (act === "home" && y.home) return "You've already visited his family.";
   const code = prospectCountry(y), cost = act === "call" ? REC_COST.call : scoutHours(REC_COST[act], code);
   if (S.rec.hours < cost) return `Not enough recruiting hours left this week (${S.rec.hours} of ${recHours()}); that needs ${cost}.`;
-  if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.sc = Math.min(3, y.sc + (knowOf(code) >= 15 ? 2 : 1)); y.scT = whenLabel(); if (y.sc >= 2) y.known = true; learnCountry(code); payTravel(code); }
+  if (act === "scout") { if (y.sc >= 3) return "You already know everything about him."; y.hide = false; y.sc = Math.min(3, y.sc + (knowOf(code) >= 15 ? 2 : 1)); y.scT = whenLabel(); if (y.sc >= 2) y.known = true; learnCountry(code); payTravel(code); }
   if (act === "call") { if (y.called === S.week + S.year * 100) return "You've already spoken to his family this week."; y.called = S.week + S.year * 100; y.known = true; y.rel[c.id] = (y.rel[c.id] || 0) + (.045 + .03 * (y.pri.dyn + y.pri.acad)) * recMult(); }
   // Visiting him and his family at home: worth most to lads who want to stay near home and care about the
   // people around them (close to home, squad dynamics); hosting him at your ground suits the rest better.
@@ -187,7 +187,7 @@ const autoScoutOn = () => { const v = (S.set || {}).autoScout; return v === true
 function autoScout() {
   if (!autoScoutOn() || !S.me) return;
   const mode = "both", c = me(), ok = code => code === "ENG" && travelCost(code) === 0, uses = new Set(slotsOf(S.formation));
-  const youth = mode === "players" ? [] : S.prospects.filter(y => y.commit == null && !y.signed && y.sc < 2 && ok(prospectCountry(y)))
+  const youth = mode === "players" ? [] : S.prospects.filter(y => y.commit == null && !y.signed && y.sc < 2 && !y.hide && ok(prospectCountry(y)))
     .map(y => ({ k: "y", o: y, cost: scoutHours(REC_COST.scout, prospectCountry(y)), s: viewMid(prospectPot(y)) + (uses.has(y.pos) ? 1.5 : 0) - km(y, c) / 400 }));
   let players = [];
   if (mode !== "youth") {

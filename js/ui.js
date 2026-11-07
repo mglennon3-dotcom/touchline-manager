@@ -827,7 +827,10 @@ function viewYouth() {
   // Two working lists above the full class: prospects you've offered a place (and not yet signed), and those
   // you've scouted but not offered. A prospect moves from the second to the first when you offer.
   const offered = S.prospects.filter(y => y.offers.includes(c.id) && y.commit !== c.id);
-  const scouted = S.prospects.filter(y => (y.sc >= 1 || y.coach) && !y.offers.includes(c.id) && y.commit !== c.id), REPORT = ["Coaches' view", "First look", "Detailed", "Complete"];
+  // Prospects you've removed (y.hide) keep their reports but leave the list, as on the Transfers Scouted tab.
+  const scoutedAll = S.prospects.filter(y => (y.sc >= 1 || y.coach) && !y.offers.includes(c.id) && y.commit !== c.id), REPORT = ["Coaches' view", "First look", "Detailed", "Complete"];
+  const yRemovedN = scoutedAll.filter(y => y.hide).length; if (!yRemovedN) UI.yShowRemoved = false;
+  const scouted = scoutedAll.filter(y => !y.hide === !UI.yShowRemoved);
   const cols = [
     { k: "n", l: "Prospect", v: y => y.name, f: y => `<button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button>` },
     { k: "pos", l: "Pos", v: y => ROLE_ORDER[y.pos], f: y => `<span class="pos">${y.pos}</span>` },
@@ -841,10 +844,12 @@ function viewYouth() {
   const scoutCols = [cols[0], cols[1], cols[2], cols[3],
     { k: "ir", l: "Injury risk", v: y => viewMid(prospectInj(y)), f: y => prospectInj(y) ? rangeHtml(prospectInj(y), true) : '<span class="tiny muted">scout again</span>' },
     { k: "rep", l: "Report", v: y => y.sc, f: y => `<span class="${y.sc >= 3 ? "good" : y.sc <= 1 ? "warn" : ""}">${REPORT[y.sc]}</span>${y.sc && y.coach ? ' <span class="tiny muted">+ coaches</span>' : ""}${y.scT || y.coachT ? `<br><span class="tiny muted">${y.scT || y.coachT}</span>` : ""}` },
-    cols[4], cols[5], cols[6]];
+    cols[4], cols[5], cols[6],
+    { k: "rm", l: "", f: y => UI.yShowRemoved ? `<button class="btn sm" data-a="yunhide" data-v="${y.id}">Restore</button>` : `<button class="btn sm" data-a="yunscout" data-v="${y.id}" title="Not good enough: take him off your scouted list (his report is kept)" aria-label="Remove ${esc(y.name)} from the scouted list">✕</button>` }];
   const scoutedCard = `<section class="card"><div class="card-h"><h2>Scouted prospects</h2><span class="small">${scouted.length} watched, not offered · ${scouted.filter(y => y.commit == null).length} still undecided · Hours this week <b class="num">${S.rec.hours}/${recHours()}</b></span></div>
     ${scoutAssistHtml()}
-    ${table("youth-sc", scoutCols, scouted, { sort: { k: "st", d: -1 }, empty: "You haven't scouted any prospects yet. Use Scout on anyone in the list below: each visit narrows his potential, and a detailed report shows his injury risk and what matters most to him." })}</section>`;
+    ${table("youth-sc", scoutCols, scouted, { sort: { k: "st", d: -1 }, empty: UI.yShowRemoved ? "Nobody removed." : yRemovedN ? "Everyone you've scouted has been removed from this list." : "You haven't scouted any prospects yet. Use Scout on anyone in the list below: each visit narrows his potential, and a detailed report shows his injury risk and what matters most to him." })}
+    ${yRemovedN ? `<p class="small muted" style="margin-top:8px">${UI.yShowRemoved ? `Showing the ${yRemovedN} you removed. Restore puts a prospect back on your list.` : `${yRemovedN} removed from this list.`} <button class="lnk" data-a="yshowremoved">${UI.yShowRemoved ? "Back to your list" : "Show removed"}</button></p>` : ""}</section>`;
   const offerCols = [cols[0], cols[1], cols[2], cols[3], scoutCols[5], cols[4],
     { k: "ost", l: "Offer", v: y => y.commit != null ? 2 : yourRank(y), f: y => y.commit != null ? `<span class="bad">Chose</span> ${clubA(y.commit, { short: true })}` : `${rankLabel(y)}<br><span class="tiny muted">${y.offers[0] === c.id ? '<b class="good">you offered first</b> · ' : `${C(y.offers[0]).short} offered first · `}${y.offers.length - 1 ? `${y.offers.length - 1} other offer${y.offers.length > 2 ? "s" : ""}` : "only offer so far"}</span>` },
     cols[6]];
@@ -860,7 +865,7 @@ function viewYouth() {
     ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: "No prospects match." })}</section>`;
   const commitCard = `<section class="card"><div class="card-h"><h2>Committed to you</h2></div>${commits.length ? commits.map(y => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span><button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button> <span class="pos">${y.pos}</span> <span class="muted small">${esc(y.region)}</span></span>${rangeHtml(prospectPot(y))}</div>`).join("") : '<p class="muted">No commitments yet.</p>'}</section>`;
   /* Tabs rather than one long page: on a phone the class list sat below two other tables. */
-  const tabs = [["offered", "Offered", offered.filter(y => y.commit == null).length], ["scouted", "Scouted", scouted.length], ["all", "All prospects", null], ["committed", "Committed", commits.length]];
+  const tabs = [["offered", "Offered", offered.filter(y => y.commit == null).length], ["scouted", "Scouted", scoutedAll.length - yRemovedN], ["all", "All prospects", null], ["committed", "Committed", commits.length]];
   const tab = UI.ytab || "offered";
   const body = { offered: offeredCard, scouted: scoutedCard, all: classCard, committed: commitCard }[tab] || offeredCard;
   return `<div class="stack">${hoursStrip()}<div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([v, l, n]) => `<button role="tab" data-a="ytab" data-v="${v}" aria-pressed="${tab === v}" aria-selected="${tab === v}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>${body}</div>`;

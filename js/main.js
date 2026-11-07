@@ -193,6 +193,9 @@ const ACT = {
   // From the match card: drop a sub (yours or automatic; he isn't brought back automatically) or add one.
   benchdrop: v => { const id = +v, cur = benchFor(me(), S.lineup); S.bench = cur.filter(x => x !== id && (S.bench || []).includes(x)); (S.benchNo ||= []).includes(id) || S.benchNo.push(id); save(); render(); },
   friask: () => { const f = UI.fri || {}; if (f.opp == null) return toast("Choose an opponent first."); const r = bookFriendly(f.wk ?? S.summerDay, f.opp, f.home !== false); UI.fri = { home: f.home, sort: f.sort }; save(); render(); toast(r); },
+  yunscout: v => { const y = S.prospects.find(x => x.id === v); if (!y) return; y.hide = true; save(); render(); toast(`${y.name} removed from your scouted prospects. His report is kept: Show removed to restore him.`); },
+  yunhide: v => { const y = S.prospects.find(x => x.id === v); if (!y) return; y.hide = false; save(); render(); toast(`${y.name} is back on your scouted prospects.`); },
+  yshowremoved: () => { UI.yShowRemoved = !UI.yShowRemoved; render(); },
   unscout: v => { const p = P(+v); (S.scoutHide ||= {})[p.id] = 1; save(); render(); toast(`${p.name} removed from your scouted list. His report is kept: Show removed to restore him.`); },
   unhide: v => { const p = P(+v); if (S.scoutHide) delete S.scoutHide[p.id]; save(); render(); toast(`${p.name} is back on your scouted list.`); },
   showremoved: () => { UI.showRemoved = !UI.showRemoved; render(); },

@@ -295,7 +295,7 @@ otherwise keep most of their under-32s who are good enough for the side, and the
 which AI clubs draw on at once to fill thin positions.
 **Scouted list.** The ✕ on a row of the Transfers Scouted tab takes a player you've decided against off the list.
 His report is kept, and the scouting assistant won't scout him again. "Show removed" lists them with Restore, and
-scouting him again yourself puts him back.
+scouting him again yourself puts him back. The Youth page's Scouted tab works the same way for prospects.
 **Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
 commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed
