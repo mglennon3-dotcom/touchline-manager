@@ -119,4 +119,7 @@ const seasonsText = w => { const y = w / SEASON_WEEKS; return y < 1.15 ? "about 
 const matchdayEstimate = c => c.cap ? ticketForecast(c, c.tkt || 1).income * homeGames(c) : 0;
 /* Everything a club expects to earn in a season. Ticket sales and sponsorship were carved out of the base
    income when they were added, so anything judging a club's finances must add them back. */
-const annualIncome = c => (c.revSeason || c.revBase) + sponsorTotal(c) + matchdayEstimate(c);
+// In preseason revSeason still holds last season's figure (it is reset at kick-off), so a promoted club's cost
+// ratio and transfer budget were judged on the division it had just left: about a quarter less base income for a
+// club up from the third tier, which roughly halved the ratio's room. revBase already reflects the move.
+const annualIncome = c => (S.phase === "summer" ? c.revBase : c.revSeason || c.revBase) + sponsorTotal(c) + matchdayEstimate(c);

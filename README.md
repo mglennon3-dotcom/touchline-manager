@@ -297,7 +297,7 @@ whole market's. The search filters include Interest: Keen, Open or keen, Would s
 any offer down) or Not interested.
 **Transfer budget** (Finances page, summarised on Transfers): the fee you can pay for a player on your starters'
 average wage over four years. It is the smaller of what your cash allows without ending the season in the
-red and the room left under the 85% cost-ratio line, shown with this season's fees in, fees out and net spend.
+red and the room left under the 85% cost-ratio line, shown with this season's fees in, fees out and net spend. In preseason both use the division you will play in, so a promoted club is judged on its new income.
 
 ## Code
 
