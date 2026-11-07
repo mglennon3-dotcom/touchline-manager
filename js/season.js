@@ -321,11 +321,11 @@ function weekly() {
       if (p.inj > 0) p.inj--;
       // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.
       if (p.ovr < p.pot) {
-        // Match ratings (6 an average game, 7 good, 8 great): the boost rises from a 5.6 season average, the median
-        // youngster, and is full (x1.15) at 6.8 for players 21 and under, about their top 10%, and at 7.5 for the rest.
-        const form = p.s.app >= 3 ? clamp((p.s.rt / p.s.app - 5.6) / (p.age <= 21 ? .8 : 1.267), 0, 1.5) : .5;
+        // Match ratings, on their own scale (6 an average game, 7 good, 8 great), the same for every age: a season
+        // averaging 5 or less x0.85, 6 x1.0, 7 x1.15, 8+ x1.25. Fewer than 3 appearances counts as average.
+        const avgR = p.s.app >= 3 ? p.s.rt / p.s.app : 6, formMult = avgR <= 7 ? clamp(1 + .15 * (avgR - 6), .85, 1.15) : 1.15 + .1 * Math.min(1, avgR - 7);
         const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * 1.12 * t.grow * (p.age <= 21 ? acad : 1)
-          * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * (.85 + .2 * form) * gsMult(p);
+          * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * formMult * gsMult(p);
         if (R() < ch) growAttrs(p, 1);
       }
       if (isUser(c) && S.training === "int" && !p.inj && R() < .006 * injMult(p)) injure(p, true);
@@ -559,7 +559,7 @@ function ageAndContracts() {
       let d = ri(-2, 1);
       if (p.age >= 18 && p.pt < .25) d -= ri(1, 3);
       if (p.mood < 35) d -= ri(0, 2);
-      if (p.pt > .6 && avg >= (p.age <= 22 ? 6.8 : 7.2)) d += ri(1, 3);  // a breakout season: 6.8 (their top 10%) for youngsters (21 and under before today's birthday), 7.2 for the rest
+      if (p.pt > .6 && avg >= 8) d += ri(2, 4); else if (p.pt > .6 && avg >= 7) d += ri(1, 3);  // a breakout season on the rating scale: good (7+) raises his ceiling, great (8+) more
       p.pot = clamp(p.pot + d, p.ovr, 95);
     }
     p.fit = 100; p.sus = 0; p.inj = Math.max(0, p.inj - 10); p.yc = 0; p.req = p.req && p.mood < 40; p.promise = null;

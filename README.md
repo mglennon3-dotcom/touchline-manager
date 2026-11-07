@@ -115,9 +115,9 @@ Development 10 and 86% at 20, never more than one band out.
 the standard of the match carries most of it, then goals, assists, chances he got (xG), key passes, shots on
 target, a keeper's saves, results and clean sheets. Measured over 50,000 starts: median 6.1, 7+ in 22%, 8+ in
 6%, 9+ in 1.5%, 10 in 0.3%; over a season the typical regular averages about 5.9 and the league's best 8.6-8.7.
-**Young players' development** rewards playing well in the first team: for players 21 and under the match-rating
-boost rises from a 5.6 average (the median youngster) and is full at 6.8 (their top 10%), and a breakout season
-(60%+ of minutes) that raises potential needs 6.8 too. Older players need 7.5 and 7.2.
+**Development** follows the same rating scale for every age: a season averaging 5 or less slows a player's weekly
+progress (x0.85), 6 is neutral, 7 (good) speeds it (x1.15) and 8+ (great) more (x1.25). With 60%+ of the minutes,
+a good season (7+) raises his potential by 1-3 at the end of it and a great one (8+) by 2-4.
 
 **Academy** (its own page): your youth players are kept apart from the first team. Summer graduates and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
