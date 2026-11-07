@@ -55,7 +55,7 @@ function transferRequest(p, c) {
   p.req = true;
   if (isUser(c)) {
     const why = moodReasons(p).filter(r => r[1] < 0).map(r => r[0].toLowerCase()).join("; ") || "he is unsettled";
-    addDecision({ type: "req", pid: p.id, title: `${p.name} hands in a transfer request`, body: `${p.name} (${p.pos}, ${p.ovr}) has asked to leave: ${why}. How do you respond?`,
+    addDecision({ type: "req", pid: p.id, title: `${p.name} hands in a transfer request`, body: `${p.name} (${p.pos}, rated ${Math.round(r20(p.ovr))}) has asked to leave: ${why}. How do you respond?`,
       opts: [["list", "Accept and put him on the transfer list"], ["promise", "Promise him more football"], ["refuse", "Refuse and tell him to get on with it"]] });
   } else {
     p.listed = true;
@@ -132,7 +132,7 @@ function weeklyStories() {
     if (ex.length) {
       const willing = ex.filter(p => renewTerms(p).happy);
       addDecision({ type: "renew", ids: ex.map(p => p.id), title: `${ex.length} contract${ex.length > 1 ? "s" : ""} expire this summer`,
-        body: `${ex.map(p => `${p.name} (${p.pos}, ${p.age}, ${p.ovr})`).join(", ")}. ${willing.length} of them would sign a new four-year deal now, adding ${perWeek(sum(willing, p => renewTerms(p).wage - p.wage))} to the wage bill. Anyone not renewed leaves for nothing at the end of the season.`,
+        body: `${ex.map(p => `${p.name} (${p.pos}, ${p.age}, rated ${Math.round(r20(p.ovr))})`).join(", ")}. ${willing.length} of them would sign a new four-year deal now, adding ${perWeek(sum(willing, p => renewTerms(p).wage - p.wage))} to the wage bill. Anyone not renewed leaves for nothing at the end of the season.`,
         opts: [["all", `Offer new deals to the ${willing.length} willing`], ["none", "I'll decide one by one"]] });
     }
   }
