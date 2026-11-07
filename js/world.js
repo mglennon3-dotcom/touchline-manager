@@ -205,7 +205,7 @@ function viewOf(p, v, k, wide) {
 /* Before any scouting, every player still has rough bands for his rating and potential: what reputation, press and
    word of mouth tell you. How much you get follows your knowledge of his country, relative to your own spread
    (knowGap: 0 in your best-known country, 1 in your least known):
-   - band width: 4 in your best-known country (e.g. 11-15), 6 in your least known (e.g. 9-15), in between elsewhere;
+   - band width: 5 in your best-known country (e.g. 11-16), 6 in your least known (e.g. 9-15), in between elsewhere;
    - in your least-known country one of the two (rating or potential, fixed per player) is blank; elsewhere the
      chance of a blank falls with the gap, to none in your best-known country.
    Scouting fills both in and tightens them (partial report: narrower; full: exact rating, tight potential).
@@ -214,7 +214,7 @@ function knowGap(p) {
   const ks = KNOW_KEYS.map(knowOf), lo = Math.min(...ks), hi = Math.max(...ks), k = knowOf(playerCountry(p));
   return hi > lo ? clamp((hi - k) / (hi - lo), 0, 1) : clamp(1 - k / 20, 0, 1);
 }
-const unscoutedWidth = p => Math.round(4 + 2 * knowGap(p));
+const unscoutedWidth = p => Math.round(5 + knowGap(p));  // 4 in the best-known country (5.44) was too precise for word of mouth
 // "ovr", "pot" or null: which band an unscouted player is missing.
 const unscoutedBlank = p => scoutLevel(p) > 0 || seedOf(p.id, 21) >= knowGap(p) ? null : seedOf(p.id, 22) < .5 ? "ovr" : "pot";
 const ratingBlank = p => unscoutedBlank(p) === "ovr";
