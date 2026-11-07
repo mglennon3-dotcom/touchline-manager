@@ -159,7 +159,7 @@ simulated like any match, with real fitness and injuries, but don't count: no ta
 cards, bans or ratings.
 
 **Live matches** show your team on a pitch in its formation: each player's rating in his position right now
-(fitness included), fitness bars and bookings, with the bench below. Tap a player and then a substitute to
+(fitness included), fitness as a percentage (green 85+, amber 70+, red below) and bookings, with the bench below. Tap a player and then a substitute to
 bring him on, or two players to swap their positions; change formation from the menu above the pitch. Any of
 these pauses the match until you resume.
 When one of your players is injured in a match you're watching, the match pauses and asks who comes on,
