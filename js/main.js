@@ -562,6 +562,9 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // 5.60.5: promotion could lower ticket prices (see move()). Clubs promoted at the last season's end get the +15%
   // they should have had, once.
   if (!S.tkt2) { for (const c of activeClubs()) { const h = (c.hist || [])[c.hist.length - 1]; if (h && h.y >= S.year - 1 && LG[h.lg] && LG[c.lg] && !LG[c.lg].foreign && LG[c.lg].tier < LG[h.lg].tier) c.price = Math.round(c.price * 1.15 * 100) / 100; } S.tkt2 = 1; }
+  // 5.62.1: one-off, alongside the amnesty: the save misled by the old preseason ratio has its wage bill halved (every
+  // player at the club, academy included). Only a save holding that amnesty is touched.
+  if (!S.wageHalf && S.amnesty && S.club != null && !S.sacked && S.amnesty.club === S.club) { const c = me(), before = sum(c.squad, id => P(id).wage); for (const id of c.squad) { const p = P(id); p.wage = Math.round(p.wage / 2 / 100) * 100; } S.wageHalf = 1; news(`Wage bill halved, a one-off correction for the preseason figures: from ${perWeek(before)} to ${perWeek(sum(c.squad, id => P(id).wage))}. New contracts are priced normally.`, true, "finance"); }
   // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
   if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
