@@ -26,6 +26,8 @@ const aCls = v => v >= 17 ? "a4" : v >= 13 ? "a3" : v >= 8 ? "a2" : "a1";
 function ctyTogHtml(off = [], a) {
   return `<div class="cty-tog" role="group" aria-label="Countries to search"><span class="small muted">Countries</span>${KNOW_KEYS.map(k => { const on = !off.includes(k); return `<button class="cty ${on ? "on" : ""}" data-a="${a}tog" data-v="${k}" aria-pressed="${on}" title="${on ? "Searching" : "Not searching"} ${esc(KNOW_NAME(k))}: tap to switch">${k === "ROW" ? "Rest of world" : esc(COUNTRY[k].name)}</button>`; }).join("")}<span class="cty-all"><button class="lnk small" data-a="${a}all" ${off.length ? "" : "disabled"}>Select all</button> · <button class="lnk small" data-a="${a}none" ${off.length >= KNOW_KEYS.length ? "disabled" : ""}>Unselect all</button></span></div>`;
 }
+/* The favourite star (player cards, prospect cards, Favourites lists): a = "fav" for players, "yfav" for prospects. */
+function starBtn(id, a, on) { return `<button class="star ${on ? "on" : ""}" data-a="${a}" data-v="${id}" aria-pressed="${on}" aria-label="${on ? "Remove from favourites" : "Add to favourites"}" title="${on ? "In your favourites: tap to remove" : "Add to your favourites"}">${on ? "★" : "☆"}</button>`; }
 function ratingHtml(p) { if (ratingBlank(p)) return '<span class="rt unk muted" title="Not scouted, and you know too little about his league to guess: scout him">?</span>'; const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="${scoutLevel(p) ? "Partly scouted" : "Not scouted: a rough band from his reputation. Scouting narrows it"}">${lo}–${hi}</span>`; }
 function attrStrip(p) {
   const lvl = scoutLevel(p);
@@ -747,7 +749,9 @@ function viewTransfers() {
   const SEARCH = [["search", "All players"], ["fa", "Free agents"], ["listed", "Transfer listed"], ["loans", "Loan targets"]];
   const group = SEARCH.some(([k]) => k === UI.tab) ? "search" : UI.tab;
   const listedMine = c.squad.map(P).filter(p => p.listed || p.req).length;
-  const tabs = [["offers", "Offers", offers.length], ["scouted", "Scouted", scoutedAll.length - removedN], ["search", "Search", null], ["mine", "Selling", listedMine], ["log", "Activity", null]];
+  // Favourites: players you've starred on their card (S.fav), wherever they play; ones you've signed drop off.
+  const favs = Object.keys(S.fav || {}).map(id => S.players[id]).filter(p => p && p.club !== S.club && !(p.loan && p.loan.from === S.club));
+  const tabs = [["offers", "Offers", offers.length], ["scouted", "Scouted", scoutedAll.length - removedN], ["fav", "Favourites", favs.length], ["search", "Search", null], ["mine", "Selling", listedMine], ["log", "Activity", null]];
   const open = windowOpen();
   let body;
   if (UI.tab === "offers") {
@@ -769,11 +773,12 @@ function viewTransfers() {
   else if (UI.tab === "mine") body = table("tmine", [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => p.pos }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], c.squad.map(P).filter(p => p.listed || p.req), { empty: "None of your players are listed. List a player from his profile and clubs will start bidding during transfer windows." });
   else {
     const f = UI.tf;
-    let pool = UI.tab === "scouted" ? scouted : UI.tab === "fa" ? S.fa.map(P) : Object.values(S.players).filter(p => p.club >= 0 && p.club !== S.club && p.age >= 17 && !p.loan);
+    const listTab = UI.tab === "scouted" || UI.tab === "fav";  // your own lists: every country, extra report columns
+    let pool = UI.tab === "scouted" ? scouted : UI.tab === "fav" ? favs : UI.tab === "fa" ? S.fa.map(P) : Object.values(S.players).filter(p => p.club >= 0 && p.club !== S.club && p.age >= 17 && !p.loan);
     if (UI.tab === "listed") pool = pool.filter(p => p.listed || p.req);
     if (UI.tab === "loans") pool = pool.filter(p => loanable(p) && !wouldStart(p, C(p.club)));
     // Countries you've switched off (S.set.ctyOff) drop out of every search tab; the Scouted list keeps everyone.
-    const ctyOff = new Set(UI.tab !== "scouted" ? S.set.ctyOff || [] : []);
+    const ctyOff = new Set(!listTab ? S.set.ctyOff || [] : []);
     if (ctyOff.size) pool = pool.filter(p => !ctyOff.has(playerCountry(p)));
     pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && (!f.min || (!ratingBlank(p) && ratingMid(p) >= f.min)) && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
     if (f.fee && UI.tab !== "loans") pool = pool.filter(p => askingPrice(p) <= f.fee);
@@ -792,7 +797,7 @@ function viewTransfers() {
       <label class="f">Interest<select id="tf-int" data-c="tf-int">${[["ALL", "Any"], ["keen", "Keen"], ["open", "Open or keen"], ["sign", "Would sign (not Not interested)"], ["no", "Not interested"]].map(([k, l]) => `<option value="${k}" ${(f.int || "ALL") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
       ${UI.tab !== "fa" ? `<label class="f">League<select id="tf-lg" data-c="tf-lg"><option value="ALL">All leagues</option><option value="ABROAD" ${f.lg === "ABROAD" ? "selected" : ""}>All foreign leagues</option>${lgOpts(f.lg)}</select></label>` : ""}</div>
-      ${UI.tab !== "scouted" ? ctyTogHtml(S.set.ctyOff, "cty") : ""}
+      ${!listTab ? ctyTogHtml(S.set.ctyOff, "cty") : ""}
       ${poolN > 200 ? `<p class="tiny muted" style="margin:0 0 6px">${poolN.toLocaleString()} players match: showing the first 200 in the order you sort by.</p>` : ""}
       ${table("t-" + UI.tab, [
         { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) },
@@ -800,7 +805,7 @@ function viewTransfers() {
         { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
         { k: "ovr", l: "Rating", r: 1, v: p => ratingSort(p), f: p => ratingHtml(p) },
         { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
-        ...(UI.tab === "scouted" ? [
+        ...(listTab ? [
           { k: "ir", l: "Injury risk", r: 1, v: p => viewMid(injView(p)), f: p => injHtml(p), cls: "hide-sm" },
           { k: "rep", l: "Report", v: p => scoutLevel(p) * 1e13 + ((S.scoutT || {})[p.id] || {}).t || 0, f: p => { const t = (S.scoutT || {})[p.id]; return `${scoutLevel(p) >= 2 ? '<b class="good">Full</b>' : '<span class="warn">Partial</span>'}${t ? `<br><span class="tiny muted">${seasonLabel(t.y)} · ${t.w}</span>` : ""}`; } },
         ] : [{ k: "sc", l: "Scouted", v: p => scoutLevel(p), f: p => ["—", "Partly", "Fully"][scoutLevel(p)], cls: "hide-sm" }]),
@@ -808,11 +813,12 @@ function viewTransfers() {
         loans ? { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage) } : { k: "ask", l: "Asking", r: 1, v: p => askingPrice(p), f: p => p.club >= 0 ? money(askingPrice(p)) : "Free" },
         { k: "w", l: "Interest", v: p => willingness(p, c), f: p => { const [l, k] = willingLabel(willingness(p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
         { k: "b", l: "", f: p => (loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"} title="You pay his wage while he's with you">Loan · ${perWeek(p.wage)}</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>`)
+          + (UI.tab === "fav" ? ` ${starBtn(p.id, "fav", true)}` : "")
           + (UI.tab === "scouted" ? (UI.showRemoved ? ` <button class="btn sm" data-a="unhide" data-v="${p.id}">Restore</button>` : ` <button class="btn sm" data-a="unscout" data-v="${p.id}" title="Not good enough: take him off your scouted list (his report is kept)" aria-label="Remove ${esc(p.name)} from the scouted list">✕</button>`) : "") },
-      ], pool, { limit: 200,  empty: UI.tab === "scouted" && !scouted.length ? (UI.showRemoved ? "Nobody removed." : removedN ? "Everyone you've scouted has been removed from this list." : "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here.") : (S.set.ctyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No players match these filters." })}
+      ], pool, { limit: 200,  empty: UI.tab === "fav" && !favs.length ? "No favourites yet. Open a player and tap the ☆ by his name to add him here." : UI.tab === "scouted" && !scouted.length ? (UI.showRemoved ? "Nobody removed." : removedN ? "Everyone you've scouted has been removed from this list." : "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here.") : (S.set.ctyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No players match these filters." })}
       ${UI.tab === "scouted" && removedN ? `<p class="small muted" style="margin-top:8px">${UI.showRemoved ? `Showing the ${removedN} you removed. Restore puts a player back on your list.` : `${removedN} removed from this list.`} <button class="lnk" data-a="showremoved">${UI.showRemoved ? "Back to your list" : "Show removed"}</button></p>` : ""}`;
   }
-  const title = { offers: "Offers", scouted: "Scouted players", search: "Search the market", mine: "Selling", log: "Activity" }[group];
+  const title = { offers: "Offers", scouted: "Scouted players", fav: "Favourites", search: "Search the market", mine: "Selling", log: "Activity" }[group];
   return `<div class="stack">${hoursStrip()}<div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-a="ttab" data-v="${k}" aria-pressed="${group === k}" aria-selected="${group === k}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>
     ${group === "search" ? needsCard(true) : ""}<section class="card"><div class="card-h"><h2>${title}</h2><span class="small">${open ? '<b class="good">Window open</b>' : '<b class="muted">Window closed</b> · opens in January (weeks 19–22) and preseason'} · Cash <b class="num">${money(c.cash)}</b> · Cost ratio <b class="num">${pct(scr(c))}</b></span></div>
     ${group === "search" ? `<div class="chips" role="group" aria-label="Browse" style="margin-bottom:10px">${SEARCH.map(([k, l]) => `<button data-a="ttab" data-v="${k}" aria-pressed="${UI.tab === k}">${l}</button>`).join("")}</div>` : ""}
@@ -883,9 +889,12 @@ function viewYouth() {
     ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: (S.set.yCtyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No prospects match." })}</section>`;
   const commitCard = `<section class="card"><div class="card-h"><h2>Committed to you</h2></div>${commits.length ? commits.map(y => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span><button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button> <span class="pos">${y.pos}</span> <span class="muted small">${esc(y.region)}</span></span>${rangeHtml(prospectPot(y))}</div>`).join("") : '<p class="muted">No commitments yet.</p>'}</section>`;
   /* Tabs rather than one long page: on a phone the class list sat below two other tables. */
-  const tabs = [["offered", "Offered", offered.filter(y => y.commit == null).length], ["scouted", "Scouted", scoutedAll.length - yRemovedN], ["all", "All prospects", null], ["committed", "Committed", commits.length]];
+  const yfavs = S.prospects.filter(y => (S.yfav || {})[y.id]);
+  const favCard = `<section class="card"><div class="card-h"><h2>Favourite prospects</h2><span class="small">${yfavs.length} starred · Hours this week <b class="num">${S.rec.hours}/${recHours()}</b></span></div>
+    ${table("youth-fav", [...scoutCols.slice(0, -1), { k: "fv", l: "", f: y => starBtn(y.id, "yfav", true) }], yfavs, { sort: { k: "st", d: -1 }, empty: "No favourites yet. Open a prospect and tap the ☆ by his name to add him here." })}</section>`;
+  const tabs = [["offered", "Offered", offered.filter(y => y.commit == null).length], ["scouted", "Scouted", scoutedAll.length - yRemovedN], ["fav", "Favourites", yfavs.length], ["all", "All prospects", null], ["committed", "Committed", commits.length]];
   const tab = UI.ytab || "offered";
-  const body = { offered: offeredCard, scouted: scoutedCard, all: classCard, committed: commitCard }[tab] || offeredCard;
+  const body = { offered: offeredCard, scouted: scoutedCard, fav: favCard, all: classCard, committed: commitCard }[tab] || offeredCard;
   return `<div class="stack">${hoursStrip()}<div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([v, l, n]) => `<button role="tab" data-a="ytab" data-v="${v}" aria-pressed="${tab === v}" aria-selected="${tab === v}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>${body}</div>`;
 }
 function yourRank(y) { const cs = contenders(y); const i = cs.findIndex(x => x.c.id === S.club); return i < 0 ? 99 : i; }
@@ -1081,7 +1090,7 @@ function modalPlayer(p) {
     const [l, k] = willingLabel(willingness(p, me()));
     actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"} title="On loan you pay his wage">Ask to loan (you pay ${perWeek(p.wage)})</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;
   }
-  return mHead(esc(p.name), `${ROLE_NAME[p.pos]} · ${NAT_NAME[p.nat] || p.nat} · ${p.age}`, c ? c.color : "var(--muted)", c ? crest(c, 36) : "") + `<div class="modal-b">
+  return mHead(esc(p.name) + (mine ? "" : " " + starBtn(p.id, "fav", !!(S.fav || {})[p.id])), `${ROLE_NAME[p.pos]} · ${NAT_NAME[p.nat] || p.nat} · ${p.age}`, c ? c.color : "var(--muted)", c ? crest(c, 36) : "") + `<div class="modal-b">
     <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${injHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
       <div><dt>Value</dt><dd class="num">${money(value(p))}</dd></div><div><dt>Wage</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Contract</dt><dd>${c ? p.yrs + " yr" + (p.yrs === 1 ? "" : "s") : "—"}</dd></div>
       <div><dt>Fitness</dt><dd>${fitBar(p.fit)} ${Math.round(p.fit)}</dd></div><div><dt>Mood</dt><dd>${moodTag(p)}</dd></div><div><dt>Homegrown</dt><dd>${Object.entries(p.yt).filter(([, v]) => v >= RULES.hgYears).map(([k]) => COUNTRY[k] ? COUNTRY[k].name : k).join(", ") || "No"}</dd></div>
@@ -1133,7 +1142,7 @@ function modalProspect(y) {
   if (!y) return "";
   const c = me(), f = factors(y, c), cs = contenders(y).slice(0, 5);
   const best = cs[0] ? cs[0].s : 1;
-  return mHead(esc(y.name), `${ROLE_NAME[y.pos]} · age 15 · ${esc(y.region)}${y.country === "ENG" ? "" : " (abroad)"}`, "var(--accent)") + `<div class="modal-b">
+  return mHead(esc(y.name) + " " + starBtn(y.id, "yfav", !!(S.yfav || {})[y.id]), `${ROLE_NAME[y.pos]} · age 15 · ${esc(y.region)}${y.country === "ENG" ? "" : " (abroad)"}`, "var(--accent)") + `<div class="modal-b">
     <dl class="facts"><div><dt>Potential</dt><dd>${rangeHtml(prospectPot(y))} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${rangeHtml(prospectInj(y), true)}</dd></div><div><dt>Scouted</dt><dd>${["Not yet", "Once", "Twice", "Fully"][y.sc]}</dd></div>
       ${y.sc >= 3 ? `<div><dt>Current rating</dt><dd class="num">${Math.round(r20(y.ovr))} / 20</dd></div>` : ""}<div><dt>Distance</dt><dd class="num">${Math.round(f.d)} km</dd></div>
       <div><dt>Open to moving</dt><dd>${y.known ? (y.open > .66 ? "Very" : y.open > .4 ? "Somewhat" : "Prefers to stay near home") : "Unknown"}</dd></div><div><dt>Status</dt><dd>${y.commit != null ? "Committed to " + clubA(y.commit) : y.offers.length + " offer" + (y.offers.length === 1 ? "" : "s")}</dd></div></dl>

@@ -482,3 +482,7 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .cty-tog .cty{font:600 12px/1 var(--f-body);padding:6px 10px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--muted);cursor:pointer;text-decoration:line-through}
 .cty-tog .cty.on{background:var(--ink);color:var(--surface);border-color:var(--ink);text-decoration:none}
 .cty-tog .cty-all{white-space:nowrap} .cty-tog .lnk[disabled]{opacity:.4;cursor:default}
+/* Favourite star: on player and prospect cards, and in the Favourites lists */
+.star{border:0;background:none;padding:0 4px;font-size:1.1em;line-height:1;color:var(--muted);cursor:pointer;vertical-align:middle}
+.star.on{color:var(--accent-ink)}
+.modal-h h2 .star{font-size:.8em}

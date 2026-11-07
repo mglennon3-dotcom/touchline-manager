@@ -308,6 +308,9 @@ which AI clubs draw on at once to fill thin positions.
 of the world) switches it on or off for every search tab: All players, Free agents, Transfer listed and Loan
 targets. A player counts by his club's country (a free agent by his nationality). Your choice is saved; "Select all"
 and "Unselect all" switch every country on or off (handy for picking just one or two), and the Scouted tab always lists everyone. The Youth page's All prospects tab has its own set of toggles, saved separately (a prospect counts by where he lives; Brazil, Argentina, West Africa and Scandinavia are Rest of world).
+**Favourites.** Tap the ☆ by a player's name on his card to star him: he joins the Favourites tab on Transfers
+(separate from Scouted, and any country), where the ★ takes him off again. Prospects work the same way, with a
+Favourites tab on the Youth page.
 **Scouted list.** The ✕ on a row of the Transfers Scouted tab takes a player you've decided against off the list.
 His report is kept, and the scouting assistant won't scout him again. "Show removed" lists them with Restore, and
 scouting him again yourself puts him back. The Youth page's Scouted tab works the same way for prospects.
