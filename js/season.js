@@ -575,7 +575,7 @@ function ageAndContracts() {
       if (isUser(c)) { c.squad = c.squad.filter(id => id !== p.id); toFreeAgent(p); news(`${p.name}'s contract has expired and he has left the club.`, false, "squad"); }
       // The player has a say too, on the same terms as yours (renewTerms): one who has asked to leave or is unhappy
       // (mood under 45) won't sign again and goes into free agency. Before 5.45 only a transfer request stopped it.
-      else if (p.age < 32 && p.ovr >= clubLevel(c) - 9 && R() < .8 && !p.req && p.mood >= 45) { p.yrs = ri(1, 4); p.wage = wageDemand(p, c.rep); }
+      else if (p.age < 32 && p.ovr >= clubLevel(c) - 9 && R() < .8 && !p.req && p.mood >= 45) { p.yrs = ri(1, 4); p.wage = renewWage(p, c); }
       else { c.squad = c.squad.filter(id => id !== p.id); toFreeAgent(p); }
     }
   }

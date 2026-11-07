@@ -79,7 +79,18 @@ function value(p) {
   const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(v)) - 1));
   return Math.max(10000, Math.round(v / mag) * mag);
 }
-function wageDemand(p, rep) { return Math.max(15000, Math.round(baseValue(p) * .16 * (.75 + rep / 200) / 1000) * 1000); }
+// Wages follow what he can do now more than what he might become: half the potential premium that baseValue gives
+// an under-24's transfer value (the full premium priced teenagers' wages like established stars').
+function wageDemand(p, rep) { const prem = p.age < 24 ? (1 + (p.pot - p.ovr) * .0225) / (1 + (p.pot - p.ovr) * .045) : 1; return Math.max(15000, Math.round(baseValue(p) * prem * .16 * (.75 + rep / 200) / 1000) * 1000); }
+/* A new deal at his own club: his market wage, but a player content enough to stay doesn't ask for more than
+   double what he earns now or 20% over the club's top earner, whichever is higher (never less than he's on).
+   Without it a youngster who'd jumped three points in a season asked five times his wage, far above anyone at a
+   small club. */
+function renewWage(p, c, mult = 1) {
+  const top = Math.max(0, ...c.squad.filter(id => id !== p.id).map(id => P(id).wage));
+  const cap = Math.max(p.wage * 2, top * 1.2);
+  return Math.max(p.wage, Math.round(Math.min(wageDemand(p, c.rep) * mult, cap) / 1000) * 1000);
+}
 const isHG = (p, country) => (p.yt[country] || 0) >= RULES.hgYears;
 // Academy players never need registering, whatever their age (they move up at 21, at the season's end).
 const isSenior = p => p.age >= 21 && !p.acad;

@@ -208,6 +208,10 @@ Head-to-head records are kept for every rivalry.
 
 **Free agents** who go three seasons without a club leave the game at the end of the third season. (The pool is
 also held to 300 at each season's end, dropping the least valuable.)
+**Renewing contracts.** A player happy enough to stay asks for his market wage, capped at double what he earns now
+or 20% above your top earner, whichever is higher (never less than his current wage). So a youngster who has
+outgrown your wage structure is still affordable to keep; his full market wage applies if a bigger club buys him.
+Wages weigh potential half as much as transfer values do.
 **Graduate intake.** At the end of each season your academy offers a pool of five local 16-year-olds. Their
 potential is chance, shaped like the game: it's drawn from the ratings of established players (22-32), so most
 land around 7-14 of 20 and stars are as rare as they are among pros, whatever the club or its academy. They appear at the top of the Academy page with their rating and

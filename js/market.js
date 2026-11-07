@@ -232,7 +232,7 @@ function renewTerms(p) {
   const c = me();
   if (p.retiring === 1) return { happy: false, wage: p.wage, reason: "He has decided to retire at the end of the season." };
   const happy = p.mood >= 45 && !p.req;
-  const wage = Math.round(wageDemand(p, c.rep) * (p.mood < 60 ? 1.25 : 1.05) / 1000) * 1000;
+  const wage = renewWage(p, c, p.mood < 60 ? 1.25 : 1.05);
   return { happy, wage, reason: happy ? "" : p.req ? "He has asked to leave and won't discuss a new deal." : "He is unhappy and won't commit his future right now. More minutes or better results might change that." };
 }
 
