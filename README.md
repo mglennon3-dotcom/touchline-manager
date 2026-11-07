@@ -272,11 +272,14 @@ bonuses and future transfers count once they happen. In preseason it projects th
 by projecting at week 6 and playing the season out: a Premier club came to €34.4M projected against €38.9M
 actual (the gap was a cup run), and a fifth-tier club to €230k against €260k.
 **What you know about a player.** Your own players and everyone in your division show their exact rating.
-Every other player shows a band that always contains his true rating. How wide it is depends on how well you
-know his country, measured against your own range of knowledge: 7 wide (e.g. 9-16) in your weakest area, 4 wide
-(e.g. 11-15) in your strongest, and in between for the rest. Scouting narrows it: a first look to 1-3 wide, a
-full report to the exact figure. Sorting and the Min rating filter use the middle of the band, and Team Needs
-upgrades need even the bottom of it to be an upgrade. Attributes, potential and injury risk still need scouting.
+Every other player shows bands for his rating and his potential, each always containing the true figure. What
+you get depends on how well you know his country, measured against your own range of knowledge: in your
+best-known country both bands are 4 wide (e.g. 11-15); in your least-known one, one of the two (rating or
+potential, fixed per player) is blank and the other is 6 wide; countries in between get widths of 5-6 and a
+blank for a share of players that grows as your knowledge falls. Scouting fills both in and narrows them: a
+first look to a few points, a full report to the exact rating and a tight potential range. Sorting and the
+Min rating filter use the middle of the band (a blank rating sorts last and fails the filter), and Team Needs
+upgrades need even the bottom of the band to be an upgrade. Attributes and injury risk still need scouting.
 Match stats (apps, goals, average rating) are public.
 **Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
 commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the

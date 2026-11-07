@@ -22,7 +22,7 @@ const starHtml = (lo, hi) => `<span class="stars" title="${lo === hi ? lo : lo +
 const trophyName = t => LG[t] ? leagueName(t) : t === "FA" ? CUPS.FA.name : t === "LC" ? CUPS.LC.name : CONT[t] ? CONT[t].name : t;
 /* Ratings out of 20. Exact for players you know; a range for everyone else until scouted. */
 const aCls = v => v >= 17 ? "a4" : v >= 13 ? "a3" : v >= 8 ? "a2" : "a1";
-function ratingHtml(p) { const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="${scoutLevel(p) ? "Partly scouted" : "Not scouted: a rough band from his reputation. Scouting narrows it"}">${lo}–${hi}</span>`; }
+function ratingHtml(p) { if (ratingBlank(p)) return '<span class="rt unk muted" title="Not scouted, and you know too little about his league to guess: scout him">?</span>'; const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="${scoutLevel(p) ? "Partly scouted" : "Not scouted: a rough band from his reputation. Scouting narrows it"}">${lo}–${hi}</span>`; }
 function attrStrip(p) {
   const lvl = scoutLevel(p);
   if (lvl === 0) return '<span class="muted tiny">Scout to see</span>';
@@ -554,7 +554,7 @@ function needTargets(role, floor, k = 3) {
   for (const p of Object.values(S.players)) {
     if (p.club === S.club || p.loan || p.age < 18 || p.age > 31 || FAM[p.pos][role] < .9 || p.retiring === 1) continue;
     const k = p.pos === role ? 1 : .97, rm = ratingMid(p) * k;
-    if (ratingView(p)[0] * k < floor + 1) continue;  // even the cautious end of the estimate must be an upgrade
+    if (ratingBlank(p) || ratingView(p)[0] * k < floor + 1) continue;  // even the cautious end of the estimate must be an upgrade
     const fee = p.club >= 0 ? askingPrice(p) : 0;
     if (fee > budget) continue;
     picks.push({ p, rm, fee });
@@ -756,7 +756,7 @@ function viewTransfers() {
     let pool = UI.tab === "scouted" ? scouted : UI.tab === "fa" ? S.fa.map(P) : Object.values(S.players).filter(p => p.club >= 0 && p.club !== S.club && p.age >= 17 && !p.loan);
     if (UI.tab === "listed") pool = pool.filter(p => p.listed || p.req);
     if (UI.tab === "loans") pool = pool.filter(p => loanable(p) && !wouldStart(p, C(p.club)));
-    pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && (!f.min || ratingMid(p) >= f.min) && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
+    pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && (!f.min || (!ratingBlank(p) && ratingMid(p) >= f.min)) && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
     if (f.fee && UI.tab !== "loans") pool = pool.filter(p => askingPrice(p) <= f.fee);
     // Interest, using the same bands as the Interest column: "would sign" is everyone but Not interested,
     // since a player below .3 turns any offer down.
@@ -779,8 +779,8 @@ function viewTransfers() {
         { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>` },
         { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
         { k: "ovr", l: "Rating", r: 1, v: p => ratingSort(p), f: p => ratingHtml(p) },
+        { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
         ...(UI.tab === "scouted" ? [
-          { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
           { k: "ir", l: "Injury risk", r: 1, v: p => viewMid(injView(p)), f: p => injHtml(p), cls: "hide-sm" },
           { k: "rep", l: "Report", v: p => scoutLevel(p) * 1e13 + ((S.scoutT || {})[p.id] || {}).t || 0, f: p => { const t = (S.scoutT || {})[p.id]; return `${scoutLevel(p) >= 2 ? '<b class="good">Full</b>' : '<span class="warn">Partial</span>'}${t ? `<br><span class="tiny muted">${seasonLabel(t.y)} · ${t.w}</span>` : ""}`; } },
         ] : [{ k: "sc", l: "Scouted", v: p => scoutLevel(p), f: p => ["—", "Partly", "Fully"][scoutLevel(p)], cls: "hide-sm" }]),
@@ -1135,7 +1135,7 @@ function modalBid(p) {
   const wages = uniq([.7, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2, 1.3].map(k => Math.round(demand * k / 1000) * 1000).concat(b.counterWage ? [b.counterWage] : [], [b.wage]));
   const feeAgreed = b.feeOK != null && b.fee >= b.feeOK;
   const counters = [b.counterFee && b.fee !== b.counterFee && !feeAgreed ? `<button class="btn sm" data-a="bidcounter" data-v="fee">Offer their ${money(b.counterFee)}</button>` : "", b.counterWage && b.wage !== b.counterWage ? `<button class="btn sm" data-a="bidcounter" data-v="wage">Offer him ${perWeek(b.counterWage)}</button>` : ""].filter(Boolean).join("");
-  return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · rated ${ratingView(p).join("–").replace(/^(\d+)–\1$/, "$1")}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
+  return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · ${ratingBlank(p) ? "rating unknown: scout him" : `rated ${ratingView(p).join("–").replace(/^(\d+)–\1$/, "$1")}`}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
     <dl class="facts"><div><dt>Asking price</dt><dd class="num">${p.club >= 0 ? money(ask) : "None"}</dd></div><div><dt>His interest</dt><dd class="${wk === "ok" ? "" : wk}">${wl}</dd></div><div><dt>His contract request</dt><dd class="num">${perWeek(demand)}</dd></div><div><dt>Earns now</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Your cash</dt><dd class="num">${money(c.cash)}</dd></div></dl>
     ${w < .45 ? `<p class="small">${esc(whyNot(p, c) || "He isn't convinced by the move.")}</p>` : ""}
     <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee ${feeAgreed ? '<span class="good tiny">agreed ✓</span>' : ""}<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === roundFee(ask) ? " (asking)" : ""}${v === b.counterFee ? " (their counter)" : ""}</option>`).join("")}</select></label>` : ""}
@@ -1263,7 +1263,7 @@ function viewLive() {
 }
 
 /* Overall, potential and age in one short line, for the Tactics pickers: "Ovr 14 · Pot 15–18 · Age 19". */
-const opaLine = p => { const o = Math.round(r20(p.ovr)); let [lo, hi] = potView(p); lo = Math.max(lo, o); hi = Math.max(hi, o);  // the estimate never sits below what he already is
+const opaLine = p => { const o = Math.round(r20(p.ovr)); let [lo, hi] = potView(p) || [o, o]; lo = Math.max(lo, o); hi = Math.max(hi, o);  // the estimate never sits below what he already is
   return `<span class="opa">Ovr ${o} · Pot ${lo === hi ? lo : lo + "–" + hi} · Age ${p.age}</span>`; };
 /* ---------- academy ---------- */
 function viewAcademy() {

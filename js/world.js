@@ -202,26 +202,43 @@ function viewOf(p, v, k, wide) {
   if (lvl === 0 && Number.isInteger(w)) { const lo = clamp(Math.round(c - w / 2), 1, 20 - w); return [lo, lo + w]; }
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
-/* Before any scouting, every player still has a rough band: what the game's reputation, press and word of mouth
-   tell you. Its width follows your knowledge of his country, relative to your own spread: your weakest area gives a
-   band 7 wide (e.g. 9-16), your strongest 4 wide (e.g. 11-15). Scouting tightens it (partial report: 1-3 wide;
-   full: exact). The band was "?" from 5.41 to 5.42, which made the world feel blank. */
-function unscoutedWidth(p) {
+/* Before any scouting, every player still has rough bands for his rating and potential: what reputation, press and
+   word of mouth tell you. How much you get follows your knowledge of his country, relative to your own spread
+   (knowGap: 0 in your best-known country, 1 in your least known):
+   - band width: 4 in your best-known country (e.g. 11-15), 6 in your least known (e.g. 9-15), in between elsewhere;
+   - in your least-known country one of the two (rating or potential, fixed per player) is blank; elsewhere the
+     chance of a blank falls with the gap, to none in your best-known country.
+   Scouting fills both in and tightens them (partial report: narrower; full: exact rating, tight potential).
+   The rating was "?" in 5.41-5.42, which made the world feel blank; 5.43 gave a rating band only (4-7 wide). */
+function knowGap(p) {
   const ks = KNOW_KEYS.map(knowOf), lo = Math.min(...ks), hi = Math.max(...ks), k = knowOf(playerCountry(p));
-  return Math.round(7 - 3 * (hi > lo ? (k - lo) / (hi - lo) : clamp(k / 20, 0, 1)));
+  return hi > lo ? clamp((hi - k) / (hi - lo), 0, 1) : clamp(1 - k / 20, 0, 1);
 }
+const unscoutedWidth = p => Math.round(4 + 2 * knowGap(p));
+// "ovr", "pot" or null: which band an unscouted player is missing.
+const unscoutedBlank = p => scoutLevel(p) > 0 || seedOf(p.id, 21) >= knowGap(p) ? null : seedOf(p.id, 22) < .5 ? "ovr" : "pot";
+const ratingBlank = p => unscoutedBlank(p) === "ovr";
+// ratingView is also the scouts' private estimate (the scouting assistant ranks targets by it), so it exists even
+// when the rating is blank to you; the display, sorting and filters check ratingBlank.
 const ratingView = p => viewOf(p, r20(p.ovr), 1, scoutLevel(p) === 0 ? unscoutedWidth(p) : 0);
 const attrView = (p, k) => scoutLevel(p) === 0 ? null : viewOf(p, p.at[k], k.charCodeAt(0) + k.charCodeAt(1), 0);
 const ratingMid = p => { const [a, b] = ratingView(p); return (a + b) / 2; };
-// Sorting and filtering use the middle of what you can see, never the true rating, so an unscouted band gives
-// nothing away beyond the band itself.
-const ratingSort = p => ratingMid(p);
+// Sorting and filtering use the middle of what you can see, never the true rating, so a band gives nothing away
+// beyond the band itself; a blank rating sorts last.
+const ratingSort = p => ratingBlank(p) ? -1 : ratingMid(p);
 /* Potential and injury proneness are hidden. Scouts estimate them as a range out of 20:
-   a first look gives a wide range, a full report a narrow one, and a better recruiter narrows both. */
+   a first look gives a wide range, a full report a narrow one, and a better recruiter narrows both.
+   Unscouted, potential gets the same band as the rating (above); injury risk stays unknown. */
 function hiddenView(p, val, k) {
-  const lvl = scoutLevel(p); if (lvl === 0) return null;
+  const lvl = scoutLevel(p);
+  if (lvl === 0) {
+    if (k !== 11 || unscoutedBlank(p) === "pot") return null;
+    const w = unscoutedWidth(p), lo = clamp(Math.round(val - w / 2 + (seedOf(p.id, k) - .5) * w), 1, 20 - w); return [lo, lo + w];
+  }
   const rec = S.me ? S.me.rec : 10, kw = (p.club >= 0 && C(p.club).lg === (S.club != null ? me().lg : "")) || p.club === S.club ? 1 : knowWidth(playerCountry(p));
-  const w = (lvl >= 2 ? Math.max(1, 5 - rec * .2) : Math.max(3, 9 - rec * .25)) * kw;
+  let w = (lvl >= 2 ? Math.max(1, 5 - rec * .2) : Math.max(3, 9 - rec * .25)) * kw;
+  // A first look never leaves the potential wider than the unscouted band it replaces.
+  if (lvl === 1 && k === 11) w = Math.min(w, unscoutedWidth(p) - 1);
   const c = val + (seedOf(p.id, k) - .5) * w * .8;
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
