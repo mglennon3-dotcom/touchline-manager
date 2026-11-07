@@ -1076,7 +1076,21 @@ function modalClub(c) {
     ${(c.takeovers || []).length ? `<p class="small">Ownership: ${c.takeovers.slice(-4).map(t => `${seasonLabel(t.y)} ${esc(t.who.replace(/^An? /, "").toLowerCase())} (${t.kind === "invest" ? "investor" : "cost-cutter"})`).join(" · ")}</p>` : ""}
     ${Object.keys(c.rivals || {}).length ? `<p class="small">Rivals: ${Object.entries(c.rivals).filter(([id]) => !C(+id).gone).map(([id, n]) => `${clubA(+id, { crest: false })} (${RIVAL_WORD[n].toLowerCase()}, ${recStr(h2hOf(c, +id))})`).join(" · ")}</p>` : ""}
     ${c.trophies.length ? `<p class="small">Honours: ${c.trophies.slice(-12).reverse().map(t => `${trophyName(t.t)} ${seasonLabel(t.y)}`).join(", ")}</p>` : ""}
-    ${table("club-" + c.id, [{ k: "n", l: "Player", f: p => playerA(p) + " " + statusChips(p, c) }, { k: "pos", l: "Pos", f: p => `<span class="pos">${p.pos}</span>` }, { k: "age", l: "Age", r: 1, f: p => p.age }, { k: "ovr", l: "Rating", r: 1, f: p => ratingHtml(p) }, { k: "g", l: "Goals", r: 1, f: p => p.s.g }, { k: "v", l: "Value", r: 1, f: p => money(value(p)) }], ps)}</div>`;
+    ${(() => { // this season's record, as on your own pages: league position, record, goals and xG
+      const r = c.gone ? null : standings(L).find(x => x.id === c.id), xs = c.xs || {};
+      return r && r.p ? `<p class="small"><b>This season:</b> P${r.p} W${r.w} D${r.d} L${r.l} · GF ${r.gf} GA ${r.ga} · ${r.pts} pts${xs.xg != null && !isForeign(c) ? ` · xG ${xs.xg.toFixed(1)} for, ${xs.xga.toFixed(1)} against` : ""}</p>` : ""; })()}
+    ${table("club-" + c.id, [
+      { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p, c) },
+      { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>` },
+      { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
+      { k: "ovr", l: "Rating", r: 1, v: p => ratingMid(p), f: p => ratingHtml(p) },
+      { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
+      { k: "app", l: "Apps", r: 1, v: p => p.s.app, f: p => p.s.app },
+      { k: "g", l: "Goals", r: 1, v: p => p.s.g, f: p => p.s.g },
+      { k: "a", l: "Assists", r: 1, v: p => p.s.a, f: p => p.s.a },
+      { k: "rt", l: "Avg rating", r: 1, v: p => p.s.app ? p.s.rt / p.s.app : 0, f: p => p.s.app ? `<span class="mr ${mrCls(p.s.rt / p.s.app)}">${(p.s.rt / p.s.app).toFixed(2)}</span>` : "—" },
+      { k: "v", l: "Value", r: 1, v: p => value(p), f: p => money(value(p)) },
+    ], ps, { sort: { k: "pos", d: 1 } })}</div>`;
 }
 function modalProspect(y) {
   if (!y) return "";
