@@ -4,14 +4,20 @@ const whenLabel = () => S.phase === "summer" ? "Pre-wk " + (S.summerDay + 1) : "
 function news(t, hi, tag) { S.news.unshift({ t, hi: !!hi, tag: tag || "", y: S.year, w: whenLabel() }); if (S.news.length > 160) S.news.length = 160; }
 const seasonLabel = y => `${y}–${String((y + 1) % 100).padStart(2, "0")}`;
 
+/* A double round robin where home and away alternate (the standard "canonical" schedule): round r pairs the last club
+   with club r (home in even rounds) and clubs r+k and r-k (mod n-1), the first at home when k is odd, so as a club's
+   k changes by one each round its venue flips. The old rotation kept most pairs'
+   orientation fixed while clubs moved along the circle: one club played 19 away games in a row, then 23 at home. */
 function roundRobin(ids) {
-  const n = ids.length, arr = ids.slice(), rounds = [];
-  for (let r = 0; r < n - 1; r++) {
-    const m = [];
-    for (let i = 0; i < n / 2; i++) { const a = arr[i], b = arr[n - 1 - i]; m.push((r + i) % 2 ? [b, a] : [a, b]); }
-    rounds.push(m); arr.splice(1, 0, arr.pop());
+  const n = ids.length, m = n - 1, rounds = [];
+  for (let r = 0; r < m; r++) {
+    const rd = [r % 2 ? [ids[r], ids[m]] : [ids[m], ids[r]]];
+    for (let k = 1; k < n / 2; k++) { const a = ids[(r + k) % m], b = ids[(r - k + m) % m]; rd.push(k % 2 ? [a, b] : [b, a]); }
+    rounds.push(rd);
   }
-  return rounds.concat(rounds.map(rd => rd.map(([a, b]) => [b, a])));
+  // The second half mirrors the first starting from its second round, so nobody gets three home or away games in a
+  // row at the turn (mirroring in order gave two clubs a run of three; never more than two this way).
+  return rounds.concat(rounds.slice(1).concat(rounds.slice(0, 1)).map(rd => rd.map(([a, b]) => [b, a])));
 }
 const windowOpen = () => S.phase === "summer" || CAL.jan.includes(S.week);
 

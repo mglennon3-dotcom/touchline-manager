@@ -498,6 +498,9 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
         if (p.nat !== "ENG" || (p.loan && p.loan.from === S.club) || !OLD90.has(rest.join(" ")) || R() > .75) continue;
         for (let i = 0; i < 20; i++) { const n = first + " " + pick(NAMES.ENG[1]); if (!hasNamesake(c, n, p.id)) { p.name = n; break; } } } }
     S.names3 = 1; }
+  // 5.60.3: fixtures now alternate home and away. A season with no league games played yet is redrawn; otherwise the
+  // new pattern starts next season.
+  if (!S.rr2) { if (S.phase === "season") for (const L of Object.values(S.leagues)) if (!(L.results || []).length) { L.fixtures = roundRobin(shuffle(L.clubs.slice())); L._st = null; } S.rr2 = 1; }
   // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
   if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
