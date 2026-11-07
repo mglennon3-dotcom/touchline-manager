@@ -459,6 +459,10 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // 5.50: graduates come as a pool at the end of the season. A save already in preseason missed that step, and the
   // old one-or-two at kick-off is gone, so it gets this year's pools now (every club, yours included).
   if (S.phase === "summer" && !S.firstPre && S.club != null && !S.sacked && S.intakeY !== S.year && !S.intake) graduateIntakes();
+  // 5.54.3: the 5.35 step above missed players who'd been with you since the career began (joined in the current
+  // year, which doesn't change until kick-off), so some showed "Too early to tell" after a full season of 44 games.
+  // Anyone with a completed season for your club in his record is known to your coaches.
+  if (!S.seenV2 && S.club != null && !S.sacked) { for (const id of me().squad) { const p = P(id); if ((p.hist || []).some(h => h[2] === S.club)) p.seen = Math.max(p.seen || 0, GS_SEEN); } S.seenV2 = 1; }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
   if (!S.pt2 && S.club != null && !S.sacked) { for (const id of me().squad) { const p = P(id); if (p.joined === S.year && !p.s.app && !p.acad) p.pt = Math.max(p.pt, expectedShare(p, me())); } S.pt2 = true; }
   // 5.51: free agents leave the game after three years unsigned. Ones already free start counting now.
