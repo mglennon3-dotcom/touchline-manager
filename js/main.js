@@ -234,7 +234,13 @@ const ACT = {
   bidcounter: v => { const b = UI.bid; if (v === "fee" && b.counterFee) b.fee = b.counterFee; if (v === "wage" && b.counterWage) b.wage = b.counterWage; b.msg = ""; renderModal(); },
   rec: v => { const [id, act] = v.split("|"); const y = S.prospects.find(x => x.id === id); const r = recAct(y, act); toast(r); save(); render(); },
   renew: v => { const p = P(+v), t = renewTerms(p); if (!t.happy) return toast(t.reason); p.yrs = 4; p.wage = t.wage; p.mood = Math.min(100, p.mood + 5); news(`${p.name} signs a new four-year contract on ${perWeek(t.wage)}.`, false, "squad"); save(); render(); toast(`${p.name} renewed until ${S.year + 4}.`); },
-  list: v => { const p = P(+v); p.listed = !p.listed; if (p.listed) p.mood = Math.max(0, p.mood - 6); save(); render(); toast(p.listed ? `${p.name} is on the transfer list.` : `${p.name} is off the list.`); },
+  // Listing upsets a player who wants to stay (mood -6), and taking him off gives it back. One who wants out (has
+  // asked to leave, or feels he's outgrown the club) doesn't mind. Before 5.55 the -6 was never undone.
+  list: v => { const p = P(+v), c = me(); p.listed = !p.listed;
+    if (p.listed) { p.listPct = p.listPct || 1; const wantsOut = p.req || (p.ovr > clubLevel(c) + 6 && p.amb > .6); p.listMood = wantsOut ? 0 : Math.min(6, p.mood); p.mood -= p.listMood; }
+    else { p.mood = Math.min(100, p.mood + (p.listMood || 0)); p.listMood = 0; }
+    save(); render(); toast(p.listed ? `${p.name} is on the transfer list at ${money(askingPrice(p))}${p.listMood ? "; he's not happy about it" : ""}.` : `${p.name} is off the list.`); },
+
   "ask-sell": v => { const p = P(+v), c = me(); if (c.squad.length <= 16) return toast("You need at least 16 players."); if (p.pos === "GK" && c.squad.filter(id => P(id).pos === "GK").length <= 2) return toast("You need to keep two goalkeepers."); UI.confirm = { id: p.id, act: "sell", msg: `Sell ${p.name} for ${money(Math.round(value(p) * .8 / 1e4) * 1e4)}?`, yes: "Sell him" }; renderModal(); },
   "ask-release": v => { const p = P(+v); UI.confirm = { id: p.id, act: "release", msg: `Release ${p.name}? You pay ${money(Math.round(p.wage * Math.max(0, p.yrs) * .5))} to settle his contract.`, yes: "Release him" }; renderModal(); },
   "confirm-no": () => { UI.confirm = null; renderModal(); },
@@ -332,7 +338,7 @@ const CHG = {
   import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); d.saveId = newSaveId(); if (!adoptSave(d)) throw new Error("not a save"); await save(); render(); toTop(); toast("Save file loaded as a new career."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
   "tf-pos": v => { UI.tf.pos = v; render(); }, "tf-age": v => { UI.tf.age = +v; render(); }, "tf-min": v => { UI.tf.min = +v; render(); }, "tf-fee": v => { UI.tf.fee = +v; render(); }, "tf-lg": v => { UI.tf.lg = v; render(); }, "tf-int": v => { UI.tf.int = v; render(); },
   "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); },
-  "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); }, "bid-plan": v => { const b = UI.bid, from = deferMult(b.plan || 1), to = deferMult(+v); b.plan = +v; b.fee = roundFee(b.fee / from * to); b.counterFee = null; b.msg = ""; renderModal(); }, "bid-wage": v => { UI.bid.wage = +v; UI.bid.msg = ""; renderModal(); },
+  "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); }, "list-pct": v => { const m = UI.modal, p = m && P(m.id); if (!p) return; p.listPct = +v; save(); render(); toast(`${p.name} now listed at ${money(askingPrice(p))}.`); }, "bid-plan": v => { const b = UI.bid, from = deferMult(b.plan || 1), to = deferMult(+v); b.plan = +v; b.fee = roundFee(b.fee / from * to); b.counterFee = null; b.msg = ""; renderModal(); }, "bid-wage": v => { UI.bid.wage = +v; UI.bid.msg = ""; renderModal(); },
 };
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-a]");
@@ -463,6 +469,8 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // year, which doesn't change until kick-off), so some showed "Too early to tell" after a full season of 44 games.
   // Anyone with a completed season for your club in his record is known to your coaches.
   if (!S.seenV2 && S.club != null && !S.sacked) { for (const id of me().squad) { const p = P(id); if ((p.hist || []).some(h => h[2] === S.club)) p.seen = Math.max(p.seen || 0, GS_SEEN); } S.seenV2 = 1; }
+  // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
+  if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
   if (!S.pt2 && S.club != null && !S.sacked) { for (const id of me().squad) { const p = P(id); if (p.joined === S.year && !p.s.app && !p.acad) p.pt = Math.max(p.pt, expectedShare(p, me())); } S.pt2 = true; }
   // 5.51: free agents leave the game after three years unsigned. Ones already free start counting now.

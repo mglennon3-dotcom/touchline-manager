@@ -6,9 +6,11 @@ function askingPrice(p, buyer) {
   const c = C(p.club);
   buyer = buyer || (S.club != null ? me() : null);
   let v = value(p) * (squadRank(p, c) < 3 ? 1.4 : squadRank(p, c) < 11 ? 1.15 : 1);
-  if (buyer) v *= 1 + .25 * rivalry(c.id, buyer.id);  // nobody sells cheaply to a rival
   if (p.req || p.listed) v *= .8;
   if (p.joined === S.year && !p.req && !p.listed) v *= 1.3;   // clubs rarely sell someone they just signed
+  // Your listed players go at the price you set (p.listPct of his value; 5.55).
+  if (p.listed && p.listPct && isUser(c)) v = value(p) * p.listPct;
+  if (buyer) v *= 1 + .25 * rivalry(c.id, buyer.id);  // nobody sells cheaply to a rival
   const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(v)) - 1));
   return Math.round(v / mag) * mag;
 }
@@ -76,6 +78,19 @@ function findNeed(c, minGap = 5) {
   }
   return gap >= minGap ? worst : null;
 }
+/* How many AI clubs might bid for one of your players: they'd rate him (what they can see of him is in their range),
+   could pay the price (within 60% of their cash) and he'd go (willingness .3+). For the Selling tab. */
+function listInterest(p) {
+  let n = 0;
+  for (const b of activeClubs()) {
+    if (isUser(b) || b.tier > 6) continue;
+    const lvl = clubLevel(b), est = aiRating(p, b);
+    if (est == null || est < lvl - 1 || est > lvl + 8 || askingPrice(p, b) > (b.cash + (b.owner === "reckless" ? b.revBase * .3 : 0)) * .6 || willingness(p, b) < .3) continue;
+    n++;
+  }
+  return n;
+}
+const interestWord = n => n >= 25 ? ["High", "good"] : n >= 8 ? ["Moderate", ""] : n ? ["Low", "warn"] : ["None", "bad"];
 /* A week of AI recruitment. Every AI club scouts every week with its own hours (aiScoutSetup, aiScout), on the
    same terms as you; intensity is the chance it bids this week, 0 outside the windows (scouting only). It looks
    at 270 random players plus those it has reports on, ranks them on what it can see (aiRating), then works down
@@ -115,7 +130,9 @@ function aiTransferDay(intensity) {
       if (!bid) continue;
       const fee = askingPrice(p, c), w = willingness(p, c);
       if (w < .3) continue;
-      if (p.club === S.club) { if (p.listed || p.req || R() < .25) offerToUser(p, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); break; }
+      // A listed player draws a bid every time a club settles on him at up to his value; dearer, fewer clubs follow
+      // through (half as often at 150%, a fifth at 180%+). Unlisted, one time in four.
+      if (p.club === S.club) { if (p.req || (p.listed ? R() < clamp(2 - (p.listPct || 1), .2, 1) : R() < .25)) offerToUser(p, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); break; }
       if (p.club >= 0) { const seller = C(p.club); if (seller.squad.filter(id => FAM[P(id).pos][p.pos] >= .9).length <= 2 || rivalry(seller.id, c.id) >= 2) continue; }
       transfer(p, c, fee, contractDemand(p, c, w), ri(2, 5)); delete c.sc[p.id];
       if (regInfo(c).seniors > RULES.aiSeniorCap) trimSquad(c, false);

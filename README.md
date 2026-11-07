@@ -321,6 +321,12 @@ Favourites tab on the Youth page.
 **Scouted list.** The ✕ on a row of the Transfers Scouted tab takes a player you've decided against off the list.
 His report is kept, and the scouting assistant won't scout him again. "Show removed" lists them with Restore, and
 scouting him again yourself puts him back. The Youth page's Scouted tab works the same way for prospects.
+**Selling.** List a player from his card and choose his asking price, 80% to 200% of his value. Clubs bid around
+that figure, and the dearer he is the fewer follow through (a listed player at up to his value draws a bid every
+time a club settles on him, half as often at 150%, a fifth at 180%+). The Selling tab shows each player's price
+and the interest: how many clubs could bid (they'd rate him, could pay, and he'd go). Listing a player who wants
+to stay costs 6 morale, given back if you take him off; one who wants out (asked to leave, or feels he's outgrown
+the club) doesn't mind.
 **Paying a fee over time.** On the offer screen, Payment is a lump sum or spread over 2, 3 or 4 years. Spread,
 the selling club wants 5% more in total for each extra year (+10% over three years), and the fee choices and its
 counter-offers follow that. You pay the first instalment and the 5% agent fee on signing, then an equal instalment
