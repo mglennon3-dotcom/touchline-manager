@@ -128,7 +128,7 @@ Blocks and Beaten columns.
 progress (x0.85), 6 is neutral, 7 (good) speeds it (x1.15) and 8+ (great) more (x1.25). With 60%+ of the minutes,
 a good season (7+) raises his potential by 1-3 at the end of it and a great one (8+) by 2-4.
 
-**Academy** (its own page): your youth players are kept apart from the first team. Summer graduates and
+**Academy** (its own page): your youth players are kept apart from the first team. Summer graduates (1-2 local 16-year-olds a year, plus one more with Youth development 15+, the same for every club) and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
 Academy page or the player's own card, which also has Promote to first team). Academy
 players never need registering; anyone turning 21 moves up as the season ends, in time to register him in

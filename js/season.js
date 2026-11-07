@@ -628,7 +628,9 @@ function summerStep() {
 }
 function newSeasonStart() {
   for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);
-  for (const c of activeClubs()) { const n = (isUser(c) ? 1 : ri(1, 2)) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) { p.acad = true; news(`Local academy graduate ${p.name} (${p.pos}) joins the academy.`, false, "youth"); } } if (!isUser(c)) trimSquad(c, false); }
+  // Local graduates: 1-2 a year for every club, yours included (yours was a flat 1 before 5.49.2), plus one with a
+  // Youth development rating of 15+.
+  for (const c of activeClubs()) { const n = ri(1, 2) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) { p.acad = true; news(`Local academy graduate ${p.name} (${p.pos}) joins the academy.`, false, "youth"); } } if (!isUser(c)) trimSquad(c, false); }
   S.year++;
   S.seasonOver = null;
   startSeason();
