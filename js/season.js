@@ -387,7 +387,8 @@ function weekly() {
   if (S.week === CAL.jan[0] - 1) news(`The January transfer window is now open. Until it closes after week ${CAL.jan[CAL.jan.length - 1] + 1} you can buy, sell and loan players, and change which 25 seniors are registered.`, true, "transfer");
   if (S.week === CAL.jan[CAL.jan.length - 1]) news("The January transfer window has closed. Registrations are locked until preseason.", true, "transfer");
 }
-const scoutCost = () => [0, 4e5, 2.5e5, 1.2e5, 6e4, 4e4, 4e4][me().tier] * MONEY;
+// About 2% of a typical club's income in the division per network level (5.62).
+const scoutCost = () => [0, 3.8e6, 5.6e5, 1.8e5, 1e5, 4.4e4, 1.8e4][me().tier];
 
 /* ---------- board ---------- */
 function afterUserMatch(fx, M) {

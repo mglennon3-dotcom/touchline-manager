@@ -1021,7 +1021,7 @@ function viewFinances() {
   const c = me(), f = c.fin, ratio = scr(c);
   const mk = v => clamp(v / 1.5 * 100, 0, 100);
   const cases = S.cases.filter(k => !isForeign(C(k.club))).slice(-12).reverse();
-  const acadCost = Math.round((c.academy + 1) * 1.5e6 * MONEY * [0, 1, .4, .2, .1, .06, .05][c.tier]);
+  const acadCost = Math.round((c.academy + 1) * 1.5e6 * MONEY * [0, 1, .15, .05, .03, .012, .005][c.tier]);
   return `<div class="grid2"><div class="stack">${projectionCard(c)}${transferBudgetCard(c)}<section class="card"><div class="card-h"><h2>Squad Cost Ratio</h2><span class="eyebrow">${seasonLabel(S.year)}</span></div>
     <div class="prose"><p>Wages, transfer amortisation and agent fees, as a share of football revenue plus profit on player sales. Above <b>${pct(RULES.scrLimit)}</b> you pay a levy at the end of the season; above <b>${pct(RULES.scrSporting)}</b> you are charged and face a points deduction the following season.</p></div>
     <div class="gauge" role="img" aria-label="Projected ratio ${pct(ratio)}"><span class="tick" style="left:${mk(.85)}%">85%</span><span class="tick" style="left:${mk(1.15)}%">115%</span><span class="mk" style="left:${mk(ratio)}%"><span>${pct(ratio)}</span></span></div>

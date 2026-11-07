@@ -360,14 +360,19 @@ income goes to at least 90% of its new division's lower quartile, and the yearly
 below that; its sponsorship rises at least as far. A relegated club is capped at 110% of its new division's upper
 quartile. (Before, promotion scaled income by about 1.4x and closed 20% of the remaining gap a season, leaving a
 promoted club on its old division's money for years.)
-**Money and ticket prices.** The game uses real-world money (5.61; it was about a tenth of it): a Premier Division
-club earns around 240-300M a year, its median player is worth about 20M on about 77k a week, and the best players
-reach about 180M (values above 100M rise more slowly). Older saves were multiplied by ten on loading, so their
-finances keep their proportions. Ticket prices follow the division, 60 in the Premier Division, 35 in the First,
-20 in the Second, 15 in the Third, 7 in the fifth tier and 5 in the sixth (45/22/12 abroad), and the interest in
-the club: one that could sell its ground out well over charges up to 30% more, one that can't fill it up to 15%
-less. They're reset each summer and when a club changes division; your price setting is a multiplier on top.
-Ticket income comes out of a club's existing income rather than on top of it.
+**Money and ticket prices.** The game uses real-world money, with turnover stepping down between divisions as real
+turnover does (5.62): a typical Premier Division club earns about 160-240M a year and the biggest 450-600M (the
+poorest at least half the division median, as shared TV money keeps them close), the First Division about 30M
+(100M+ for a few big clubs), the Second about 10M, the Third 5M, the fifth tier about 2M and the sixth under 1M.
+Wages follow ability and what the paying club can afford: median weekly wages run from about 55-65k in the top
+flight to 9k, 2.5k, 1.2k, 600 and 250-290 down the divisions. Transfer values fall away much faster below
+top-flight level (a median Premier player about 20M, First Division 2M, Second 300k, fifth tier 50k; the best about
+180M). Scouting, travel and academy costs scale with each division's money. Older saves were converted on loading,
+each club's money and wages together, so its finances keep their proportions. Ticket prices follow the division,
+60 in the Premier Division, 35 in the First, 20 in the Second, 15 in the Third, 7 in the fifth tier and 5 in the
+sixth (45/22/12 abroad), and the interest in the club: one that could sell its ground out well over charges up to
+30% more, one that can't fill it up to 15% less. They're reset each summer and when a club changes division; your
+price setting is a multiplier on top. Ticket income comes out of a club's existing income rather than on top of it.
 **Preseason accounts.** Transfers in the summer window count in the coming season's accounts (they used to go
 into the season just finished), and the preseason cost ratio counts only income that carries into that season:
 regular income plus profit on players sold this summer, not last season's prize money, merit payment or sales.

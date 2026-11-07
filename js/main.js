@@ -467,8 +467,35 @@ function moneyRescale(k) {
   }
   UI.bid = null;
 }
+/* 5.62: incomes step down between divisions as real turnover does. An older save's leagues are each scaled to the
+   median a new world gives that league (every club's money and its players' wages together, so a club's proportions
+   and cost ratio are unchanged), and pending bids are withdrawn (player values changed). */
+const ECON_TARGET = { E1: 220, E2: 30, E3: 10.5, E4: 5.1, E5: 2.3, E6N: .95, E6S: .95, ESP1: 260, ESP2: 21, ESP3: 6.2, GER1: 200, GER2: 18.4, GER3: 6.4, ITA1: 205, ITA2: 18.5, ITA3: 5.7, FRA1: 119, FRA2: 13.3, FRA3: 3.9, POR1: 79, POR2: 9.4, POR3: 2.3, NED1: 74.5, NED2: 8.2, NED3: 2, BEL1: 42, BEL2: 4.6, BEL3: 1.4 };
+function econRebase() {
+  const num = (o, k) => { if (o) for (const f in o) if (typeof o[f] === "number") o[f] *= k; }, F = {};
+  for (const [key, L] of Object.entries(S.leagues)) {
+    const cs = L.clubs.map(C).filter(c => !c.gone), inc = cs.map(annualIncome).sort((a, b) => a - b), med = inc[inc.length >> 1];
+    if (!med || !ECON_TARGET[key]) continue;
+    const k = ECON_TARGET[key] * 1e6 / med; F[key] = k;
+    for (const c of cs) {
+      const md = matchdayEstimate(c);  // ticket prices stay; base income takes up the difference so total income scales by k
+      for (const f of ["revBase", "revSeason", "cash"]) if (typeof c[f] === "number") c[f] = Math.round(c[f] * k);
+      c.revBase = Math.round(c.revBase + (k - 1) * md); if (c.revSeason) c.revSeason = Math.round(c.revSeason + (k - 1) * md);
+      num(c.fin, k); num(c.pre, k); for (const d of c.deals || []) { d.amt *= k; num(d.bonus, k); }
+      if (c.build) for (const f of ["cost", "perWeek", "paid"]) if (typeof c.build[f] === "number") c.build[f] *= k;
+      for (const sc of c.schemes || []) sc.amt *= k;
+      for (const id of c.squad) { const p = P(id); p.wage = Math.round(p.wage * k); if (p.am) p.am.per = Math.round(p.am.per * k); }
+    }
+    if (S.revK[key]) S.revK[key] *= k; if (S.spK && S.spK[key]) S.spK[key] *= k;
+  }
+  for (const d of S.dues || []) { const k = F[C(d.payer).lg] || 1; d.per *= k; d.fee *= k; }
+  let n = 0; for (const m of S.inbox || []) if (!m.done && (m.type === "bid" || m.type === "auction")) { m.done = true; m.choice = "withdrawn"; n++; }
+  UI.bid = null;
+  return { F, n };
+}
 function upgradeSave() {  // bring an older save up to date; runs on load and on import
   if (!S.money10 && S.clubs) { moneyRescale(MONEY); S.money10 = 1; if (S.club != null) news("The game now uses real-world money: every amount in your save is ten times bigger, so your finances are in the same proportions. Ticket prices now follow the division (60 in the Premier Division down to 7 in the fifth tier) and demand.", true, "finance"); }
+  if (!S.econ2 && S.clubs) { const r = econRebase(); S.econ2 = 1; if (S.club != null) { const k = r.F[me().lg]; news(`Club incomes now step down between divisions as real turnover does (a Premier League club around 220M a year, the Second Division about 10M, the sixth tier under 1M). Your club's money and wages were scaled together by ${k ? k.toFixed(2) : "1"}×, so your finances keep their proportions.${r.n ? ` ${r.n} pending bid${r.n > 1 ? "s were" : " was"} withdrawn, as player values changed.` : ""}`, true, "finance"); } }
   // Repairs keepers whose fitness went NaN after playing outfield (fixed in 5.22.0).
   for (const p of Object.values(S.players)) { if (!isFinite(p.fit)) p.fit = 90; if (p.gs == null) p.gs = newGrowthSpeed(); }  // 5.34: hidden growth speed
   // 5.33: the academy. Teenagers (18 and under) outside the current matchday squad move into it.
