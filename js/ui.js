@@ -476,7 +476,7 @@ function needsCard(compact) {
 // The XI's attribute profile, for the Team Needs page.
 function needsAttrCard() {
   const c = me(), X = xiProfile(c), lgN = leagueName(c.lg), f1 = v => { const t = (Math.abs(v) < .05 ? 0 : v).toFixed(1); return (t[0] === "-" ? "" : "+") + t; };
-  return `<section class="card"><div class="card-h"><h2>Your XI's attributes</h2><span class="small muted">against the ${lgN} average XI</span></div>
+  return `<section class="card"><div class="card-h"><h2>Your best XI's attributes</h2><span class="small muted">against the ${lgN} average XI</span></div>
     <div class="need-overview"><p>${X.standout.length ? `Stand-out: <b class="good">${X.standout.map(a => a.l.toLowerCase()).join(" and ")}</b>. ` : ""}${X.lacking.length ? `Short on: <b class="bad">${X.lacking.map(a => a.l.toLowerCase()).join(" and ")}</b>. ` : ""}Overall ${Math.abs(X.mean) < .3 ? "about level with" : `${Math.abs(X.mean).toFixed(1)} ${X.mean > 0 ? "above" : "below"}`} the division average.</p>
       <p><b>Best style for this XI:</b> ${bestStyleLine()}.</p></div>
     <div class="need-attrs" style="margin-top:8px">${X.attrs.map(a => { const w = Math.min(50, Math.abs(a.diff) / 3 * 50); return `<div class="need-attr"><span>${a.l}</span><span class="dbar"><i class="${a.diff >= 0 ? "pos" : "neg"}" style="${a.diff >= 0 ? "left:50%" : `left:${50 - w}%`};width:${w}%"></i></span><b class="num ${a.rel >= .4 ? "good" : a.rel <= -.4 ? "bad" : ""}">${a.v.toFixed(1)} <span class="tiny muted">(${f1(a.diff)})</span></b></div>`; }).join("")}</div>
@@ -525,7 +525,7 @@ function viewSquad() {
 }
 
 /* ---------- team needs ---------- */
-/* For each role in your shape: how your starters compare with the strongest sides in your division,
+/* For each role in your shape: how your best XI compares with the strongest sides in your division,
    whether there's cover behind them, and who on the market would be a real upgrade. */
 function bestAt(c, role, n, skip) {
   return c.squad.map(P).filter(p => !(skip && skip.has(p.id)) && !p.inj && FAM[p.pos][role] >= .62).map(p => ({ p, r: slotRating(p, role) })).sort((a, b) => b.r - a.r).slice(0, n);
@@ -533,13 +533,16 @@ function bestAt(c, role, n, skip) {
 function teamNeeds() {
   const c = me(), f = S.formation, sl = slotsOf(f), lg = S.leagues[c.lg];
   const others = lg.clubs.map(C).filter(x => x.id !== c.id && !x.gone).sort((a, b) => clubLevel(b) - clubLevel(a));
-  const top = others.slice(0, 4), xiIds = new Set(S.lineup.filter(id => id != null));
+  // Judged on your best XI in this shape (ratings in position, ignoring fitness and form; injured players and the
+  // academy left out), not the side you've picked: rotation or a youngster given a game used to read as a weakness.
+  const best = bestXI(c);
+  const top = others.slice(0, 4), xiIds = new Set(best.filter(id => id != null));
   const avgOf = (clubs, role, n) => sum(clubs, x => { const b = bestAt(x, role, n); return b.length ? sum(b, y => y.r) / b.length : 0; }) / Math.max(1, clubs.length);
   const out = [];
   for (const role of [...new Set(sl)].sort((a, b) => ROLE_ORDER[a] - ROLE_ORDER[b])) {
     const n = roleSlots(f, role);
-    // Starters: who is actually in your XI in those slots, filled from the squad if a slot is empty.
-    let st = S.lineup.map((id, i) => id != null && sl[i] === role ? P(id) : null).filter(Boolean).map(p => ({ p, r: slotRating(p, role) }));
+    // Starters: your best XI's players in those slots, filled from the squad if a slot is empty.
+    let st = best.map((id, i) => id != null && sl[i] === role ? P(id) : null).filter(Boolean).map(p => ({ p, r: slotRating(p, role) }));
     if (st.length < n) st = st.concat(bestAt(c, role, n - st.length, new Set([...xiIds, ...st.map(s => s.p.id)])));
     st.sort((a, b) => b.r - a.r);
     const used = new Set([...xiIds, ...st.map(s => s.p.id)]);

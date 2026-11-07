@@ -81,10 +81,11 @@ substitutes, and the bench takes young prospects first. Across 15 clubs it chang
 of team strength. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
 the morning of each match day, so any change you make after that stands.
 
-**Team needs** has its own tab. Each role in your formation is ranked by priority: your weakest starter
-there against the best at that role in your division's four strongest squads and the division average, the
+**Team needs** has its own tab. It judges your best XI in your formation (ratings in position, ignoring fitness,
+form and who you've actually picked; injured and academy players left out). Each role is ranked by priority: your
+weakest starter there against the best at that role in your division's four strongest squads and the division average, the
 cover behind them, warnings (ageing, contract ending, on loan, wants to leave, out of position), and upgrades
-you can afford who would come, with Sign or Bid buttons. Above them, your XI's finishing, creativity,
+you can afford who would come, with Sign or Bid buttons. Above them, your best XI's finishing, creativity,
 dribbling, defending, aerial ability, pace, stamina and physical strength against the division's average XI,
 and the style that suits your players. The Squad page shows a summary and Transfers lists the roles to fix.
 

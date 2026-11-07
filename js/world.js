@@ -612,9 +612,11 @@ function divisionAttrs(lg) {
   for (const [l, ks] of NEED_ATTRS) v[l] = avgOf(xis.map(xi => avgOf(xi.map(p => avgOf(ks.map(k => p.at[k]))))));
   S._battrs = { k: key, v }; return v;
 }
+/* Your best XI in your shape (as Team Needs judges it: ratings in position, fitness and form ignored, injured and
+   academy players left out), not the side you've picked this week. */
+const bestXI = c => optimisePick(eligibleIds(c).map(P).filter(p => !p.inj), slotsOf(S.formation), Array(11).fill(null), (p, role) => o100(slotRating(p, role)));
 function xiProfile(c) {
-  fixUserLineup();
-  const B = divisionAttrs(c.lg), xi = S.lineup.map(id => S.players[id]).filter(p => p && p.pos !== "GK");
+  const B = divisionAttrs(c.lg), xi = bestXI(c).map(id => S.players[id]).filter(p => p && p.pos !== "GK");
   const attrs = NEED_ATTRS.map(([l, ks]) => { const v = avgOf(xi.map(p => avgOf(ks.map(k => p.at[k])))); return { l, v, bench: B[l], diff: v - B[l] }; });
   const mean = avgOf(attrs.map(a => a.diff)); for (const a of attrs) a.rel = a.diff - mean;
   return { attrs, mean, standout: attrs.filter(a => a.rel >= .4).sort((a, b) => b.rel - a.rel).slice(0, 2), lacking: attrs.filter(a => a.rel <= -.4).sort((a, b) => a.rel - b.rel).slice(0, 2) };
