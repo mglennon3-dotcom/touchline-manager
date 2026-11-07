@@ -471,3 +471,6 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 /* names wrap rather than clip, so a long name doesn't squash its XI / SUB tag into a blank chip */
 .bench-p .nm{min-width:0;white-space:normal;overflow-wrap:anywhere}
 .fixture .team .stand{display:grid;font-size:14px;line-height:1.3;margin:2px 0}.fixture .team .stand>span{white-space:nowrap}.fixture .team .stand b{font-size:15px}
+/* away: your club's colour stays on your (right-hand) side of each bar */
+.cmp.away .split .a{background:var(--muted);opacity:.45}.cmp.away .split .b{background:var(--club,var(--accent));opacity:1}
+.cmp-labels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}.cmp-labels>span:last-child{text-align:right}

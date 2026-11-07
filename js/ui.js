@@ -350,8 +350,11 @@ function nextMatchCard() {
     ${rivalry(S.club, opp.id) ? `<p class="derby"><span class="chip rival r${rivalry(S.club, opp.id)}">${RIVAL_WORD[rivalry(S.club, opp.id)].toUpperCase()}</span> ${esc(rivalName(S.club, opp.id).replace(/^the /, "The "))} · your record ${recStr(h2hOf(c, opp.id))}. Win and the board, the fans and the dressing room will love it; lose and they won't forget.</p>` : ""}
     ${fx.ko ? `<p class="small muted" style="text-align:center">First leg: ${C(fx.a).short} ${fx.ko.aggA}–${fx.ko.aggH} ${C(fx.h).short}</p>` : ""}
     <div class="fixture">${team(H)}<div class="vs">v</div>${team(A)}</div>
-    <div class="row small muted between"><span>Your XI · ${ARCH[S.me.arch].l}</span><span>${esc(opp.short)}'s likely XI · ${esc(coachOf(opp).name)}, ${ARCH[coachOf(opp).arch].l.toLowerCase()}</span></div>
-    <div class="cmp">${cmp("Attack", mr.att, orr.att)}${cmp("Midfield", mr.mid, orr.mid)}${cmp("Defence", mr.def, orr.def)}</div>
+    ${(() => { // left and right follow the fixture above: home club on the left (it was always your XI on the left, even away)
+      const meL = fx.h === S.club, L = meL ? mr : orr, Rr = meL ? orr : mr;
+      const mine = `<span>Your XI · ${ARCH[S.me.arch].l}</span>`, theirs = `<span>${esc(opp.short)}'s likely XI · ${esc(coachOf(opp).name)}, ${ARCH[coachOf(opp).arch].l.toLowerCase()}</span>`;
+      return `<div class="cmp-labels small muted">${meL ? mine + theirs : theirs + mine}</div>
+    <div class="cmp${meL ? "" : " away"}">${cmp("Attack", L.att, Rr.att)}${cmp("Midfield", L.mid, Rr.mid)}${cmp("Defence", L.def, Rr.def)}</div>`; })()}
     <p class="tiny muted" style="margin:4px 0 10px">Team strength out of 20 from each XI's ratings in position, fitness, style and coach. Midfield decides who has the ball; your Attack against their Defence decides how good your chances are, and theirs against yours how good theirs are. Home advantage (about 3.5%) isn't included.</p>
     <div class="row between" style="margin-bottom:10px"><label class="row small">Formation <select id="nx-form" data-c="form">${formOpts(S.formation)}</select></label>
       <label class="row small">Style <select data-c="style" aria-label="Style of play">${(() => { const on = userOn(); return Object.entries(MENT).map(([k, v]) => `<option value="${k}" ${S.mentality === k ? "selected" : ""}>${v.l}${STYLE_KEYS[k].length ? " · " + fitWord(styleFit(on, k))[1].toLowerCase() : ""}</option>`).join(""); })()}</select></label></div>
