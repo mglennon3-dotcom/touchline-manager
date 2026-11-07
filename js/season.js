@@ -587,8 +587,8 @@ function ageAndContracts() {
 /* Graduate intake, at the end of every season. Each club's academy puts up a pool of five local 16-year-olds
    (academyPlayer: potential from its Youth development rating); it keeps up to three. Yours wait on the Academy
    page for you to choose (S.intake) until the end of preseason week 2 (INTAKE_DEADLINE), which leaves three weeks of
-   the window for other clubs to sign the ones you release; undecided by then, your staff keep the best they have
-   academy places for (ACAD_CAP, 15), and you can keep none. Those you don't keep become free agents, so anyone can sign them in the window. AI
+   the window for other clubs to sign the ones you release. Only those you tick by then join (up to three, within
+   the academy's 15 places, ACAD_CAP); nobody is chosen for you, so ticking none releases all five. Those you don't keep become free agents, so anyone can sign them in the window. AI
    clubs keep their best, and the next two if they're within two points of the club's level; the ones they let go
    join the free agents if they're worth a contract (potential 9+), otherwise they leave the game, which keeps the
    pool from swelling by a thousand teenagers a year. Before 5.50 every club simply got 1-2 graduates (yours 1). */
@@ -621,7 +621,8 @@ function graduateIntakes() {
 function settleIntake(auto) {
   const it = S.intake; if (!it) return;
   const c = me(), kids = it.ids.map(id => S.players[id]).filter(Boolean);
-  const keep = new Set(auto ? kids.slice().sort((a, b) => b.pot - a.pot).slice(0, intakeRoom()).map(p => p.id) : it.pick.slice(0, intakeRoom()));
+  // Only the ones you ticked: at the deadline (auto) nobody is picked for you, and anyone unticked is released.
+  const keep = new Set(it.pick.slice(0, intakeRoom()));
   const joined = [];
   for (const p of kids) {
     p.intake = false;
@@ -630,7 +631,7 @@ function settleIntake(auto) {
   }
   S.intake = null;
   const names = joined.map(p => `${p.name} (${p.pos})`).join(", ");
-  news(joined.length ? `${auto ? "The graduate deadline passed, so your academy staff kept the best they had room for: " : "Joining your academy: "}${names}. ${kids.length - joined.length} released as free agents.` : `${auto && !intakeRoom() ? "Your academy was full, so all" : "All"} ${kids.length} of this year's graduates were released as free agents.`, auto, "youth");
+  news(joined.length ? `${auto ? "The graduate deadline has passed. " : ""}Joining your academy: ${names}. ${kids.length - joined.length} released as free agents.` : `${auto ? "The graduate deadline passed with nobody chosen: all" : "All"} ${kids.length} of this year's graduates were released as free agents.`, auto, "youth");
   return joined.length;
 }
 /* AI clubs refill thin positions, stay inside the registration rules, and trim costs their owner won't carry. */
@@ -679,7 +680,7 @@ function summerStep() {
 }
 function newSeasonStart() {
   for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);
-  if (S.intake) settleIntake(true);  // graduates you didn't decide on: the best three join, the rest are released
+  if (S.intake) settleIntake(true);  // missed the deadline somehow: only those ticked join, the rest are released
   for (const c of activeClubs()) if (!isUser(c)) trimSquad(c, false);
   S.year++;
   S.seasonOver = null;
