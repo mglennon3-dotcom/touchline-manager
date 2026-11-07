@@ -213,7 +213,7 @@ potential is chance, shaped like the game: it's drawn from the ratings of establ
 land around 7-14 of 20 and stars are as rare as they are among pros, whatever the club or its academy. They appear at the top of the Academy page with their rating and
 potential: keep up to three, or none, by the end of preseason week 2. Those you don't keep are released as free
 agents, leaving three weeks of the window for any club to sign them. Nobody is picked for you: at the deadline
-whoever is ticked joins and the rest go, so ticking none releases all five. The academy holds 15: graduates and
+whoever is ticked joins and the rest go, so ticking none releases all five. The academy holds 15 (places used are shown on the Home screen too, with the intake while it waits): graduates and
 players sent down need a free place (youth recruits who committed still join), so promote or release to make room.
 AI clubs get one or two graduates and keep each unless he's well below the club's level or they have no room
 (15 players aged 20 and under); the ones they release join the free agents if their potential is 9 or more.
@@ -306,8 +306,8 @@ otherwise keep most of their under-32s who are good enough for the side, and the
 which AI clubs draw on at once to fill thin positions.
 **Countries to search.** Under the search filters on the Transfers page, a toggle for each country (and the rest
 of the world) switches it on or off for every search tab: All players, Free agents, Transfer listed and Loan
-targets. A player counts by his club's country (a free agent by his nationality). Your choice is saved; "All on"
-resets it, and the Scouted tab always lists everyone. The Youth page's All prospects tab has its own set of toggles, saved separately (a prospect counts by where he lives; Brazil, Argentina, West Africa and Scandinavia are Rest of world).
+targets. A player counts by his club's country (a free agent by his nationality). Your choice is saved; "Select all"
+and "Unselect all" switch every country on or off (handy for picking just one or two), and the Scouted tab always lists everyone. The Youth page's All prospects tab has its own set of toggles, saved separately (a prospect counts by where he lives; Brazil, Argentina, West Africa and Scandinavia are Rest of world).
 **Scouted list.** The ✕ on a row of the Transfers Scouted tab takes a player you've decided against off the list.
 His report is kept, and the scouting assistant won't scout him again. "Show removed" lists them with Restore, and
 scouting him again yourself puts him back. The Youth page's Scouted tab works the same way for prospects.

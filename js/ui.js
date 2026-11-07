@@ -24,7 +24,7 @@ const trophyName = t => LG[t] ? leagueName(t) : t === "FA" ? CUPS.FA.name : t ==
 const aCls = v => v >= 17 ? "a4" : v >= 13 ? "a3" : v >= 8 ? "a2" : "a1";
 /* Country toggles (Transfers search: S.set.ctyOff, actions ctytog/ctyall; Youth: S.set.yCtyOff, yctytog/yctyall). */
 function ctyTogHtml(off = [], a) {
-  return `<div class="cty-tog" role="group" aria-label="Countries to search"><span class="small muted">Countries</span>${KNOW_KEYS.map(k => { const on = !off.includes(k); return `<button class="cty ${on ? "on" : ""}" data-a="${a}tog" data-v="${k}" aria-pressed="${on}" title="${on ? "Searching" : "Not searching"} ${esc(KNOW_NAME(k))}: tap to switch">${k === "ROW" ? "Rest of world" : esc(COUNTRY[k].name)}</button>`; }).join("")}${off.length ? `<button class="lnk small" data-a="${a}all">All on</button>` : ""}</div>`;
+  return `<div class="cty-tog" role="group" aria-label="Countries to search"><span class="small muted">Countries</span>${KNOW_KEYS.map(k => { const on = !off.includes(k); return `<button class="cty ${on ? "on" : ""}" data-a="${a}tog" data-v="${k}" aria-pressed="${on}" title="${on ? "Searching" : "Not searching"} ${esc(KNOW_NAME(k))}: tap to switch">${k === "ROW" ? "Rest of world" : esc(COUNTRY[k].name)}</button>`; }).join("")}<span class="cty-all"><button class="lnk small" data-a="${a}all" ${off.length ? "" : "disabled"}>Select all</button> · <button class="lnk small" data-a="${a}none" ${off.length >= KNOW_KEYS.length ? "disabled" : ""}>Unselect all</button></span></div>`;
 }
 function ratingHtml(p) { if (ratingBlank(p)) return '<span class="rt unk muted" title="Not scouted, and you know too little about his league to guess: scout him">?</span>'; const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="${scoutLevel(p) ? "Partly scouted" : "Not scouted: a rough band from his reputation. Scouting narrows it"}">${lo}–${hi}</span>`; }
 function attrStrip(p) {
@@ -286,6 +286,13 @@ function jobOffers() {
 }
 
 /* ---------- home ---------- */
+/* Home: academy places, and this year's graduate pool while it's waiting on you. */
+function academyHomeCard(c) {
+  const n = acadCount(c), it = S.intake, left = INTAKE_DEADLINE - S.summerDay;
+  return `<section class="card"><div class="card-h"><h2>Academy</h2><button class="lnk small" data-a="go" data-v="academy">Academy page</button></div>
+    <p>Places used <b class="num ${n >= ACAD_CAP ? "warn" : ""}">${n}/${ACAD_CAP}</b>${n >= ACAD_CAP ? ' <span class="small warn">full: promote or release to make room</span>' : ` <span class="small muted">· ${ACAD_CAP - n} free</span>`}</p>
+    ${it ? `<p class="small" style="margin-top:6px"><b>Graduate intake:</b> ${it.ids.length} waiting, <b>${it.pick.length}</b> ticked (up to ${intakeRoom()}). Choose by the end of preseason week ${INTAKE_DEADLINE} (${left <= 1 ? "this week" : `${left} weeks left`}); anyone not ticked is released.</p>` : ""}</section>`;
+}
 function viewHome() {
   const c = me(), parts = [];
   for (const m of openDecisions()) parts.push(`<section class="decision"><div class="eyebrow">Decision needed · ${m.w}</div><h3>${esc(m.title)}</h3><p>${esc(m.body)}</p><div class="row">${m.opts.map(([k, l], i) => `<button class="btn ${i === 0 ? "primary" : ""}" data-a="decide" data-v="${m.id}|${k}">${l}</button>`).join("")}</div></section>`);
@@ -297,6 +304,7 @@ function viewHome() {
   const side = `<section class="card"><div class="card-h"><h2>${leagueName(L.key)}</h2><button class="lnk small" data-a="go" data-v="league">Full table</button></div>
       ${miniTable(L, t.slice(lo, lo + 7), lo)}</section>
     ${rivalsCard()}
+    ${academyHomeCard(c)}
     <section class="card"><div class="card-h"><h2>Board</h2><span class="num">${S.board}/100</span></div><p>Target: <b>${expText(S.expPos, c.lg)}</b> (${ord(S.expPos)} or better).</p><p class="small muted" style="margin-top:6px">Each league result is judged against what the board expected from that fixture. Relegation, cost-rule breaches and early cup exits to weaker sides hurt. ${S.set.unsackable ? "Unsackable mode is on, so you keep your job whatever happens." : "At zero you are dismissed."}</p></section>
     <section class="card"><div class="card-h"><h2>News</h2><button class="lnk small" data-a="go" data-v="news">All news</button></div><ul class="news">${S.news.slice(0, 10).map(newsItem).join("")}</ul></section>`;
   return `<div class="grid2"><div class="stack">${parts.join("")}</div><div class="stack">${side}</div></div>`;
@@ -801,7 +809,7 @@ function viewTransfers() {
         { k: "w", l: "Interest", v: p => willingness(p, c), f: p => { const [l, k] = willingLabel(willingness(p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
         { k: "b", l: "", f: p => (loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"} title="You pay his wage while he's with you">Loan · ${perWeek(p.wage)}</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>`)
           + (UI.tab === "scouted" ? (UI.showRemoved ? ` <button class="btn sm" data-a="unhide" data-v="${p.id}">Restore</button>` : ` <button class="btn sm" data-a="unscout" data-v="${p.id}" title="Not good enough: take him off your scouted list (his report is kept)" aria-label="Remove ${esc(p.name)} from the scouted list">✕</button>`) : "") },
-      ], pool, { limit: 200,  empty: UI.tab === "scouted" && !scouted.length ? (UI.showRemoved ? "Nobody removed." : removedN ? "Everyone you've scouted has been removed from this list." : "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here.") : "No players match these filters." })}
+      ], pool, { limit: 200,  empty: UI.tab === "scouted" && !scouted.length ? (UI.showRemoved ? "Nobody removed." : removedN ? "Everyone you've scouted has been removed from this list." : "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here.") : (S.set.ctyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No players match these filters." })}
       ${UI.tab === "scouted" && removedN ? `<p class="small muted" style="margin-top:8px">${UI.showRemoved ? `Showing the ${removedN} you removed. Restore puts a player back on your list.` : `${removedN} removed from this list.`} <button class="lnk" data-a="showremoved">${UI.showRemoved ? "Back to your list" : "Show removed"}</button></p>` : ""}`;
   }
   const title = { offers: "Offers", scouted: "Scouted players", search: "Search the market", mine: "Selling", log: "Activity" }[group];
@@ -872,7 +880,7 @@ function viewYouth() {
       <label class="f">Position<select id="yf-pos" data-c="yf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Show<select id="yf-st" data-c="yf-st">${[["OPEN", "Undecided"], ["MINE", "Your targets"], ["DONE", "Committed"], ["ALL", "Everyone"]].map(([k, l]) => `<option value="${k}" ${f.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     ${ctyTogHtml(S.set.yCtyOff, "ycty")}
-    ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: "No prospects match." })}</section>`;
+    ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: (S.set.yCtyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No prospects match." })}</section>`;
   const commitCard = `<section class="card"><div class="card-h"><h2>Committed to you</h2></div>${commits.length ? commits.map(y => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span><button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button> <span class="pos">${y.pos}</span> <span class="muted small">${esc(y.region)}</span></span>${rangeHtml(prospectPot(y))}</div>`).join("") : '<p class="muted">No commitments yet.</p>'}</section>`;
   /* Tabs rather than one long page: on a phone the class list sat below two other tables. */
   const tabs = [["offered", "Offered", offered.filter(y => y.commit == null).length], ["scouted", "Scouted", scoutedAll.length - yRemovedN], ["all", "All prospects", null], ["committed", "Committed", commits.length]];

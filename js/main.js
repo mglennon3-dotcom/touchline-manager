@@ -154,7 +154,8 @@ function assignSlot(i, id) {
   // On the Line-up tab the picker sits below the pitch: return to the pitch to show the change.
   if (fromPicker) window.scrollTo(0, 0);
 }
-function ctyToggle(key, v) { const off = new Set(S.set[key] || []); off.has(v) ? off.delete(v) : off.add(v); if (off.size >= KNOW_KEYS.length) return toast("Keep at least one country switched on."); S.set[key] = [...off]; save(); render(); }
+// Every country can be switched off (Unselect all, then pick the few you want); the lists then say none are selected.
+function ctyToggle(key, v) { const off = new Set(S.set[key] || []); off.has(v) ? off.delete(v) : off.add(v); S.set[key] = [...off]; save(); render(); }
 const ACT = {
   regbest: () => { autoRegister(me(), false); fixUserLineup(); save(); render(); toast("Your best 25 seniors are registered."); },
   regtoggle: v => {
@@ -199,6 +200,7 @@ const ACT = {
   yshowremoved: () => { UI.yShowRemoved = !UI.yShowRemoved; render(); },
   ctytog: v => ctyToggle("ctyOff", v), ctyall: () => { S.set.ctyOff = []; save(); render(); },
   yctytog: v => ctyToggle("yCtyOff", v), yctyall: () => { S.set.yCtyOff = []; save(); render(); },
+  ctynone: () => { S.set.ctyOff = KNOW_KEYS.slice(); save(); render(); }, yctynone: () => { S.set.yCtyOff = KNOW_KEYS.slice(); save(); render(); },
   intakepick: v => { const it = S.intake; if (!it) return; const id = +v, i = it.pick.indexOf(id); if (i >= 0) it.pick.splice(i, 1); else { const room = intakeRoom(); if (it.pick.length >= room) return toast(room < INTAKE_KEEP ? `Your academy has room for ${room} more (${acadCount(me())}/${ACAD_CAP} places used). Promote or release someone to make space.` : `You can keep ${INTAKE_KEEP} at most. Untick one first.`); it.pick.push(id); } save(); render(); },
   intakeok: () => { if (!S.intake) return; const n = S.intake.ids.length - S.intake.pick.length; settleIntake(false); save(); render(); toast(`Done. ${n ? `${n} released as free agent${n > 1 ? "s" : ""}.` : ""}`); },
   unscout: v => { const p = P(+v); (S.scoutHide ||= {})[p.id] = 1; save(); render(); toast(`${p.name} removed from your scouted list. His report is kept: Show removed to restore him.`); },
