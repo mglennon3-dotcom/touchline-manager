@@ -117,7 +117,11 @@ interceptions, blocks, a keeper's saves, clean sheets and goals conceded, the re
 through what it lets him do, so a modest striker who wins the golden boot out-rates a star who plays badly. All but
 his own actions scale with his minutes, so a late substitute sits near 6; a red card costs 2. Measured over a season
 of starts: median 6.15, 7+ 22%, 8+ 5.5%, 9+ 1.7%, 10 0.5%; the season's best averages (about 7.5) belong to the top
-scorers. The ratings line shows each player's shots, xG, key passes, xA, tackles/interceptions, blocks or saves.
+scorers. Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
+air; about 4 a game for a centre-back), blocks, and the defender beaten for each goal conceded (more often a weak
+one). The ratings line shows each player's shots, xG, key passes, xA, tackles, interceptions, clearances, blocks,
+goals he was beaten for, or saves; the Squad page's Advanced stats adds season Tackles, Interceptions, Clearances,
+Blocks and Beaten columns.
 **Development** follows the same rating scale for every age: a season averaging 5 or less slows a player's weekly
 progress (x0.85), 6 is neutral, 7 (good) speeds it (x1.15) and 8+ (great) more (x1.25). With 60%+ of the minutes,
 a good season (7+) raises his potential by 1-3 at the end of it and a great one (8+) by 2-4.

@@ -1139,7 +1139,8 @@ function advLine(x) {
   if (x.sh) t.push(`${x.sh} sh${x.sot ? ` (${x.sot} on)` : ""}`, `${x.xg.toFixed(2)} xG`);
   if (x.kp) t.push(`${x.kp} KP`, `${x.xa.toFixed(2)} xA`);
   if (x.sv) t.push(`${x.sv} save${x.sv > 1 ? "s" : ""}`);
-  if (x.tk || x.bk) t.push([x.tk ? `${x.tk} tkl/int` : "", x.bk ? `${x.bk} blk` : ""].filter(Boolean).join(" · "));
+  for (const [k, l] of [["tk", "tkl"], ["int", "int"], ["clr", "clr"], ["bk", "blk"]]) if (x[k]) t.push(`${x[k]} ${l}`);
+  if (x.bt) t.push(`beaten for ${x.bt === 1 ? "a goal" : x.bt + " goals"}`);
   return t.join(" · ");
 }
 /* Season advanced stats, for the squad table. G−xG is finishing: above zero, he scores more than his chances
@@ -1154,6 +1155,11 @@ const ADV_COLS = [
   { k: "xg90", l: "xG/90", r: 1, v: p => per90(p, p.s.xg || 0) ?? -1, f: p => f2(per90(p, p.s.xg || 0)) },
   { k: "kp", l: "Key passes", r: 1, v: p => p.s.kp || 0, f: p => p.s.kp || 0 },
   { k: "xa", l: "xA", r: 1, v: p => p.s.xa || 0, f: p => (p.s.xa || 0).toFixed(1) },
+  { k: "tk", l: "Tackles", r: 1, v: p => p.s.tk || 0, f: p => p.s.tk || 0 },
+  { k: "int", l: "Interceptions", r: 1, v: p => p.s.int || 0, f: p => p.s.int || 0 },
+  { k: "clr", l: "Clearances", r: 1, v: p => p.s.clr || 0, f: p => p.s.clr || 0 },
+  { k: "bk", l: "Blocks", r: 1, v: p => p.s.bk || 0, f: p => p.s.bk || 0 },
+  { k: "bt", l: "Beaten (goals)", r: 1, v: p => p.s.bt || 0, f: p => p.s.bt || 0 },
   { k: "sv", l: "Saves", r: 1, v: p => p.s.sv || 0, f: p => p.pos === "GK" ? p.s.sv || 0 : "" },
   { k: "cs", l: "Clean sheets", r: 1, v: p => p.s.cs || 0, f: p => p.s.cs || 0 },
 ];

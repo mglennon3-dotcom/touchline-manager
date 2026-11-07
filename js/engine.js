@@ -184,16 +184,24 @@ function sendOff(M, i, o, why, games) {
 
 /* Chance quality multiplier: a gamma(2) draw divided by 2 (mean 1); about 1 shot in 9 is twice the average or better. */
 const CHANCE_SPREAD = () => -Math.log((1 - R()) * (1 - R())) / 2;
-/* Defending, which the match didn't record: when an attack comes to nothing someone won the ball back (tackles
-   and interceptions, tk), and some missed shots were blocked (bk). Mostly centre-backs and holding midfielders,
-   and good tacklers and markers more often. They show on the ratings line and count in the rating, so a
-   defender's mark comes from what he did rather than from his ability alone. */
+/* Defending, which the match didn't record (5.41 added a single tackle count; this is the full set). When an
+   attack comes to nothing someone won the ball back: a tackle (good tacklers win more), an interception (good
+   markers read more), and sometimes a clearance (good in the air). Missed shots are sometimes blocked. When a goal
+   goes in, one defender was beaten for it, more often a weak one. All weighted by role (centre-backs and holding
+   midfielders most), shown on the ratings line and counted in the rating, so a defender's mark is what he did. */
 const DEF_ROLE = { GK: 0, CB: 3, FB: 2, DM: 3, CM: 1.5, AM: .5, W: .4, ST: .2 };
+const CLR_ROLE = { GK: 0, CB: 4, FB: 1.5, DM: 1, CM: .4, AM: .1, W: .1, ST: .2 };
 const psOf = (M, id) => (M.ps = M.ps || {})[id] || (M.ps[id] = { sh: 0, sot: 0, xg: 0, kp: 0, xa: 0, sv: 0 });
+const credit = (M, o, kind) => { if (o) { const x = psOf(M, o.p.id); x[kind] = (x[kind] || 0) + 1; } };
+const at2 = (o, a) => Math.pow((o.p.at[a] ?? 6) / 10, 2);
 function defAct(M, i, D, kind) {
-  const o = wpick(D.on, o => DEF_ROLE[o.slot] * Math.pow(((o.p.at.tac ?? 6) + (o.p.at.mar ?? 6)) / 20, 2));
-  if (o) { const x = psOf(M, o.p.id); x[kind] = (x[kind] || 0) + 1; }
+  if (kind === "bk") return credit(M, wpick(D.on, o => DEF_ROLE[o.slot] * at2(o, "mar")), "bk");
+  if (R() < .55) credit(M, wpick(D.on, o => DEF_ROLE[o.slot] * at2(o, "tac")), "tk");
+  else credit(M, wpick(D.on, o => DEF_ROLE[o.slot] * at2(o, "mar")), "int");
+  if (R() < .75) credit(M, wpick(D.on, o => CLR_ROLE[o.slot] * at2(o, "hea")), "clr");  // about 4 a game for a centre-back
 }
+// The defender beaten for a goal: the weaker his tackling and marking, the likelier it was him.
+function beaten(M, D) { credit(M, wpick(D.on, o => ({ CB: 3, FB: 2.5, DM: 1.5, CM: .6, AM: .2, W: .3, ST: .1, GK: 0 })[o.slot] * Math.max(1, 21 - ((o.p.at.tac ?? 6) + (o.p.at.mar ?? 6)) / 2)), "bt"); }
 const BIG_CHANCE = .25;  // the xG at which a chance counts as a big one: about 1 shot in 9
 function step(M) {
   if (M.done) return;
@@ -243,7 +251,7 @@ function step(M) {
     const xg = q, xs = st(sh.p.id); xs.sh++; xs.xg += xg; A.xg = (A.xg || 0) + xg; if (xg >= BIG_CHANCE) A.big = (A.big || 0) + 1; if (header) A.hdr = (A.hdr || 0) + 1;
     if (as) { const xc = st(as.p.id); xc.kp++; xc.xa += xg; }
     if (r < q) {
-      A.goals++; A.sot++; xs.sot++;
+      A.goals++; A.sot++; xs.sot++; if (D.on.length) beaten(M, D);
       M.goals.push({ side: k, pid: sh.p.id, ast: as ? as.p.id : null, min: M.min, n: sur(sh.p) });
       lg(M, "goal", k, "GOAL! " + fillT(pick(header ? T_HEAD : T_GOAL), { s: sh.p.name }) + (as ? `, set up by ${sur(as.p)}.` : "."));
     } else if (r < q + .23) { A.sot++; xs.sot++; if (gk) { st(gk.p.id).sv++; D.sav = (D.sav || 0) + 1; } if (R() < .4 && gk) lg(M, "save", k, fillT(pick(T_SAVE), { s: sur(sh.p), k: sur(gk.p) }) + "."); }
@@ -320,7 +328,7 @@ const matchWinner = M => M.pens ? (M.pens[0] > M.pens[1] ? M.h.club : M.a.club) 
    / 4.1: a good centre-back got 9.4 for an ordinary game, a weaker substitute 4.8 the minute he came on.) */
 // Measured over a season of starts: median 6.15, 7+ 22%, 8+ 5.5%, 9+ 1.7%, 10 0.5%; late substitutes 6.0; a red card
 // about 3.9; the season's best average led by the top scorer (36 goals: 7.47).
-const RTW = { base: 6, off: .4, res: .3, q: 9, qcap: 0, g: 1.3, a: .8, xg: .5, kp: .15, sot: .08, tk: .16, bk: .2, sv: .22, cs: .65, ga: .2, noise: .25 };
+const RTW = { base: 6, off: .4, res: .3, q: 9, qcap: 0, g: 1.3, a: .8, xg: .5, kp: .15, sot: .08, tk: .16, int: .14, clr: .06, bk: .2, bt: .35, sv: .22, cs: .65, ga: .15, noise: .25 };
 function matchRating(M, i, id, W = RTW) {
   const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), on = s.on.find(o => o.p.id === id);
   const mins = on ? M.min - on.from : (s.mins[id] ?? 0), m = clamp(mins / Math.max(30, M.done ? M.end : M.min), 0, 1);
@@ -329,7 +337,7 @@ function matchRating(M, i, id, W = RTW) {
   const g = M.goals.filter(x => x.pid === id).length, a = M.goals.filter(x => x.ast === id).length;
   const form = (M.form ||= {})[id] ??= gauss();
   const lvl = M.lvl || (M.lvl = (clubLevel(C(M.h.club)) + clubLevel(C(M.a.club))) / 2), x = (M.ps || {})[id] || {};
-  const did = g * W.g + a * W.a + W.xg * (x.xg || 0) + W.kp * (x.kp || 0) + W.sot * (x.sot || 0) + W.tk * (x.tk || 0) + W.bk * (x.bk || 0) + (p.pos === "GK" ? W.sv * (x.sv || 0) : 0);
+  const did = g * W.g + a * W.a + W.xg * (x.xg || 0) + W.kp * (x.kp || 0) + W.sot * (x.sot || 0) + W.tk * (x.tk || 0) + (W.int || 0) * (x.int || 0) + (W.clr || 0) * (x.clr || 0) + W.bk * (x.bk || 0) - (W.bt || 0) * (x.bt || 0) + (p.pos === "GK" ? W.sv * (x.sv || 0) : 0);
   let ctx = (win ? W.res : loss ? -W.res : 0) + clamp((p.ovr - lvl) / W.q, -W.qcap, W.qcap) + form * W.noise - W.off;
   if (LINE[p.pos] === "DEF" || p.pos === "GK") { ctx -= o2.goals * W.ga; if (o2.goals === 0 && mins >= 60) ctx += W.cs; }
   let rt = W.base + m * ctx + did;
