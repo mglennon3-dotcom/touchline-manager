@@ -586,24 +586,31 @@ function ageAndContracts() {
 }
 /* Graduate intake, at the end of every season. Each club's academy puts up a pool of five local 16-year-olds
    (academyPlayer: potential from its Youth development rating); it keeps up to three. Yours wait on the Academy
-   page for you to choose (S.intake) until the season starts, when any still undecided are settled for you (the
-   best three by potential). Those you don't keep become free agents, so anyone can sign them in the window. AI
+   page for you to choose (S.intake) until the end of preseason week 2 (INTAKE_DEADLINE), which leaves three weeks of
+   the window for other clubs to sign the ones you release; undecided by then, your staff keep the best they have
+   academy places for (ACAD_CAP, 15), and you can keep none. Those you don't keep become free agents, so anyone can sign them in the window. AI
    clubs keep their best, and the next two if they're within two points of the club's level; the ones they let go
    join the free agents if they're worth a contract (potential 9+), otherwise they leave the game, which keeps the
    pool from swelling by a thousand teenagers a year. Before 5.50 every club simply got 1-2 graduates (yours 1). */
-const INTAKE_POOL = 5, INTAKE_KEEP = 3;
+const INTAKE_POOL = 5, INTAKE_KEEP = 3, INTAKE_DEADLINE = 2;  // decide by the end of preseason week 2
+const ACAD_CAP = 15;  // academy places: graduates and players sent down need a free one
+const acadCount = c => c.squad.filter(id => P(id).acad).length;
+const intakeRoom = () => Math.max(0, Math.min(INTAKE_KEEP, ACAD_CAP - acadCount(me())));
 function graduateIntakes() {
   for (const c of activeClubs()) {
     const pool = Array.from({ length: INTAKE_POOL }, () => { const p = academyPlayer(c, 16); p.yt[c.country] = 1; return p; });
     if (isUser(c)) {
       for (const p of pool) { c.squad = c.squad.filter(id => id !== p.id); p.club = -1; p.intake = true; S.scout[p.id] = 2; }
       S.intake = { ids: pool.map(p => p.id), pick: [] };
-      news(`Your academy has ${INTAKE_POOL} local 16-year-olds ready to join. Choose up to ${INTAKE_KEEP} on the Academy page before the season starts; the rest will be released.`, true, "youth");
+      news(`Your academy has ${INTAKE_POOL} local 16-year-olds ready to join. Choose up to ${INTAKE_KEEP} (or none) on the Academy page by the end of preseason week ${INTAKE_DEADLINE}; the rest are released as free agents. Academy places: ${acadCount(c)}/${ACAD_CAP} used.`, true, "youth");
       continue;
     }
+    // The same 15 places: an AI club counts its 20-and-unders outside the first team's regulars (it has no
+    // separate academy), and keeps graduates only while it has room.
     const lvl = clubLevel(c), ranked = pool.sort((a, b) => b.pot - a.pot);
+    const room = Math.min(INTAKE_KEEP, ACAD_CAP - c.squad.filter(id => P(id).age <= ACAD_MAX_AGE && !pool.some(q => q.id === id)).length);
     ranked.forEach((p, i) => {
-      if (i === 0 || (i < INTAKE_KEEP && p.pot >= lvl - 6)) return;
+      if (i < room && (i === 0 || p.pot >= lvl - 6)) return;
       c.squad = c.squad.filter(id => id !== p.id);
       if (p.pot >= o100(9)) toFreeAgent(p); else delete S.players[p.id];
     });
@@ -614,7 +621,7 @@ function graduateIntakes() {
 function settleIntake(auto) {
   const it = S.intake; if (!it) return;
   const c = me(), kids = it.ids.map(id => S.players[id]).filter(Boolean);
-  const keep = new Set(auto ? kids.slice().sort((a, b) => b.pot - a.pot).slice(0, INTAKE_KEEP).map(p => p.id) : it.pick);
+  const keep = new Set(auto ? kids.slice().sort((a, b) => b.pot - a.pot).slice(0, intakeRoom()).map(p => p.id) : it.pick.slice(0, intakeRoom()));
   const joined = [];
   for (const p of kids) {
     p.intake = false;
@@ -623,7 +630,7 @@ function settleIntake(auto) {
   }
   S.intake = null;
   const names = joined.map(p => `${p.name} (${p.pos})`).join(", ");
-  news(joined.length ? `${auto ? "Your academy staff kept the best of this year's graduates: " : "Joining your academy: "}${names}. ${kids.length - joined.length} released as free agents.` : `You released all ${kids.length} of this year's graduates as free agents.`, false, "youth");
+  news(joined.length ? `${auto ? "The graduate deadline passed, so your academy staff kept the best they had room for: " : "Joining your academy: "}${names}. ${kids.length - joined.length} released as free agents.` : `${auto && !intakeRoom() ? "Your academy was full, so all" : "All"} ${kids.length} of this year's graduates were released as free agents.`, auto, "youth");
   return joined.length;
 }
 /* AI clubs refill thin positions, stay inside the registration rules, and trim costs their owner won't carry. */
@@ -661,6 +668,7 @@ function summerStep() {
   // week for your squad only, against 18-25 for a friendly, so a side with a friendly a week started the
   // season at 72% (97, 92, 86, 80, 76 through the weeks) while the rested squad sat at 100%.
   recoverDays(7);
+  if (S.intake && S.summerDay + 1 >= INTAKE_DEADLINE) settleIntake(true);  // the graduate deadline: end of preseason week 2
   autoScout(); S.rec.hours = recHours();  // scouting hours are weekly in preseason too; only the season's weekly() refilled them
   S.summerDay++;
   if (S.summerDay < CAL.summerDays) return;

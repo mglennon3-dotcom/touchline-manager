@@ -199,7 +199,7 @@ const ACT = {
   yshowremoved: () => { UI.yShowRemoved = !UI.yShowRemoved; render(); },
   ctytog: v => ctyToggle("ctyOff", v), ctyall: () => { S.set.ctyOff = []; save(); render(); },
   yctytog: v => ctyToggle("yCtyOff", v), yctyall: () => { S.set.yCtyOff = []; save(); render(); },
-  intakepick: v => { const it = S.intake; if (!it) return; const id = +v, i = it.pick.indexOf(id); if (i >= 0) it.pick.splice(i, 1); else { if (it.pick.length >= INTAKE_KEEP) return toast(`You can keep ${INTAKE_KEEP} at most. Untick one first.`); it.pick.push(id); } save(); render(); },
+  intakepick: v => { const it = S.intake; if (!it) return; const id = +v, i = it.pick.indexOf(id); if (i >= 0) it.pick.splice(i, 1); else { const room = intakeRoom(); if (it.pick.length >= room) return toast(room < INTAKE_KEEP ? `Your academy has room for ${room} more (${acadCount(me())}/${ACAD_CAP} places used). Promote or release someone to make space.` : `You can keep ${INTAKE_KEEP} at most. Untick one first.`); it.pick.push(id); } save(); render(); },
   intakeok: () => { if (!S.intake) return; const n = S.intake.ids.length - S.intake.pick.length; settleIntake(false); save(); render(); toast(`Done. ${n ? `${n} released as free agent${n > 1 ? "s" : ""}.` : ""}`); },
   unscout: v => { const p = P(+v); (S.scoutHide ||= {})[p.id] = 1; save(); render(); toast(`${p.name} removed from your scouted list. His report is kept: Show removed to restore him.`); },
   unhide: v => { const p = P(+v); if (S.scoutHide) delete S.scoutHide[p.id]; save(); render(); toast(`${p.name} is back on your scouted list.`); },
@@ -267,7 +267,7 @@ const ACT = {
     cur[i] = id; S.bench = cur; S.benchNo = (S.benchNo || []).filter(x => x !== id); if (old != null && !S.benchNo.includes(old)) S.benchNo.push(old);
     UI.sel = null; save(); render(); document.querySelector(".subs-card")?.scrollIntoView({ block: "start" }); toast(`${P(id).name} on the bench in place of ${P(old).name}.`); },
   promote: v => { const p = P(+v); p.acad = false; save(); render(); toast(`${p.name} promoted to the first-team squad.`); },
-  demote: v => { const p = P(+v); if (p.age > ACAD_MAX_AGE) return toast(`Only players aged ${ACAD_MAX_AGE} and under can join the academy.`); p.acad = true; S.bench = (S.bench || []).filter(x => x !== p.id); if (!S.set.acadSel) fixUserLineup(); save(); render(); toast(`${p.name} moved to the academy.`); },
+  demote: v => { const p = P(+v); if (p.age > ACAD_MAX_AGE) return toast(`Only players aged ${ACAD_MAX_AGE} and under can join the academy.`); if (acadCount(me()) >= ACAD_CAP) return toast(`The academy is full (${ACAD_CAP} places). Promote or release someone first.`); p.acad = true; S.bench = (S.bench || []).filter(x => x !== p.id); if (!S.set.acadSel) fixUserLineup(); save(); render(); toast(`${p.name} moved to the academy.`); },
   tactab: v => { UI.tacTab = v; UI.sel = null; render(); },
   ytab: v => { UI.ytab = v; render(); },
   livetab: v => { UI.ltab = v; render(); },

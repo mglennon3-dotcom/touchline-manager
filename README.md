@@ -208,9 +208,11 @@ Head-to-head records are kept for every rivalry.
 
 **Graduate intake.** At the end of each season every club's academy offers a pool of five local 16-year-olds,
 their potential set by its Youth development rating. Yours appear at the top of the Academy page with their
-rating and potential: keep up to three, and those you don't keep are released as free agents for any club to
-sign. Decide before the season starts, or your staff keep the best three by potential. AI clubs keep their best,
-plus the next two if they're within two points of the club's level; the ones they release join the free agents if
+rating and potential: keep up to three, or none, by the end of preseason week 2. Those you don't keep are
+released as free agents, leaving three weeks of the window for any club to sign them; undecided at the deadline,
+your staff keep the best they have room for. The academy holds 15: graduates and players sent down need a free
+place (youth recruits who committed still join), so promote or release to make room. AI clubs keep their best,
+plus the next two if they're within two points of the club's level, while they have under 15 players aged 20 and under; the ones they release join the free agents if
 their potential is 9 or more.
 **Youth development** is a club rating out of 20, only loosely tied to division, so a small club can run an
 excellent academy. It sets the potential of each summer's graduates, how fast under-21s improve, and how many
