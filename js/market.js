@@ -37,15 +37,18 @@ function scr(c, extraCost = 0, extraRev = 0) {
   const rev = annualIncome(c) + f.prize + f.merit + f.scheme + Math.max(0, f.sales) + extraRev;
   return cost / Math.max(1, rev);
 }
-function transfer(p, to, fee, wage, yrs) {
-  const from = p.club >= 0 ? C(p.club) : null;
+/* plan: instalments for the fee (1 = lump sum). The first is paid now with the 5% agent fee on the whole fee; the
+   rest at the start of each following season (payDues), and the seller receives them as they're paid. */
+function transfer(p, to, fee, wage, yrs, plan = 1) {
+  const from = p.club >= 0 ? C(p.club) : null, now = plan > 1 ? Math.round(fee / plan) : fee;
   if (from) {
     from.squad = from.squad.filter(id => id !== p.id);
     const book = p.am ? p.am.per * p.am.left : 0;
-    from.cash += fee; from.fin.sales += fee - book; from.fin.sold += fee;
+    from.cash += now; from.fin.sales += fee - book; from.fin.sold += now;
     if (isUser(from)) S.lineup = S.lineup.map(id => id === p.id ? null : id);
   } else S.fa = S.fa.filter(id => id !== p.id);
-  to.cash -= fee * 1.05; to.fin.bought += fee; to.fin.agent += fee * .05;
+  to.cash -= now + fee * .05; to.fin.bought += now; to.fin.agent += fee * .05;
+  if (plan > 1) (S.dues ||= []).push({ pid: p.id, name: p.name, payer: to.id, payee: from ? from.id : -1, per: Math.round((fee - now) / (plan - 1)), left: plan - 1, fee, plan, y: S.year });
   to.squad.push(p.id);
   p.club = to.id; p.yrs = yrs; p.wage = wage; p.am = fee > 0 ? { per: Math.round(fee / yrs), left: yrs } : null;
   p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.pt = .5; p.acad = false;
@@ -144,6 +147,21 @@ function logBid(p, fee, yrs, res, msg) { (S.bids ||= {})[p.id] = { y: S.year, w:
 const clubFloor = p => askingPrice(p) * (.88 + .1 * seedOf(p.id + S.year * 7, 3));
 const wageFloor = (p, demand, w, yrs) => demand * (1 - .2 * w) * (p.age >= 31 && yrs === 1 ? 1.1 : 1);
 const roundFee = v => { const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1)); return Math.ceil(v / mag) * mag; };
+/* Deferred fees: the selling club wants 5% more in total for each extra year it waits for its money. */
+const DEFER_MAX = 4, deferMult = n => 1 + .05 * (Math.max(1, n) - 1);
+/* What the club still owes on deferred fees: per year, in total, and the instalments. */
+function duesOf(c) { const d = (S.dues || []).filter(x => x.payer === c.id); return { list: d, next: sum(d, x => x.per), total: sum(d, x => x.per * x.left) }; }
+/* At the start of each season every club pays the next instalment on each deferred fee it owes. */
+function payDues() {
+  for (const d of S.dues || []) {
+    const payer = C(d.payer), payee = d.payee >= 0 ? C(d.payee) : null;
+    payer.cash -= d.per; payer.fin.bought += d.per;
+    if (payee && !payee.gone) { payee.cash += d.per; payee.fin.sold += d.per; }
+    d.left--;
+    if (isUser(payer)) news(`Deferred fee for ${d.name}: ${money(d.per)} paid${d.left ? `, ${d.left} instalment${d.left > 1 ? "s" : ""} left` : ", the last instalment"}.`, false, "finance");
+  }
+  S.dues = (S.dues || []).filter(d => d.left > 0);
+}
 function userBid(p, fee, yrs, wage, st) {
   const r = userBidInner(p, fee, yrs, wage, st || {});
   if (r.res) logBid(p, fee, yrs, r.res, r.msg);
@@ -152,19 +170,21 @@ function userBid(p, fee, yrs, wage, st) {
 function userBidInner(p, fee, yrs, wage, st) {
   const err = canBuy(p); if (err) return { ok: false, msg: err };
   const c = me(), w = willingness(p, c), lock = () => { (S.tried ||= {})[p.id] = S.year + ":" + S.week + ":" + S.phase + S.summerDay; };
-  if (fee * 1.05 > c.cash) return { ok: false, msg: `You can't cover ${money(fee)} plus agent fees with ${money(c.cash)} in the bank.` };
+  const plan = p.club >= 0 && fee > 0 ? clamp(st.plan || 1, 1, DEFER_MAX) : 1, dm = deferMult(plan), upfront = fee / plan + fee * .05;
+  if (upfront > c.cash) return { ok: false, msg: `You can't cover ${plan > 1 ? `the first instalment (${money(fee / plan)})` : money(fee)} plus agent fees with ${money(c.cash)} in the bank.` };
   if (w < .3) return { ok: false, res: "refused", msg: `${p.name} doesn't want to join. ${whyNot(p, c)}` };
   // 1. The fee, unless it's already agreed at this figure or more.
-  if (p.club >= 0 && !(st.feeOK != null && fee >= st.feeOK)) {
-    const ask = askingPrice(p), floor = clubFloor(p);
+  // Paid over several years, the club judges the total against its price scaled up by deferMult.
+  if (p.club >= 0 && !(st.feeOK != null && fee >= st.feeOK && st.feePlan === plan)) {
+    const ask = askingPrice(p) * dm, floor = clubFloor(p) * dm, how = plan > 1 ? ` over ${plan} years` : "";
     if (fee < floor) {
       st.clubNo = (st.clubNo || 0) + 1;
-      if (st.clubNo >= 3 || fee < ask * .6) { lock(); return { ok: false, res: "rejected", msg: `${C(p.club).name} end the talks${fee < ask * .6 ? ` at ${money(fee)}: nowhere near their ${money(ask)} valuation` : " after three offers below what they'll take"}. Try again next week.` }; }
+      if (st.clubNo >= 3 || fee < ask * .6) { lock(); return { ok: false, res: "rejected", msg: `${C(p.club).name} end the talks${fee < ask * .6 ? ` at ${money(fee)}${how}: nowhere near their ${money(ask)} valuation` : " after three offers below what they'll take"}. Try again next week.` }; }
       const counter = roundFee(Math.max(floor, fee + (ask - fee) * .5));
       st.counterFee = counter;
-      return { ok: false, msg: `${C(p.club).name} turn down ${money(fee)} and come back at ${money(counter)}.` };
+      return { ok: false, msg: `${C(p.club).name} turn down ${money(fee)}${how} and come back at ${money(counter)}${how}.` };
     }
-    st.feeOK = fee; st.counterFee = null;
+    st.feeOK = fee; st.feePlan = plan; st.counterFee = null;
   }
   // 2. Personal terms.
   const demand = contractDemand(p, c, w), min = wageFloor(p, demand, w, yrs);
@@ -176,10 +196,10 @@ function userBidInner(p, fee, yrs, wage, st) {
     return { ok: false, msg: `${p.club >= 0 ? "Fee agreed. " : ""}${p.name} turns down ${perWeek(wage)} on a ${yrs}-year deal; he'd sign for ${perWeek(counter)}.` };
   }
   const fromRival = p.club >= 0 ? rivalry(p.club, c.id) : 0, rivalClub = p.club >= 0 ? C(p.club) : null;
-  transfer(p, c, fee, wage, yrs);
+  transfer(p, c, fee, wage, yrs, plan);
   if (fromRival) { S.board = clamp(S.board - fromRival, 0, 100); news(`Signing ${p.name} from ${rivalClub.name} divides opinion. Some supporters will never accept a player from across the divide.`, true, "transfer"); }
   fixUserLineup();
-  return { ok: true, res: "signed", msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}${p.club >= 0 && fee ? ` for ${money(fee)}` : ""}.` };
+  return { ok: true, res: "signed", msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}${fee ? ` for ${money(fee)}${plan > 1 ? `, paid over ${plan} years (${money(fee / plan)} now)` : ""}` : ""}.` };
 }
 function whyNot(p, b) {
   const cur = p.club >= 0 ? C(p.club) : null, out = [];

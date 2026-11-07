@@ -690,6 +690,7 @@ function newSeasonStart() {
   S.year++;
   S.seasonOver = null;
   startSeason();
+  payDues();  // deferred transfer fees: this season's instalments, in this season's accounts
   fixUserLineup();
   // Promotion and relegation can bring a derby back into the fixture list, or take it away.
   for (const id of Object.keys(me().rivals || {}).map(Number)) {

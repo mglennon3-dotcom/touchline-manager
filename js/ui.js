@@ -943,6 +943,7 @@ function finProjection(c) {
     ["Scouting network", g("scouting"), S.rec.scoutLvl * scoutCost() * remWk / 52],
     ["Stadium works", g("stadium"), b ? b.perWeek * Math.min(b.left, remWk) : 0],
     ["Transfer fees paid", g("bought"), 0],
+    ...(duesOf(c).list.length && summer ? [["Deferred fee instalments", 0, duesOf(c).next, "due at kick-off on fees you spread over several years"]] : []),
     ["Agent fees", g("agent"), 0],
   ];
   const ratio = scr(c), rev = annualIncome(c) + g("prize") + g("merit") + g("scheme") + Math.max(0, g("sales"));
@@ -985,6 +986,7 @@ function transferBudgetCard(c) {
     <dl class="ledger small">
       <dt>Cash: keeps you out of the red at season's end</dt><dd>${money(t.byCash)}</dd>
       <dt>Cost ratio: room under ${pct(RULES.scrLimit)} (now ${pct(t.ratio)})</dt><dd class="${t.room < 0 ? "bad" : ""}">${t.room < 0 ? `over by ${money(-t.room)} a year` : `${money(t.room)} a year → ${money(t.byRatio)} fee`}</dd>
+      ${duesOf(c).total ? `<dt>Deferred fees still owed</dt><dd class="bad">${money(duesOf(c).total)} <span class="tiny muted">(${money(duesOf(c).next)} at the start of next season${t.pj.summer ? ", counted above" : ""})</span></dd>` : ""}
       <dt>Fees received this season</dt><dd class="good">${money(t.sold)}</dd><dt>Fees and agents paid</dt><dd class="bad">${money(-(t.bought + t.agent))}</dd>
       <dt class="tot">Net transfer spend</dt><dd class="tot ${t.net >= 0 ? "good" : "bad"}">${t.net >= 0 ? "+" : "−"}${money(Math.abs(t.net))}</dd></dl>
     <p class="tiny muted" style="margin-top:6px">A fee counts in the cost ratio as fee ÷ contract years, plus his wage; selling a player adds the profit over his book value to revenue. Projected season result: <b class="${t.pj.net >= 0 ? "good" : "bad"}">${t.pj.net >= 0 ? "+" : "−"}${money(Math.abs(t.pj.net))}</b> (Finances page).</p></section>`;
@@ -1158,19 +1160,22 @@ function modalBid(p) {
   const b = UI.bid && UI.bid.id === p.id ? UI.bid : (UI.bid = { id: p.id, fee: ask, yrs: p.age >= 31 ? 2 : 4, wage: demand, msg: "" });
   if (b.wage == null) b.wage = demand;
   const after = scr(c, b.wage + (b.fee ? b.fee / b.yrs : 0) + b.fee * .05);
+  const plan = p.club >= 0 ? clamp(b.plan || 1, 1, DEFER_MAX) : 1, dm = deferMult(plan);
   // Fee and wage choices: steps around the asking price and his demand, plus any counter-offer on the table.
   const uniq = a => [...new Set(a)].sort((x, y) => x - y);
-  const fees = p.club >= 0 ? uniq([.7, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2].map(k => roundFee(ask * k)).concat(b.counterFee ? [b.counterFee] : [], [b.fee])) : [0];
+  // Fee steps follow the payment plan: a deferred deal costs deferMult more in total.
+  const fees = p.club >= 0 ? uniq([.7, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2].map(k => roundFee(ask * dm * k)).concat(b.counterFee ? [b.counterFee] : [], [b.fee])) : [0];
   const wages = uniq([.7, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2, 1.3].map(k => Math.round(demand * k / 1000) * 1000).concat(b.counterWage ? [b.counterWage] : [], [b.wage]));
   const feeAgreed = b.feeOK != null && b.fee >= b.feeOK;
   const counters = [b.counterFee && b.fee !== b.counterFee && !feeAgreed ? `<button class="btn sm" data-a="bidcounter" data-v="fee">Offer their ${money(b.counterFee)}</button>` : "", b.counterWage && b.wage !== b.counterWage ? `<button class="btn sm" data-a="bidcounter" data-v="wage">Offer him ${perWeek(b.counterWage)}</button>` : ""].filter(Boolean).join("");
   return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · ${ratingBlank(p) ? "rating unknown: scout him" : `rated ${ratingView(p).join("–").replace(/^(\d+)–\1$/, "$1")}`}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
     <dl class="facts"><div><dt>Asking price</dt><dd class="num">${p.club >= 0 ? money(ask) : "None"}</dd></div><div><dt>His interest</dt><dd class="${wk === "ok" ? "" : wk}">${wl}</dd></div><div><dt>His contract request</dt><dd class="num">${perWeek(demand)}</dd></div><div><dt>Earns now</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Your cash</dt><dd class="num">${money(c.cash)}</dd></div></dl>
     ${w < .45 ? `<p class="small">${esc(whyNot(p, c) || "He isn't convinced by the move.")}</p>` : ""}
-    <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee ${feeAgreed ? '<span class="good tiny">agreed ✓</span>' : ""}<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === roundFee(ask) ? " (asking)" : ""}${v === b.counterFee ? " (their counter)" : ""}</option>`).join("")}</select></label>` : ""}
+    <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee ${feeAgreed ? '<span class="good tiny">agreed ✓</span>' : ""}<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === roundFee(ask * dm) ? (plan > 1 ? " (asking, deferred)" : " (asking)") : ""}${v === b.counterFee ? " (their counter)" : ""}</option>`).join("")}</select></label>` : ""}
       <label class="f">Wage offer<select id="bid-wage" data-c="bid-wage">${wages.map(v => `<option value="${v}" ${v === b.wage ? "selected" : ""}>${perWeek(v)}${v === demand ? " (his request)" : ""}${v === b.counterWage ? " (he'd sign)" : ""}</option>`).join("")}</select></label>
+      ${p.club >= 0 ? `<label class="f">Payment<select id="bid-plan" data-c="bid-plan">${Array.from({ length: DEFER_MAX }, (_, i) => i + 1).map(n => `<option value="${n}" ${n === plan ? "selected" : ""}>${n === 1 ? "Lump sum" : `Over ${n} years (+${Math.round((deferMult(n) - 1) * 100)}%)`}</option>`).join("")}</select></label>` : ""}
       <label class="f">Contract length<select id="bid-yrs" data-c="bid-yrs">${[1, 2, 3, 4, 5].map(y => `<option value="${y}" ${y === b.yrs ? "selected" : ""}>${y} year${y > 1 ? "s" : ""}</option>`).join("")}</select></label></div>
-    <p class="small">With agent fees (5%) this costs <b>${money(b.fee * 1.05)}</b> now and <b>${perWeek(b.wage)}</b> in wages. Your projected cost ratio would move from ${pct(scr(c))} to <b class="${after > RULES.scrSporting ? "bad" : after > RULES.scrLimit ? "warn" : ""}">${pct(after)}</b>. ${isSenior(p) ? (regInfo(c).registered < RULES.squadMax ? `He'd take one of your ${RULES.squadMax - regInfo(c).registered} free registration places.` : `Your 25 registration places are full: he'd join unregistered unless you take someone else off the list.`) : "As an under-21 he needs no registration place."}</p>
+    <p class="small">With agent fees (5%) this costs <b>${money(b.fee / plan + b.fee * .05)}</b> now${plan > 1 ? `, then <b>${money(b.fee / plan)}</b> at the start of each of the next ${plan - 1} season${plan > 2 ? "s" : ""}` : ""}, and <b>${perWeek(b.wage)}</b> in wages. Your projected cost ratio would move from ${pct(scr(c))} to <b class="${after > RULES.scrSporting ? "bad" : after > RULES.scrLimit ? "warn" : ""}">${pct(after)}</b>. ${isSenior(p) ? (regInfo(c).registered < RULES.squadMax ? `He'd take one of your ${RULES.squadMax - regInfo(c).registered} free registration places.` : `Your 25 registration places are full: he'd join unregistered unless you take someone else off the list.`) : "As an under-21 he needs no registration place."}</p>
     ${b.msg ? `<p class="small ${b.ok ? "good" : "bad"}"><b>${esc(b.msg)}</b></p>` : ""}
     ${counters ? `<div class="row" style="gap:6px">${counters}</div>` : ""}
     <p class="tiny muted">Offer below his request and he may say no and name his price; keen players accept a little less. His club may come back with a counter-offer. Three refusals from either side and talks are off until next week.</p>

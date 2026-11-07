@@ -311,6 +311,11 @@ and "Unselect all" switch every country on or off (handy for picking just one or
 **Scouted list.** The ✕ on a row of the Transfers Scouted tab takes a player you've decided against off the list.
 His report is kept, and the scouting assistant won't scout him again. "Show removed" lists them with Restore, and
 scouting him again yourself puts him back. The Youth page's Scouted tab works the same way for prospects.
+**Paying a fee over time.** On the offer screen, Payment is a lump sum or spread over 2, 3 or 4 years. Spread,
+the selling club wants 5% more in total for each extra year (+10% over three years), and the fee choices and its
+counter-offers follow that. You pay the first instalment and the 5% agent fee on signing, then an equal instalment
+at the start of each following season; the seller receives them as they're paid. What you still owe is on the
+Finances page, and the coming season's instalments are in its projection and transfer budget.
 **Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
 commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed

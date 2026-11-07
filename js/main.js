@@ -330,7 +330,7 @@ const CHG = {
   import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); d.saveId = newSaveId(); if (!adoptSave(d)) throw new Error("not a save"); await save(); render(); toTop(); toast("Save file loaded as a new career."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
   "tf-pos": v => { UI.tf.pos = v; render(); }, "tf-age": v => { UI.tf.age = +v; render(); }, "tf-min": v => { UI.tf.min = +v; render(); }, "tf-fee": v => { UI.tf.fee = +v; render(); }, "tf-lg": v => { UI.tf.lg = v; render(); }, "tf-int": v => { UI.tf.int = v; render(); },
   "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); },
-  "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); }, "bid-wage": v => { UI.bid.wage = +v; UI.bid.msg = ""; renderModal(); },
+  "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); }, "bid-plan": v => { const b = UI.bid, from = deferMult(b.plan || 1), to = deferMult(+v); b.plan = +v; b.fee = roundFee(b.fee / from * to); b.counterFee = null; b.msg = ""; renderModal(); }, "bid-wage": v => { UI.bid.wage = +v; UI.bid.msg = ""; renderModal(); },
 };
 document.addEventListener("click", e => {
   const t = e.target.closest("[data-a]");
