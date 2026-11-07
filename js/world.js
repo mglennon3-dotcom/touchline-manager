@@ -430,11 +430,23 @@ function genSquad(c) {
   for (let i = 0; i < 3; i++) academyPlayer(c, ri(16, 18));
   trimSquad(c, true);
 }
+/* Ratings of established players (22-32, at a club), refreshed once a season: the shape graduates' potential is
+   drawn from. null while the world is still being built. */
+let SKILL = null;
+function skillSample() {
+  if (SKILL && SKILL.y === S.year && SKILL.s === S) return SKILL.a;
+  const a = []; for (const p of Object.values(S.players)) if (p.club >= 0 && p.age >= 22 && p.age <= 32) a.push(p.ovr);
+  if (a.length < 2000) return null;  // world not built yet: the old academy-centred draw
+  SKILL = { y: S.year, s: S, a }; return a;
+}
 function academyPlayer(c, age) {
   const p = makePlayer({ pos: pick(["CB", "FB", "DM", "CM", "AM", "W", "ST", "CB", "GK"]), base: 50, age, nat: c.country, club: c.id, rep: c.rep });
-  // Graduates are pure chance: potential is equally likely anywhere from 3 to 20, whatever the club or its academy
-  // (Youth development still sets how fast they improve). It was centred on the academy rating, +- 2.2 then 3.2.
-  p.pot = Math.round(o100(rf(3, 20)));
+  // Graduates are chance, shaped like the game itself: potential is the rating of a random established player
+  // (skillSample), so stars are as rare among graduates as among pros, whatever the club or its academy (Youth
+  // development still sets how fast they improve). History: centred on the academy rating (+- 2.2, then 3.2), then
+  // uniform 3-20 in 5.52.0, which made one graduate in 17 a potential 19-20 at every club.
+  const sk = skillSample();
+  p.pot = clamp(Math.round(sk ? pick(sk) + gauss() * 1.5 : o100(5 + c.academy * .55 + gauss() * 2.2)), 33, 95);
   setRating(p, clamp(p.pot - ri(6, 14) - (18 - age) * 3, 33, p.pot));
   p.wage = Math.max(12000, Math.round(wageDemand(p, c.rep) * .6 / 1000) * 1000);
   p.yt[c.country] = Math.max(1, age - 15); p.yrs = ri(2, 3);
