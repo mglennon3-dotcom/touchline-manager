@@ -271,10 +271,13 @@ wages at today's bill, running costs, scouting, stadium works and any cost-ratio
 bonuses and future transfers count once they happen. In preseason it projects the coming season. Checked
 by projecting at week 6 and playing the season out: a Premier club came to €34.4M projected against €38.9M
 actual (the gap was a cup run), and a fifth-tier club to €230k against €260k.
-**What you know about a player.** Ability ratings show only for your own players, everyone in your division,
-and players you've scouted (a first look gives a range, a full report the exact figure). Everyone else shows
-"?", sorts last, and fails a Min rating filter; their match stats (apps, goals, average rating) are public, so
-you can spot form and then scout. Team Needs upgrades only suggest players you know about.
+**What you know about a player.** Your own players and everyone in your division show their exact rating.
+Every other player shows a band that always contains his true rating. How wide it is depends on how well you
+know his country, measured against your own range of knowledge: 7 wide (e.g. 9-16) in your weakest area, 4 wide
+(e.g. 11-15) in your strongest, and in between for the rest. Scouting narrows it: a first look to 1-3 wide, a
+full report to the exact figure. Sorting and the Min rating filter use the middle of the band, and Team Needs
+upgrades need even the bottom of it to be an upgrade. Attributes, potential and injury risk still need scouting.
+Match stats (apps, goals, average rating) are public.
 **Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
 commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed

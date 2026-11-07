@@ -197,16 +197,25 @@ function seedOf(id, k) { const x = Math.sin(id * 12.9898 + k * 78.233) * 43758.5
 function viewOf(p, v, k, wide) {
   const lvl = scoutLevel(p); if (lvl >= 2) return [Math.round(v), Math.round(v)];
   const w = lvl === 1 ? Math.max(1, 2 * knowWidth(playerCountry(p))) : wide, c = v + (seedOf(p.id, k) - .5) * w;
+  // A whole-number band is slid inside 1-20 rather than clipped, so a 19 still shows the full band (13-20, not 16-20)
+  // and the true value stays inside it.
+  if (lvl === 0 && Number.isInteger(w)) { const lo = clamp(Math.round(c - w / 2), 1, 20 - w); return [lo, lo + w]; }
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
-const ratingView = p => viewOf(p, r20(p.ovr), 1, 5);
+/* Before any scouting, every player still has a rough band: what the game's reputation, press and word of mouth
+   tell you. Its width follows your knowledge of his country, relative to your own spread: your weakest area gives a
+   band 7 wide (e.g. 9-16), your strongest 4 wide (e.g. 11-15). Scouting tightens it (partial report: 1-3 wide;
+   full: exact). The band was "?" from 5.41 to 5.42, which made the world feel blank. */
+function unscoutedWidth(p) {
+  const ks = KNOW_KEYS.map(knowOf), lo = Math.min(...ks), hi = Math.max(...ks), k = knowOf(playerCountry(p));
+  return Math.round(7 - 3 * (hi > lo ? (k - lo) / (hi - lo) : clamp(k / 20, 0, 1)));
+}
+const ratingView = p => viewOf(p, r20(p.ovr), 1, scoutLevel(p) === 0 ? unscoutedWidth(p) : 0);
 const attrView = (p, k) => scoutLevel(p) === 0 ? null : viewOf(p, p.at[k], k.charCodeAt(0) + k.charCodeAt(1), 0);
 const ratingMid = p => { const [a, b] = ratingView(p); return (a + b) / 2; };
-/* You see a player's ability only once he's known: yours, anyone in your division, or scouted (at least once).
-   Everyone else shows "?" (a wide range used to show, which gave the answer away without scouting); sorting puts
-   unknown players last. ratingMid stays the scouts' private estimate, for the scouting assistant's targets. */
-const ratingKnown = p => scoutLevel(p) > 0;
-const ratingSort = p => ratingKnown(p) ? ratingMid(p) : -1;
+// Sorting and filtering use the middle of what you can see, never the true rating, so an unscouted band gives
+// nothing away beyond the band itself.
+const ratingSort = p => ratingMid(p);
 /* Potential and injury proneness are hidden. Scouts estimate them as a range out of 20:
    a first look gives a wide range, a full report a narrow one, and a better recruiter narrows both. */
 function hiddenView(p, val, k) {

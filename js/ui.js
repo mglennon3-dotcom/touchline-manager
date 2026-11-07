@@ -22,7 +22,7 @@ const starHtml = (lo, hi) => `<span class="stars" title="${lo === hi ? lo : lo +
 const trophyName = t => LG[t] ? leagueName(t) : t === "FA" ? CUPS.FA.name : t === "LC" ? CUPS.LC.name : CONT[t] ? CONT[t].name : t;
 /* Ratings out of 20. Exact for players you know; a range for everyone else until scouted. */
 const aCls = v => v >= 17 ? "a4" : v >= 13 ? "a3" : v >= 8 ? "a2" : "a1";
-function ratingHtml(p) { if (!ratingKnown(p)) return '<span class="rt unk muted" title="Not scouted: scout him to see his rating">?</span>'; const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="Not fully scouted">${lo}–${hi}</span>`; }
+function ratingHtml(p) { const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="${scoutLevel(p) ? "Partly scouted" : "Not scouted: a rough band from his reputation. Scouting narrows it"}">${lo}–${hi}</span>`; }
 function attrStrip(p) {
   const lvl = scoutLevel(p);
   if (lvl === 0) return '<span class="muted tiny">Scout to see</span>';
@@ -477,7 +477,7 @@ function viewSquad() {
     { k: "n", l: "Name", v: p => p.name, f: p => `${playerA(p)} ${statusChips(p, c)}` },
     { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>${xi.has(p.id) ? ' <span class="chip xi">XI</span>' : ""}` },
     // What you judge a player on comes first, next to his name: on a phone the rest is a sideways scroll away.
-    { k: "ovr", l: "Rating", r: 1, v: p => p.ovr, f: p => ratingHtml(p) },
+    { k: "ovr", l: "Rating", r: 1, v: p => ratingSort(p), f: p => ratingHtml(p) },
     { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
     { k: "atk", l: "Attack", r: 1, v: p => groupAvg(p, "atk") ?? -1, f: p => groupHtml(p, "atk") },
     { k: "dfn", l: "Defence", r: 1, v: p => groupAvg(p, "dfn") ?? -1, f: p => groupHtml(p, "dfn") },
@@ -554,7 +554,7 @@ function needTargets(role, floor, k = 3) {
   for (const p of Object.values(S.players)) {
     if (p.club === S.club || p.loan || p.age < 18 || p.age > 31 || FAM[p.pos][role] < .9 || p.retiring === 1) continue;
     const k = p.pos === role ? 1 : .97, rm = ratingMid(p) * k;
-    if (!ratingKnown(p) || ratingView(p)[0] * k < floor + 1) continue;  // only players you know about, and even the cautious end of the estimate must be an upgrade
+    if (ratingView(p)[0] * k < floor + 1) continue;  // even the cautious end of the estimate must be an upgrade
     const fee = p.club >= 0 ? askingPrice(p) : 0;
     if (fee > budget) continue;
     picks.push({ p, rm, fee });
@@ -740,7 +740,7 @@ function viewTransfers() {
       { k: "n", l: "Player", v: o => o.p.name, f: o => playerA(o.p) },
       { k: "pos", l: "Pos", v: o => ROLE_ORDER[o.p.pos], f: o => `<span class="pos">${o.p.pos}</span>` },
       { k: "age", l: "Age", r: 1, v: o => o.p.age, f: o => o.p.age },
-      { k: "ovr", l: "Rating", r: 1, v: o => o.p.ovr, f: o => ratingHtml(o.p) },
+      { k: "ovr", l: "Rating", r: 1, v: o => ratingSort(o.p), f: o => ratingHtml(o.p) },
       { k: "club", l: "Club", v: o => o.p.club, f: o => o.p.club >= 0 ? clubA(o.p.club, { flag: 1 }) : "Free agent" },
       { k: "fee", l: "Your offer", r: 1, v: o => o.b.fee, f: o => o.b.fee ? money(o.b.fee) : "Contract" },
       { k: "ask", l: "Asking now", r: 1, v: o => o.p.club >= 0 ? askingPrice(o.p) : 0, f: o => o.p.club >= 0 ? money(askingPrice(o.p)) : "—" },
@@ -756,7 +756,7 @@ function viewTransfers() {
     let pool = UI.tab === "scouted" ? scouted : UI.tab === "fa" ? S.fa.map(P) : Object.values(S.players).filter(p => p.club >= 0 && p.club !== S.club && p.age >= 17 && !p.loan);
     if (UI.tab === "listed") pool = pool.filter(p => p.listed || p.req);
     if (UI.tab === "loans") pool = pool.filter(p => loanable(p) && !wouldStart(p, C(p.club)));
-    pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && (!f.min || (ratingKnown(p) && ratingMid(p) >= f.min)) && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
+    pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && (!f.min || ratingMid(p) >= f.min) && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
     if (f.fee && UI.tab !== "loans") pool = pool.filter(p => askingPrice(p) <= f.fee);
     // Interest, using the same bands as the Interest column: "would sign" is everyone but Not interested,
     // since a player below .3 turns any offer down.
@@ -1068,7 +1068,7 @@ function attrPanel(p) {
   const lvl = scoutLevel(p), main = attrKeys(p.pos), rest = allKeys(p.pos).filter(k => !main.includes(k));
   const row = k => { const l = ATTR_NAME[k]; const v = attrView(p, k); return `<div class="attr"><span>${l}</span><span class="abar">${v ? `<i style="left:${(v[0] - 1) / 19 * 100}%;width:${Math.max(2, (v[1] - v[0]) / 19 * 100)}%" class="${aCls((v[0] + v[1]) / 2)}"></i>` : ""}</span><b class="num">${v ? (v[0] === v[1] ? v[0] : v[0] + "–" + v[1]) : "?"}</b></div>`; };
   const rows = main.map(row).join("") + (rest.length ? `<details class="attr-more"><summary class="small muted">Other attributes (used out of position)</summary>${rest.map(row).join("")}</details>` : "");
-  const need = lvl < 2 ? `<div class="row" style="margin-top:6px"><span class="small muted">${lvl === 0 ? "Not scouted: attributes unknown, rating is a rough guess." : "Partly scouted: attributes are ranges."}</span><button class="btn sm" data-a="scoutp" data-v="${p.id}">Scout him (${scoutHours(2, playerCountry(p))}h${travelCost(playerCountry(p)) ? `, ${money(travelCost(playerCountry(p)))} travel` : ""}; ${S.rec.hours}h left)</button><span class="tiny muted">Your knowledge of ${KNOW_NAME(playerCountry(p))}: ${Math.floor(knowOf(playerCountry(p)))}/20</span></div>` : "";
+  const need = lvl < 2 ? `<div class="row" style="margin-top:6px"><span class="small muted">${lvl === 0 ? "Not scouted: attributes unknown, and the rating is a rough band (wider in leagues you know less well)." : "Partly scouted: attributes are ranges."}</span><button class="btn sm" data-a="scoutp" data-v="${p.id}">Scout him (${scoutHours(2, playerCountry(p))}h${travelCost(playerCountry(p)) ? `, ${money(travelCost(playerCountry(p)))} travel` : ""}; ${S.rec.hours}h left)</button><span class="tiny muted">Your knowledge of ${KNOW_NAME(playerCountry(p))}: ${Math.floor(knowOf(playerCountry(p)))}/20</span></div>` : "";
   return `<div><h3 style="margin-bottom:6px">${LINE_NAME[LINE[p.pos]]} attributes <span class="tiny muted">out of 20</span></h3><div class="attrs">${rows}</div>${need}</div>`;
 }
 function modalClub(c) {
@@ -1135,7 +1135,7 @@ function modalBid(p) {
   const wages = uniq([.7, .8, .85, .9, .95, 1, 1.05, 1.1, 1.2, 1.3].map(k => Math.round(demand * k / 1000) * 1000).concat(b.counterWage ? [b.counterWage] : [], [b.wage]));
   const feeAgreed = b.feeOK != null && b.fee >= b.feeOK;
   const counters = [b.counterFee && b.fee !== b.counterFee && !feeAgreed ? `<button class="btn sm" data-a="bidcounter" data-v="fee">Offer their ${money(b.counterFee)}</button>` : "", b.counterWage && b.wage !== b.counterWage ? `<button class="btn sm" data-a="bidcounter" data-v="wage">Offer him ${perWeek(b.counterWage)}</button>` : ""].filter(Boolean).join("");
-  return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · ${ratingKnown(p) ? `rated ${ratingView(p).join("–").replace(/^(\d+)–\1$/, "$1")}` : "rating unknown: scout him"}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
+  return mHead(esc(p.name), `${p.club >= 0 ? "Offer to " + esc(C(p.club).name) : "Free agent"} · ${ROLE_NAME[p.pos]} · ${p.age} · rated ${ratingView(p).join("–").replace(/^(\d+)–\1$/, "$1")}`, p.club >= 0 ? C(p.club).color : "var(--muted)") + `<div class="modal-b">
     <dl class="facts"><div><dt>Asking price</dt><dd class="num">${p.club >= 0 ? money(ask) : "None"}</dd></div><div><dt>His interest</dt><dd class="${wk === "ok" ? "" : wk}">${wl}</dd></div><div><dt>His contract request</dt><dd class="num">${perWeek(demand)}</dd></div><div><dt>Earns now</dt><dd class="num">${p.club >= 0 ? perWeek(p.wage) : "—"}</dd></div><div><dt>Your cash</dt><dd class="num">${money(c.cash)}</dd></div></dl>
     ${w < .45 ? `<p class="small">${esc(whyNot(p, c) || "He isn't convinced by the move.")}</p>` : ""}
     <div class="filters">${p.club >= 0 ? `<label class="f">Transfer fee ${feeAgreed ? '<span class="good tiny">agreed ✓</span>' : ""}<select id="bid-fee" data-c="bid-fee">${fees.map(v => `<option value="${v}" ${v === b.fee ? "selected" : ""}>${money(v)}${v === roundFee(ask) ? " (asking)" : ""}${v === b.counterFee ? " (their counter)" : ""}</option>`).join("")}</select></label>` : ""}
@@ -1275,7 +1275,7 @@ function viewAcademy() {
     { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
     { k: "ready", l: "First team?", v: p => { const r = acadReadiness(p, c); return ["Not yet", "Close", "Ready", "Ready to start"].indexOf(r[0]); }, f: p => { const [l, k, bar] = acadReadiness(p, c); return `<span class="${k}">${l}</span><br><span class="tiny muted">${bar ? `his ${Math.round(r20(p.ovr))} v ${Math.round(r20(bar))} at ${p.pos}` : `a place is free at ${p.pos}`}</span>`; } },
     { k: "act", l: "", f: p => `<button class="btn sm" data-a="promote" data-v="${p.id}">Promote</button>` },
-    { k: "ovr", l: "Rating", r: 1, v: p => p.ovr, f: p => ratingHtml(p) },
+    { k: "ovr", l: "Rating", r: 1, v: p => ratingSort(p), f: p => ratingHtml(p) },
     { k: "pot", l: "Potential", r: 1, v: p => viewMid(potView(p)), f: p => potHtml(p) },
     { k: "gs", l: "Coaches' view", v: p => { const h = gsHint(p); return h ? ["Slow to develop", "A late developer: be patient", "Too early to tell", "Developing at a normal pace", "A quick learner", "Picks things up very quickly"].indexOf(h[0]) : -1; }, f: p => { const h = gsHint(p); return h ? `<span class="small ${h[1]}">${h[0]}</span>` : ""; } },
     { k: "app", l: "Apps", r: 1, v: p => as(p).app, f: p => as(p).app },
