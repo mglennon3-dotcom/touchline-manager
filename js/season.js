@@ -19,6 +19,44 @@ function roundRobin(ids) {
   // row at the turn (mirroring in order gave two clubs a run of three; never more than two this way).
   return rounds.concat(rounds.slice(1).concat(rounds.slice(0, 1)).map(rd => rd.map(([a, b]) => [b, a])));
 }
+/* Re-arrange the rest of a season drawn with the old generator (long home/away runs), keeping what's been played. Two
+   moves keep the fixture list valid: reorder the remaining rounds, and swap the legs of a pairing neither of whose
+   games has been played (A hosts B in one round, B hosts A in another). A search (simulated annealing) on those moves
+   minimises runs of home or away games (two in a row costs 1, three 10, longer far more), counting the last two
+   games already played, and keeps a pair's two meetings at least four rounds apart. */
+function rebalanceFixtures(L, iters = 15000) {
+  const done = (L.results || []).length, rest = L.fixtures.slice(done).map(rd => rd.map(m => m.slice())); if (rest.length < 4) return null;
+  const teams = L.clubs, idx = new Map(teams.map((t, i) => [t, i])), T = teams.length, Rn = rest.length;
+  // venue[r][t]: +1 home, -1 away in remaining round r (rounds are reordered, not rewritten, so this only changes on a flip)
+  const venue = rest.map(rd => { const v = new Int8Array(T); for (const [h, a] of rd) { v[idx.get(h)] = 1; v[idx.get(a)] = -1; } return v; });
+  const tail = teams.map(t => L.fixtures.slice(Math.max(0, done - 2), done).map(rd => { const m = rd.find(x => x[0] === t || x[1] === t); return m ? (m[0] === t ? 1 : -1) : 0; }));
+  const lastMeet = {}; L.fixtures.slice(0, done).forEach((rd, r) => { for (const [h, a] of rd) lastMeet[Math.min(h, a) + "-" + Math.max(h, a)] = r - done; });
+  const legs = {}; rest.forEach((rd, r) => rd.forEach((m, i) => { const key = Math.min(m[0], m[1]) + "-" + Math.max(m[0], m[1]); (legs[key] ||= []).push([r, i]); }));
+  const legList = Object.entries(legs).map(([k, l]) => ({ l, last: lastMeet[k] })), both = legList.filter(x => x.l.length === 2).map(x => x.l);
+  const order = rest.map((_, i) => i), pos = new Int32Array(Rn);
+  const cost = () => {
+    let c = 0; for (let p = 0; p < Rn; p++) pos[order[p]] = p;
+    for (let t = 0; t < T; t++) {
+      let prev = 0, run = 0;
+      for (const v of tail[t]) { if (v && v === prev) run++; else { run = v ? 1 : 0; prev = v; } }
+      for (let p = 0; p < Rn; p++) { const v = venue[order[p]][t]; if (v && v === prev) { run++; c += run === 2 ? 1 : run === 3 ? 10 : 30 * (run - 2); } else { run = v ? 1 : 0; prev = v; } }
+    }
+    for (const { l, last } of legList) {
+      if (l.length === 2) { if (Math.abs(pos[l[0][0]] - pos[l[1][0]]) < 4) c += 5; }
+      else if (last != null && pos[l[0][0]] - last < 4) c += 5;
+    }
+    return c;
+  };
+  const flip = l => { for (const [r, i] of l) { const m = rest[r][i]; rest[r][i] = [m[1], m[0]]; venue[r][idx.get(m[0])] *= -1; venue[r][idx.get(m[1])] *= -1; } };
+  let cur = cost(); const start = cur;
+  for (let it = 0; it < iters; it++) {
+    const temp = 4 * Math.pow(.002, it / iters);
+    if (R() < .5 || !both.length) { const a = Math.floor(R() * Rn), b = Math.floor(R() * Rn); [order[a], order[b]] = [order[b], order[a]]; const nc = cost(); if (nc <= cur || R() < Math.exp((cur - nc) / temp)) cur = nc; else [order[a], order[b]] = [order[b], order[a]]; }
+    else { const l = both[Math.floor(R() * both.length)]; flip(l); const nc = cost(); if (nc <= cur || R() < Math.exp((cur - nc) / temp)) cur = nc; else flip(l); }
+  }
+  L.fixtures = L.fixtures.slice(0, done).concat(Array.from(order, r => rest[r])); L._st = null;
+  return { start, end: cur };
+}
 const windowOpen = () => S.phase === "summer" || CAL.jan.includes(S.week);
 
 /* ---------- calendar ---------- */
