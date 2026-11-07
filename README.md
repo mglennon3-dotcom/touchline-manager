@@ -128,7 +128,7 @@ Blocks and Beaten columns.
 progress (x0.85), 6 is neutral, 7 (good) speeds it (x1.15) and 8+ (great) more (x1.25). With 60%+ of the minutes,
 a good season (7+) raises his potential by 1-3 at the end of it and a great one (8+) by 2-4.
 
-**Academy** (its own page): your youth players are kept apart from the first team. Summer graduates (1-2 local 16-year-olds a year, plus one more with Youth development 15+, the same for every club) and
+**Academy** (its own page): your youth players are kept apart from the first team. Graduates (see Graduate intake below) and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
 Academy page or the player's own card, which also has Promote to first team). Academy
 players never need registering; anyone turning 21 moves up as the season ends, in time to register him in
@@ -206,6 +206,12 @@ mood and gate money. Rival clubs charge each other more and fierce rivals won't 
 players are reluctant to cross the divide; and signing from or selling to a rival costs you some goodwill.
 Head-to-head records are kept for every rivalry.
 
+**Graduate intake.** At the end of each season every club's academy offers a pool of five local 16-year-olds,
+their potential set by its Youth development rating. Yours appear at the top of the Academy page with their
+rating and potential: keep up to three, and those you don't keep are released as free agents for any club to
+sign. Decide before the season starts, or your staff keep the best three by potential. AI clubs keep their best,
+plus the next two if they're within two points of the club's level; the ones they release join the free agents if
+their potential is 9 or more.
 **Youth development** is a club rating out of 20, only loosely tied to division, so a small club can run an
 excellent academy. It sets the potential of each summer's graduates, how fast under-21s improve, and how many
 places you can offer prospects. It is one of six factors prospects weigh (with distance, playing time, formation

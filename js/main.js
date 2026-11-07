@@ -199,6 +199,8 @@ const ACT = {
   yshowremoved: () => { UI.yShowRemoved = !UI.yShowRemoved; render(); },
   ctytog: v => ctyToggle("ctyOff", v), ctyall: () => { S.set.ctyOff = []; save(); render(); },
   yctytog: v => ctyToggle("yCtyOff", v), yctyall: () => { S.set.yCtyOff = []; save(); render(); },
+  intakepick: v => { const it = S.intake; if (!it) return; const id = +v, i = it.pick.indexOf(id); if (i >= 0) it.pick.splice(i, 1); else { if (it.pick.length >= INTAKE_KEEP) return toast(`You can keep ${INTAKE_KEEP} at most. Untick one first.`); it.pick.push(id); } save(); render(); },
+  intakeok: () => { if (!S.intake) return; const n = S.intake.ids.length - S.intake.pick.length; settleIntake(false); save(); render(); toast(`Done. ${n ? `${n} released as free agent${n > 1 ? "s" : ""}.` : ""}`); },
   unscout: v => { const p = P(+v); (S.scoutHide ||= {})[p.id] = 1; save(); render(); toast(`${p.name} removed from your scouted list. His report is kept: Show removed to restore him.`); },
   unhide: v => { const p = P(+v); if (S.scoutHide) delete S.scoutHide[p.id]; save(); render(); toast(`${p.name} is back on your scouted list.`); },
   showremoved: () => { UI.showRemoved = !UI.showRemoved; render(); },
@@ -450,6 +452,9 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
     S.names2 = true; }
   if (!S.acad20) { for (const c of S.clubs) c.academy = clamp(c.academy * 2, 1, 20); S.acad20 = true; }  // older saves rated academies out of 10
   if (!S.attr2) { for (const p of Object.values(S.players)) convertAttrs(p); for (const c of S.clubs) delete c._lv; S.attr2 = true; }
+  // 5.50: graduates come as a pool at the end of the season. A save already in preseason missed that step, and the
+  // old one-or-two at kick-off is gone, so it gets this year's pools now (every club, yours included).
+  if (S.phase === "summer" && !S.firstPre && S.club != null && !S.sacked && S.intakeY !== S.year && !S.intake) graduateIntakes();
 }
 function migrate4(d) {
   const keep = S; S = d;

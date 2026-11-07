@@ -77,7 +77,7 @@ function findNeed(c, minGap = 5) {
    Before 5.46 clubs saw true ratings and needed no scouting; judged on bands alone, 73% of their signings came
    in below their level, so they bid only on players they have looked at. */
 function aiTransferDay(intensity) {
-  const all = Object.values(S.players).filter(p => p.age >= 18 && !p.loan);
+  const all = Object.values(S.players).filter(p => p.age >= 18 && !p.loan && !p.intake);
   for (const c of activeClubs()) {
     if (isUser(c)) continue;
     aiScoutSetup(c);

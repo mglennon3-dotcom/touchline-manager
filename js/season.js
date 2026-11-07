@@ -538,6 +538,7 @@ function endSeason() {
 
   signingDay();
   ageAndContracts();
+  graduateIntakes();
   for (const c of activeClubs()) if (!isUser(c)) aiMaintain(c);
   S.phase = "summer"; S.summerDay = 0; S.seasonOverSeen = false; S.friendlies = []; S.friNo = [];
   news(`The ${seasonLabel(S.year)} season is over. Five weeks of preseason follow, with the transfer window open.`, true, "transfer");
@@ -582,6 +583,48 @@ function ageAndContracts() {
   if (S.fa.length > 300) { const drop = S.fa.map(P).sort((a, b) => value(a) - value(b)).slice(0, S.fa.length - 300); for (const p of drop) retirePlayer(p); }
   for (const id of S.lineup) if (id != null && !S.players[id]) S.lineup = S.lineup.map(x => x === id ? null : x);
   if (up.length) news(`${up.map(p => p.name).join(", ")} ${up.length > 1 ? "have" : "has"} turned 21 and moved up from the academy to the first-team squad. Register ${up.length > 1 ? "them" : "him"} on the Squad page before the season starts.`, true, "youth");
+}
+/* Graduate intake, at the end of every season. Each club's academy puts up a pool of five local 16-year-olds
+   (academyPlayer: potential from its Youth development rating); it keeps up to three. Yours wait on the Academy
+   page for you to choose (S.intake) until the season starts, when any still undecided are settled for you (the
+   best three by potential). Those you don't keep become free agents, so anyone can sign them in the window. AI
+   clubs keep their best, and the next two if they're within two points of the club's level; the ones they let go
+   join the free agents if they're worth a contract (potential 9+), otherwise they leave the game, which keeps the
+   pool from swelling by a thousand teenagers a year. Before 5.50 every club simply got 1-2 graduates (yours 1). */
+const INTAKE_POOL = 5, INTAKE_KEEP = 3;
+function graduateIntakes() {
+  for (const c of activeClubs()) {
+    const pool = Array.from({ length: INTAKE_POOL }, () => { const p = academyPlayer(c, 16); p.yt[c.country] = 1; return p; });
+    if (isUser(c)) {
+      for (const p of pool) { c.squad = c.squad.filter(id => id !== p.id); p.club = -1; p.intake = true; S.scout[p.id] = 2; }
+      S.intake = { ids: pool.map(p => p.id), pick: [] };
+      news(`Your academy has ${INTAKE_POOL} local 16-year-olds ready to join. Choose up to ${INTAKE_KEEP} on the Academy page before the season starts; the rest will be released.`, true, "youth");
+      continue;
+    }
+    const lvl = clubLevel(c), ranked = pool.sort((a, b) => b.pot - a.pot);
+    ranked.forEach((p, i) => {
+      if (i === 0 || (i < INTAKE_KEEP && p.pot >= lvl - 6)) return;
+      c.squad = c.squad.filter(id => id !== p.id);
+      if (p.pot >= o100(9)) toFreeAgent(p); else delete S.players[p.id];
+    });
+  }
+  S.intakeY = S.year;
+}
+/* Your choice (or, at the season start, the best three by potential). */
+function settleIntake(auto) {
+  const it = S.intake; if (!it) return;
+  const c = me(), kids = it.ids.map(id => S.players[id]).filter(Boolean);
+  const keep = new Set(auto ? kids.slice().sort((a, b) => b.pot - a.pot).slice(0, INTAKE_KEEP).map(p => p.id) : it.pick);
+  const joined = [];
+  for (const p of kids) {
+    p.intake = false;
+    if (keep.has(p.id)) { p.club = c.id; p.acad = true; p.joined = S.year; c.squad.push(p.id); joined.push(p); }
+    else toFreeAgent(p);
+  }
+  S.intake = null;
+  const names = joined.map(p => `${p.name} (${p.pos})`).join(", ");
+  news(joined.length ? `${auto ? "Your academy staff kept the best of this year's graduates: " : "Joining your academy: "}${names}. ${kids.length - joined.length} released as free agents.` : `You released all ${kids.length} of this year's graduates as free agents.`, false, "youth");
+  return joined.length;
 }
 /* AI clubs refill thin positions, stay inside the registration rules, and trim costs their owner won't carry. */
 function aiMaintain(c) {
@@ -628,9 +671,8 @@ function summerStep() {
 }
 function newSeasonStart() {
   for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);
-  // Local graduates: 1-2 a year for every club, yours included (yours was a flat 1 before 5.49.2), plus one with a
-  // Youth development rating of 15+.
-  for (const c of activeClubs()) { const n = ri(1, 2) + (c.academy >= 15 ? 1 : 0); for (let i = 0; i < n; i++) { const p = academyPlayer(c, 16); p.yt[c.country] = 1; if (isUser(c)) { p.acad = true; news(`Local academy graduate ${p.name} (${p.pos}) joins the academy.`, false, "youth"); } } if (!isUser(c)) trimSquad(c, false); }
+  if (S.intake) settleIntake(true);  // graduates you didn't decide on: the best three join, the rest are released
+  for (const c of activeClubs()) if (!isUser(c)) trimSquad(c, false);
   S.year++;
   S.seasonOver = null;
   startSeason();
