@@ -213,8 +213,8 @@ their potential set by its Youth development rating. Yours appear at the top of 
 rating and potential: keep up to three, or none, by the end of preseason week 2. Those you don't keep are
 released as free agents, leaving three weeks of the window for any club to sign them. Nobody is picked for you:
 at the deadline whoever is ticked joins and the rest go, so ticking none releases all five. The academy holds 15: graduates and players sent down need a free
-place (youth recruits who committed still join), so promote or release to make room. AI clubs keep their best,
-plus the next two if they're within two points of the club's level, while they have under 15 players aged 20 and under; the ones they release join the free agents if
+place (youth recruits who committed still join), so promote or release to make room. Pools are pitched a little below a single graduate of old, since you choose the best of them. AI clubs keep their
+best one or two, while they have under 15 players aged 20 and under; the ones they release join the free agents if
 their potential is 9 or more.
 **Youth development** is a club rating out of 20, only loosely tied to division, so a small club can run an
 excellent academy. It sets the potential of each summer's graduates, how fast under-21s improve, and how many
