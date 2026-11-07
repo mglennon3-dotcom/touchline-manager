@@ -329,9 +329,10 @@ const matchWinner = M => M.pens ? (M.pens[0] > M.pens[1] ? M.h.club : M.a.club) 
 // A wide curve, measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%
 // (median 6.23). One goal is about 7.4, two 8.8, two and an assist 9.9, a hat-trick 10. A 10 isn't only goals: about
 // 40% of them are defensive or goalkeeping displays (13 clearances and a clean sheet; 8 tackles and 9 interceptions;
-// 7 saves and a clean sheet). Late substitutes 6.0, a
+// 7 saves and a clean sheet), and a playmaker's chances created can carry him to 9+ without an assist (xA beyond his
+// assists 0.9, key passes 0.3). Late substitutes 6.0, a
 // red card about 3.9. (5.41 sat too many games between 5 and 7: under 5 in only 4%.)
-const RTW = { base: 6, off: .4, res: .4, q: 9, qcap: 0, g: 1.15, a: .75, xg: .25, miss: .4, kp: .2, sot: .08, tk: .2, int: .18, clr: .08, bk: .25, bt: .45, sv: .3, cs: .8, ga: .25, noise: .45 };
+const RTW = { base: 6, off: .6, res: .4, q: 9, qcap: 0, g: 1.15, a: .75, xg: .25, miss: .4, kp: .3, xa: .9, sot: .08, tk: .2, int: .18, clr: .08, bk: .25, bt: .45, sv: .3, cs: .8, ga: .25, noise: .45 };
 function matchRating(M, i, id, W = RTW) {
   const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), on = s.on.find(o => o.p.id === id);
   const mins = on ? M.min - on.from : (s.mins[id] ?? 0), m = clamp(mins / Math.max(30, M.done ? M.end : M.min), 0, 1);
@@ -341,7 +342,9 @@ function matchRating(M, i, id, W = RTW) {
   const form = (M.form ||= {})[id] ??= gauss();
   const lvl = M.lvl || (M.lvl = (clubLevel(C(M.h.club)) + clubLevel(C(M.a.club))) / 2), x = (M.ps || {})[id] || {};
   // Chances count a little for getting into position, and chances missed cost: xG well above his goals is points off.
-  const did = g * W.g + a * W.a + W.xg * (x.xg || 0) - (W.miss || 0) * Math.max(0, (x.xg || 0) - g) + W.kp * (x.kp || 0) + W.sot * (x.sot || 0) + W.tk * (x.tk || 0) + (W.int || 0) * (x.int || 0) + (W.clr || 0) * (x.clr || 0) + W.bk * (x.bk || 0) - (W.bt || 0) * (x.bt || 0) + (p.pos === "GK" ? W.sv * (x.sv || 0) : 0);
+  // Chances he created count beyond those already rewarded as assists (xA above his assists), so a playmaker whose
+  // team-mates miss can still have a 9; counting all xA paid assist games twice and doubled the 10s.
+  const did = g * W.g + a * W.a + W.xg * (x.xg || 0) - (W.miss || 0) * Math.max(0, (x.xg || 0) - g) + W.kp * (x.kp || 0) + (W.xa || 0) * Math.max(0, (x.xa || 0) - a) + W.sot * (x.sot || 0) + W.tk * (x.tk || 0) + (W.int || 0) * (x.int || 0) + (W.clr || 0) * (x.clr || 0) + W.bk * (x.bk || 0) - (W.bt || 0) * (x.bt || 0) + (p.pos === "GK" ? W.sv * (x.sv || 0) : 0);
   let ctx = (win ? W.res : loss ? -W.res : 0) + clamp((p.ovr - lvl) / W.q, -W.qcap, W.qcap) + form * W.noise - W.off;
   if (LINE[p.pos] === "DEF" || p.pos === "GK") { ctx -= o2.goals * W.ga; if (o2.goals === 0 && mins >= 60) ctx += W.cs; }
   let rt = W.base + m * ctx + did;

@@ -118,7 +118,8 @@ through what it lets him do, so a modest striker who wins the golden boot out-ra
 his own actions scale with his minutes, so a late substitute sits near 6; a red card costs 2. Chances missed cost
 points: xG well above his goals is taken off. A 10 is a performance on the level of a hat-trick or two goals and
 an assist (one goal is about 7.4, two 8.8): about 40% of 10s go to defenders and keepers, for displays like 13
-clearances and a clean sheet, or 7 saves and a clean sheet. Measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%. Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
+clearances and a clean sheet, or 7 saves and a clean sheet. Chances a player creates count (key passes, and xA
+beyond his assists), so a playmaker whose team-mates miss can still reach 9+. Measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%. Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
 air; about 4 a game for a centre-back), blocks, and the defender beaten for each goal conceded (more often a weak
 one). The ratings line shows each player's shots, xG, key passes, xA, tackles, interceptions, clearances, blocks,
 goals he was beaten for, or saves; the Squad page's Advanced stats adds season Tackles, Interceptions, Clearances,
