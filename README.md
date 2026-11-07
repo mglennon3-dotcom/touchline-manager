@@ -210,7 +210,9 @@ Head-to-head records are kept for every rivalry.
 also held to 300 at each season's end, dropping the least valuable.)
 **Renewing contracts.** A player happy enough to stay asks for his market wage, capped at double what he earns now
 or 20% above your top earner, whichever is higher (never less than his current wage). So a youngster who has
-outgrown your wage structure is still affordable to keep; his full market wage applies if a bigger club buys him.
+outgrown your wage structure is still affordable to keep; his full market wage applies if a bigger club buys him. A loyal player ("Loyal to the
+club" on his card) asks 10% under his market wage and at most one and a half times what he earns now; his Renew
+button says "loyal".
 Wages weigh potential half as much as transfer values do.
 **Graduate intake.** At the end of each season your academy offers a pool of five local 16-year-olds. Their
 potential is chance, shaped like the game: it's drawn from the ratings of established players (22-32), so most

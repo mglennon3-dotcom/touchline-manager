@@ -1078,7 +1078,7 @@ function modalPlayer(p) {
   } else if (cf && cf.id === p.id) actions = `<div class="row"><span class="small">${esc(cf.msg)}</span><button class="btn sm danger" data-a="confirm-yes">${cf.yes}</button><button class="btn sm" data-a="confirm-no">Cancel</button></div>`;
   else if (mine) {
     const r = renewTerms(p);
-    actions = `<div class="row">${p.yrs <= 2 ? `<button class="btn sm" data-a="renew" data-v="${p.id}" ${r.happy ? "" : "disabled"} title="${esc(r.reason)}">Renew (${perWeek(r.wage)}, 4 yrs)</button>` : ""}
+    actions = `<div class="row">${p.yrs <= 2 ? `<button class="btn sm" data-a="renew" data-v="${p.id}" ${r.happy ? "" : "disabled"} title="${esc(r.reason || (p.loy > .75 ? "Loyal to the club: he asks less to stay" : ""))}">Renew (${perWeek(r.wage)}, 4 yrs${p.loy > .75 ? ", loyal" : ""})</button>` : ""}
       ${loanable(p) ? `<button class="btn sm" data-a="ask-loan" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>Loan out</button>` : ""}
       ${p.acad ? `<button class="btn sm" data-a="promote" data-v="${p.id}">Promote to first team</button>` : p.age <= ACAD_MAX_AGE ? `<button class="btn sm" data-a="demote" data-v="${p.id}">Send to academy</button>` : ""}
       <button class="btn sm" data-a="list" data-v="${p.id}">${p.listed ? "Remove from transfer list" : "Put on transfer list"}</button>
