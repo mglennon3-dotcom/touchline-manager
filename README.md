@@ -271,6 +271,10 @@ wages at today's bill, running costs, scouting, stadium works and any cost-ratio
 bonuses and future transfers count once they happen. In preseason it projects the coming season. Checked
 by projecting at week 6 and playing the season out: a Premier club came to €34.4M projected against €38.9M
 actual (the gap was a cup run), and a fifth-tier club to €230k against €260k.
+**What you know about a player.** Ability ratings show only for your own players, everyone in your division,
+and players you've scouted (a first look gives a range, a full report the exact figure). Everyone else shows
+"?", sorts last, and fails a Min rating filter; their match stats (apps, goals, average rating) are public, so
+you can spot form and then scout. Team Needs upgrades only suggest players you know about.
 **Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
 commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed

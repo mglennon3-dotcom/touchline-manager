@@ -202,6 +202,11 @@ function viewOf(p, v, k, wide) {
 const ratingView = p => viewOf(p, r20(p.ovr), 1, 5);
 const attrView = (p, k) => scoutLevel(p) === 0 ? null : viewOf(p, p.at[k], k.charCodeAt(0) + k.charCodeAt(1), 0);
 const ratingMid = p => { const [a, b] = ratingView(p); return (a + b) / 2; };
+/* You see a player's ability only once he's known: yours, anyone in your division, or scouted (at least once).
+   Everyone else shows "?" (a wide range used to show, which gave the answer away without scouting); sorting puts
+   unknown players last. ratingMid stays the scouts' private estimate, for the scouting assistant's targets. */
+const ratingKnown = p => scoutLevel(p) > 0;
+const ratingSort = p => ratingKnown(p) ? ratingMid(p) : -1;
 /* Potential and injury proneness are hidden. Scouts estimate them as a range out of 20:
    a first look gives a wide range, a full report a narrow one, and a better recruiter narrows both. */
 function hiddenView(p, val, k) {
