@@ -354,6 +354,10 @@ Both the Transfers and Youth pages show this week's scouting hours above the tab
 Sorting a search sorts every player who matches, then shows the first 200, so the cheapest-first order is the
 whole market's. The search filters include Interest: Keen, Open or keen, Would sign (everyone but Not interested, who turn
 any offer down) or Not interested.
+**Preseason accounts.** Transfers in the summer window count in the coming season's accounts (they used to go
+into the season just finished), and the preseason cost ratio counts only income that carries into that season:
+regular income plus profit on players sold this summer, not last season's prize money, merit payment or sales.
+Before, those made the preseason ratio look far healthier than the one you'd face at kick-off.
 **Transfer budget** (Finances page, summarised on Transfers): the fee you can pay for a player on your starters'
 average wage over four years. It is the smaller of what your cash allows without ending the season in the
 red and the room left under the 85% cost-ratio line, shown with this season's fees in, fees out and net spend. In preseason both use the division you will play in, so a promoted club is judged on its new income.

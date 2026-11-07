@@ -36,9 +36,18 @@ function scr(c, extraCost = 0, extraRev = 0) {
   // Season-to-date ratio, projected to a full year where the season is still running.
   const f = c.fin; if (!f) return 0;
   const cost = sum(c.squad, id => P(id).wage + (P(id).am ? P(id).am.per : 0)) + extraCost;
-  const rev = annualIncome(c) + f.prize + f.merit + f.scheme + Math.max(0, f.sales) + extraRev;
-  return cost / Math.max(1, rev);
+  return cost / Math.max(1, annualIncome(c) + oneOffs(c) + extraRev);
 }
+/* One-off income the ratio counts on top of a year's regular income. In preseason it's the coming season's: profit
+   on players sold this summer (c.pre), not last season's prize money, merit payment and sales, which vanished at
+   kick-off and made the ratio leap (71% in preseason to 150% in week 1 for one club). */
+function oneOffs(c) {
+  if (S.phase === "summer") return Math.max(0, (c.pre || {}).sales || 0);
+  const f = c.fin || {}; return (f.prize || 0) + (f.merit || 0) + (f.scheme || 0) + Math.max(0, f.sales || 0);
+}
+/* Where a transfer is booked: in preseason the coming season's accounts (c.pre, merged in at kick-off by
+   startSeason), otherwise this season's. Before 5.58 summer business went into the season just finished. */
+const acct = c => S.phase === "summer" ? (c.pre ||= { sales: 0, sold: 0, bought: 0, agent: 0 }) : c.fin;
 /* plan: instalments for the fee (1 = lump sum). The first is paid now with the 5% agent fee on the whole fee; the
    rest at the start of each following season (payDues), and the seller receives them as they're paid. */
 function transfer(p, to, fee, wage, yrs, plan = 1) {
@@ -46,10 +55,10 @@ function transfer(p, to, fee, wage, yrs, plan = 1) {
   if (from) {
     from.squad = from.squad.filter(id => id !== p.id);
     const book = p.am ? p.am.per * p.am.left : 0;
-    from.cash += now; from.fin.sales += fee - book; from.fin.sold += now;
+    from.cash += now; acct(from).sales += fee - book; acct(from).sold += now;
     if (isUser(from)) S.lineup = S.lineup.map(id => id === p.id ? null : id);
   } else S.fa = S.fa.filter(id => id !== p.id);
-  to.cash -= now + fee * .05; to.fin.bought += now; to.fin.agent += fee * .05;
+  to.cash -= now + fee * .05; acct(to).bought += now; acct(to).agent += fee * .05;
   if (plan > 1) (S.dues ||= []).push({ pid: p.id, name: p.name, payer: to.id, payee: from ? from.id : -1, per: Math.round((fee - now) / (plan - 1)), left: plan - 1, fee, plan, y: S.year });
   to.squad.push(p.id);
   p.club = to.id; p.yrs = yrs; p.wage = wage;
@@ -304,7 +313,7 @@ function whyNot(p, b) {
 function sellToAbroad(p) {
   const c = me(), fee = Math.round(value(p) * .8 / 1e4) * 1e4;
   c.squad = c.squad.filter(id => id !== p.id); const book = p.am ? p.am.per * p.am.left : 0;
-  c.cash += fee; c.fin.sales += fee - book; c.fin.sold += fee; S.lineup = S.lineup.map(id => id === p.id ? null : id);
+  c.cash += fee; acct(c).sales += fee - book; acct(c).sold += fee; S.lineup = S.lineup.map(id => id === p.id ? null : id);
   news(`${p.name} sold to a club abroad for ${money(fee)}.`, false, "transfer");
   delete S.players[p.id]; fixUserLineup();
   return fee;

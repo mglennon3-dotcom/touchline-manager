@@ -942,7 +942,7 @@ function cupIncomeCard(c) {
    levy). Money that depends on what hasn't happened (cup runs, sponsor bonuses, future transfers) counts only
    once it's real. In the summer it projects the coming season from zero, since the accounts reset at kick-off. */
 function finProjection(c) {
-  const summer = S.phase !== "season", f = summer ? {} : c.fin, g = k => f[k] || 0;
+  const summer = S.phase !== "season", f = summer ? c.pre || {} : c.fin, g = k => f[k] || 0;  // preseason: this summer's transfers
   const lastW = S.days.length ? S.days[S.days.length - 1].w : 41, remWk = summer ? lastW + 1 : Math.max(0, lastW + 1 - S.week);
   const share = (remWk + 10) / 52;  // weekly flows for the rest of the season, plus the ten-week summer share
   const rs = summer ? c.revBase : c.revSeason, wageBill = sum(c.squad, id => P(id).wage);
@@ -970,7 +970,7 @@ function finProjection(c) {
     ...(duesOf(c).list.length && summer ? [["Deferred fee instalments", 0, duesOf(c).next, "due at kick-off on fees you spread over several years"]] : []),
     ["Agent fees", g("agent"), 0],
   ];
-  const ratio = scr(c), rev = annualIncome(c) + g("prize") + g("merit") + g("scheme") + Math.max(0, g("sales"));
+  const ratio = scr(c), rev = annualIncome(c) + oneOffs(c);
   const levy = ratio > RULES.scrLimit && ratio <= RULES.scrSporting ? Math.round((ratio - RULES.scrLimit) * rev * .5) : 0;
   cost.push(["Cost-ratio levy", g("levy"), levy, ratio > RULES.scrSporting ? `ratio ${pct(ratio)}: above ${pct(RULES.scrSporting)} that's a charge and a points deduction, not a levy` : levy ? `ratio ${pct(ratio)} against ${pct(RULES.scrLimit)}` : ""]);
   const tot = rows => rows.reduce((a, r) => [a[0] + r[1], a[1] + r[1] + r[2]], [0, 0]);
@@ -990,12 +990,12 @@ function projectionCard(c) {
       <tr class="sec"><td colspan="3">Income</td></tr>${P_.inc.map(row).join("")}${sub("Total income", P_.incSo, P_.incAll)}
       <tr class="sec"><td colspan="3">Costs</td></tr>${P_.cost.map(row).join("")}${sub("Total costs", P_.costSo, P_.costAll)}
       ${sub(P_.net >= 0 ? "Profit" : "Loss", P_.incSo - P_.costSo, P_.net, P_.net >= 0 ? "good" : "bad")}</tbody></table></div>
-    <p class="tiny muted" style="margin-top:6px">${P_.summer ? "Preseason: this is the coming season from kick-off, at today's squad, wages and prices. Fees paid this summer count in last season's accounts." : "Cash basis: transfer fees count when paid, not spread over the contract."} Sponsor bonuses (promotion, Europe, a cup) and cup runs come on top. Cash above a year's base income at the end of the season: the board invests half of it in the club.</p></section>`;
+    <p class="tiny muted" style="margin-top:6px">${P_.summer ? "Preseason: this is the coming season from kick-off, at today's squad, wages and prices. Transfers this summer count in the coming season's accounts." : "Cash basis: transfer fees count when paid, not spread over the contract."} Sponsor bonuses (promotion, Europe, a cup) and cup runs come on top. Cash above a year's base income at the end of the season: the board invests half of it in the club.</p></section>`;
 }
 /* Transfer budget: the smaller of what your cash can pay without ending the season in the red, and what the
    Squad Cost Ratio has room for before the levy line (fees count in the ratio as fee ÷ contract years). */
 function transferBudget(c) {
-  const pj = finProjection(c), f = c.fin || {}, rev = annualIncome(c) + (f.prize || 0) + (f.merit || 0) + (f.scheme || 0) + Math.max(0, f.sales || 0);
+  const pj = finProjection(c), f = (S.phase === "summer" ? c.pre : c.fin) || {}, rev = annualIncome(c) + oneOffs(c);
   const cost = sum(c.squad, id => P(id).wage + (P(id).am ? P(id).am.per : 0)), room = RULES.scrLimit * rev - cost;
   const xi = (S.lineup || []).filter(x => x != null).map(P), wage = xi.length ? sum(xi, p => p.wage) / xi.length : c.squad.length ? sum(c.squad, id => P(id).wage) / c.squad.length : 0;
   const yrs = 4, wkLeft = (pj.remWk + 10) / 52;

@@ -39,6 +39,7 @@ function startSeason() {
   for (const L of Object.values(S.leagues)) { L.fixtures = roundRobin(shuffle(L.clubs.slice())); L.results = []; L.ded = {}; L.n = 0; L._st = null; }
   for (const c of activeClubs()) {
     c.fin = { rev: 0, wages: 0, amort: 0, agent: 0, sales: 0, bought: 0, sold: 0, prize: 0, levy: 0, scheme: 0, merit: 0, ops: 0, scouting: 0 };
+    if (c.pre) { for (const k of ["sales", "sold", "bought", "agent"]) c.fin[k] += c.pre[k] || 0; c.pre = null; }  // this summer's transfers (acct)
     c.revSeason = c.revBase; c.ym = 0; c.tm = 0; c.wkMatches = 0; c.xs = { xg: 0, xga: 0 };
   }
   for (const p of Object.values(S.players)) { p.s = newStats(); p.yc = 0; if (p.as) p.as = null; }
