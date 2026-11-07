@@ -172,6 +172,7 @@ function signingDay() {
 function scoutPlayer(p) {
   const code = playerCountry(p); S.rec.hours -= scoutHours(2, code); payTravel(code); learnCountry(code);
   S.scout[p.id] = Math.min(2, (S.scout[p.id] || 0) + (knowOf(code) >= 15 ? 2 : 1));
+  if (S.scoutHide) delete S.scoutHide[p.id];  // scouting him again puts him back on your list
   (S.scoutT ||= {})[p.id] = { y: S.year, w: whenLabel(), n: ((S.scoutT[p.id] || {}).n || 0) + 1, t: Date.now() };
 }
 /* ---------- the scouting assistant ----------
@@ -192,7 +193,7 @@ function autoScout() {
   if (mode !== "youth") {
     const needs = teamNeeds().filter(n => n.status[1] !== "good"), budget = c.cash * 1.2;
     for (const n of needs.slice(0, 4)) for (const p of Object.values(S.players)) {
-      if (p.club === S.club || p.club < 0 && !S.fa.includes(p.id) || p.loan || p.age < 18 || p.age > 31 || scoutLevel(p) >= 2 || FAM[p.pos][n.role] < .9 || !ok(playerCountry(p))) continue;
+      if (p.club === S.club || p.club < 0 && !S.fa.includes(p.id) || p.loan || p.age < 18 || p.age > 31 || scoutLevel(p) >= 2 || (S.scoutHide || {})[p.id] || FAM[p.pos][n.role] < .9 || !ok(playerCountry(p))) continue;
       if (ratingMid(p) < n.weakest + .5 || (p.club >= 0 && askingPrice(p) > budget)) continue;
       players.push({ k: "p", o: p, cost: scoutHours(2, playerCountry(p)), s: ratingMid(p) - n.weakest + n.score * .2 - (p.club >= 0 ? askingPrice(p) / 1e7 : 0) });
     }

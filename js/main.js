@@ -193,6 +193,9 @@ const ACT = {
   // From the match card: drop a sub (yours or automatic; he isn't brought back automatically) or add one.
   benchdrop: v => { const id = +v, cur = benchFor(me(), S.lineup); S.bench = cur.filter(x => x !== id && (S.bench || []).includes(x)); (S.benchNo ||= []).includes(id) || S.benchNo.push(id); save(); render(); },
   friask: () => { const f = UI.fri || {}; if (f.opp == null) return toast("Choose an opponent first."); const r = bookFriendly(f.wk ?? S.summerDay, f.opp, f.home !== false); UI.fri = { home: f.home, sort: f.sort }; save(); render(); toast(r); },
+  unscout: v => { const p = P(+v); (S.scoutHide ||= {})[p.id] = 1; save(); render(); toast(`${p.name} removed from your scouted list. His report is kept: Show removed to restore him.`); },
+  unhide: v => { const p = P(+v); if (S.scoutHide) delete S.scoutHide[p.id]; save(); render(); toast(`${p.name} is back on your scouted list.`); },
+  showremoved: () => { UI.showRemoved = !UI.showRemoved; render(); },
   fricancel: v => { const r = cancelFriendly(+v); save(); render(); toast(r); },
   benchauto: () => { S.bench = null; S.benchNo = []; save(); render(); toast("Bench back to automatic: your best available players."); },
   potpick: () => { const c = me(), r = potentialPick(c); UI.sel = null; save(); render();

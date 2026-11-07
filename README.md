@@ -284,7 +284,7 @@ Match stats (apps, goals, average rating) are public.
 **AI clubs scout like you.** Every rival keeps its own country knowledge (home country best, one foreign
 speciality, as yours), its own scouting reports and weekly hours from your formula: network level (2 as
 standard, 3 with cash to spare, 1 over the cost-ratio line) and its manager's Recruitment. A look costs it the same
-hours and travel as you and teaches it the country the same way. It sees its own division exactly and everyone
+hours and travel as you (travel capped at 3% of its base income a season) and teaches it the country the same way. It sees its own division exactly and everyone
 else through bands like yours (blank ratings included). It scouts every week of the season for its current
 needs, and bids only for players in its division or with a full report. In preseason its pace builds through the
 window instead of landing in week one, and at the end of the season it takes only free agents it has scouted,
@@ -293,6 +293,9 @@ filling other gaps with journeymen, so the free-agent pool is still full when yo
 has asked to leave, at your club or any other. Yours leave as free agents when the contract ends. AI clubs
 otherwise keep most of their under-32s who are good enough for the side, and the rest join the free-agent pool,
 which AI clubs draw on at once to fill thin positions.
+**Scouted list.** The ✕ on a row of the Transfers Scouted tab takes a player you've decided against off the list.
+His report is kept, and the scouting assistant won't scout him again. "Show removed" lists them with Restore, and
+scouting him again yourself puts him back.
 **Negotiating a signing.** The offer screen shows his contract request (and what he earns now) before you
 commit. Choose the fee, your wage offer and the contract length. His club has a private floor, 88-98% of the
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed

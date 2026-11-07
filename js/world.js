@@ -271,7 +271,11 @@ function aiScoutSetup(c) {
 /* One look, at your price: the same hours (scoutHours), travel cost and knowledge gained as scoutPlayer. */
 function aiScout(c, p) {
   const code = playerCountry(p), h = scoutHours(2, code, c); if (c.hrs < h) return false;
-  c.hrs -= h; const t = travelCost(code, c); if (t) { c.cash -= t; if (c.fin) c.fin.scouting = (c.fin.scouting || 0) + t; }
+  const t = travelCost(code, c);
+  // Travel is budgeted: at most 3% of a year's base income a season, and never from a thin balance. Uncapped, clubs
+  // scouting abroad every week spent more on trips than a small club earns, and median AI cash fell 40% in a season.
+  if (t && (((c.fin || {}).scouting || 0) + t > c.revBase * .03 || c.cash < t * 10)) return false;
+  c.hrs -= h; if (t) { c.cash -= t; if (c.fin) c.fin.scouting = (c.fin.scouting || 0) + t; }
   c.know[code] = Math.min(20, Math.round((knowOf(code, c) + .25) * 100) / 100);
   c.sc[p.id] = Math.min(2, (c.sc[p.id] || 0) + (knowOf(code, c) >= 15 ? 2 : 1));
   const ks = Object.keys(c.sc); if (ks.length > 100) delete c.sc[ks[0]];  // drops the lowest id, not the oldest; capped so 200-odd clubs don't bloat the save

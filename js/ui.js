@@ -723,7 +723,11 @@ function viewCups() {
 /* ---------- transfers ---------- */
 function viewTransfers() {
   // Scouted: everyone your scouts have filed a report on, wherever he plays now (players you've signed drop off).
-  const scouted = Object.keys(S.scout || {}).map(id => S.players[id]).filter(p => p && S.scout[p.id] > 0 && p.club !== S.club && !(p.loan && p.loan.from === S.club));
+  // Players you've removed (S.scoutHide) keep their report but leave the list; "Show removed" lists them to restore.
+  const scoutedAll = Object.keys(S.scout || {}).map(id => S.players[id]).filter(p => p && S.scout[p.id] > 0 && p.club !== S.club && !(p.loan && p.loan.from === S.club));
+  const hide = S.scoutHide || {}, removedN = scoutedAll.filter(p => hide[p.id]).length;
+  if (!removedN) UI.showRemoved = false;
+  const scouted = scoutedAll.filter(p => !hide[p.id] === !UI.showRemoved);
   const c = me();
   // Laid out like the Youth page: tabs with counts instead of one long page. Offers is your working list of
   // players you've bid for who haven't joined; Search holds the four ways of browsing the market.
@@ -731,7 +735,7 @@ function viewTransfers() {
   const SEARCH = [["search", "All players"], ["fa", "Free agents"], ["listed", "Transfer listed"], ["loans", "Loan targets"]];
   const group = SEARCH.some(([k]) => k === UI.tab) ? "search" : UI.tab;
   const listedMine = c.squad.map(P).filter(p => p.listed || p.req).length;
-  const tabs = [["offers", "Offers", offers.length], ["scouted", "Scouted", scouted.length], ["search", "Search", null], ["mine", "Selling", listedMine], ["log", "Activity", null]];
+  const tabs = [["offers", "Offers", offers.length], ["scouted", "Scouted", scoutedAll.length - removedN], ["search", "Search", null], ["mine", "Selling", listedMine], ["log", "Activity", null]];
   const open = windowOpen();
   let body;
   if (UI.tab === "offers") {
@@ -787,8 +791,10 @@ function viewTransfers() {
         { k: "club", l: "Club", v: p => p.club >= 0 ? C(p.club).name : "", f: p => p.club >= 0 ? clubA(p.club, { short: true, flag: 1 }) : '<span class="muted">Free</span>' },
         loans ? { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage) } : { k: "ask", l: "Asking", r: 1, v: p => askingPrice(p), f: p => p.club >= 0 ? money(askingPrice(p)) : "Free" },
         { k: "w", l: "Interest", v: p => willingness(p, c), f: p => { const [l, k] = willingLabel(willingness(p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
-        { k: "b", l: "", f: p => loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"} title="You pay his wage while he's with you">Loan · ${perWeek(p.wage)}</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>` },
-      ], pool, { limit: 200,  empty: UI.tab === "scouted" && !scouted.length ? "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here." : "No players match these filters." })}`;
+        { k: "b", l: "", f: p => (loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"} title="You pay his wage while he's with you">Loan · ${perWeek(p.wage)}</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>`)
+          + (UI.tab === "scouted" ? (UI.showRemoved ? ` <button class="btn sm" data-a="unhide" data-v="${p.id}">Restore</button>` : ` <button class="btn sm" data-a="unscout" data-v="${p.id}" title="Not good enough: take him off your scouted list (his report is kept)" aria-label="Remove ${esc(p.name)} from the scouted list">✕</button>`) : "") },
+      ], pool, { limit: 200,  empty: UI.tab === "scouted" && !scouted.length ? (UI.showRemoved ? "Nobody removed." : removedN ? "Everyone you've scouted has been removed from this list." : "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here.") : "No players match these filters." })}
+      ${UI.tab === "scouted" && removedN ? `<p class="small muted" style="margin-top:8px">${UI.showRemoved ? `Showing the ${removedN} you removed. Restore puts a player back on your list.` : `${removedN} removed from this list.`} <button class="lnk" data-a="showremoved">${UI.showRemoved ? "Back to your list" : "Show removed"}</button></p>` : ""}`;
   }
   const title = { offers: "Offers", scouted: "Scouted players", search: "Search the market", mine: "Selling", log: "Activity" }[group];
   return `<div class="stack">${hoursStrip()}<div class="seg lv-tabs y-tabs" role="tablist">${tabs.map(([k, l, n]) => `<button role="tab" data-a="ttab" data-v="${k}" aria-pressed="${group === k}" aria-selected="${group === k}">${l}${n != null ? ` <span class="tab-n">${n}</span>` : ""}</button>`).join("")}</div>
