@@ -22,6 +22,10 @@ const starHtml = (lo, hi) => `<span class="stars" title="${lo === hi ? lo : lo +
 const trophyName = t => LG[t] ? leagueName(t) : t === "FA" ? CUPS.FA.name : t === "LC" ? CUPS.LC.name : CONT[t] ? CONT[t].name : t;
 /* Ratings out of 20. Exact for players you know; a range for everyone else until scouted. */
 const aCls = v => v >= 17 ? "a4" : v >= 13 ? "a3" : v >= 8 ? "a2" : "a1";
+/* Country toggles (Transfers search: S.set.ctyOff, actions ctytog/ctyall; Youth: S.set.yCtyOff, yctytog/yctyall). */
+function ctyTogHtml(off = [], a) {
+  return `<div class="cty-tog" role="group" aria-label="Countries to search"><span class="small muted">Countries</span>${KNOW_KEYS.map(k => { const on = !off.includes(k); return `<button class="cty ${on ? "on" : ""}" data-a="${a}tog" data-v="${k}" aria-pressed="${on}" title="${on ? "Searching" : "Not searching"} ${esc(KNOW_NAME(k))}: tap to switch">${k === "ROW" ? "Rest of world" : esc(COUNTRY[k].name)}</button>`; }).join("")}${off.length ? `<button class="lnk small" data-a="${a}all">All on</button>` : ""}</div>`;
+}
 function ratingHtml(p) { if (ratingBlank(p)) return '<span class="rt unk muted" title="Not scouted, and you know too little about his league to guess: scout him">?</span>'; const [lo, hi] = ratingView(p); return lo === hi ? `<b class="rt ${aCls(lo)}">${lo}</b>` : `<span class="rt rng" title="${scoutLevel(p) ? "Partly scouted" : "Not scouted: a rough band from his reputation. Scouting narrows it"}">${lo}–${hi}</span>`; }
 function attrStrip(p) {
   const lvl = scoutLevel(p);
@@ -780,7 +784,7 @@ function viewTransfers() {
       <label class="f">Interest<select id="tf-int" data-c="tf-int">${[["ALL", "Any"], ["keen", "Keen"], ["open", "Open or keen"], ["sign", "Would sign (not Not interested)"], ["no", "Not interested"]].map(([k, l]) => `<option value="${k}" ${(f.int || "ALL") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
       ${UI.tab !== "fa" ? `<label class="f">League<select id="tf-lg" data-c="tf-lg"><option value="ALL">All leagues</option><option value="ABROAD" ${f.lg === "ABROAD" ? "selected" : ""}>All foreign leagues</option>${lgOpts(f.lg)}</select></label>` : ""}</div>
-      ${UI.tab !== "scouted" ? `<div class="cty-tog" role="group" aria-label="Countries to search"><span class="small muted">Countries</span>${KNOW_KEYS.map(k => { const on = !(S.set.ctyOff || []).includes(k); return `<button class="cty ${on ? "on" : ""}" data-a="ctytog" data-v="${k}" aria-pressed="${on}" title="${on ? "Searching" : "Not searching"} ${esc(KNOW_NAME(k))}: tap to switch">${k === "ROW" ? "Rest of world" : esc(COUNTRY[k].name)}</button>`; }).join("")}${(S.set.ctyOff || []).length ? '<button class="lnk small" data-a="ctyall">All on</button>' : ""}</div>` : ""}
+      ${UI.tab !== "scouted" ? ctyTogHtml(S.set.ctyOff, "cty") : ""}
       ${poolN > 200 ? `<p class="tiny muted" style="margin:0 0 6px">${poolN.toLocaleString()} players match: showing the first 200 in the order you sort by.</p>` : ""}
       ${table("t-" + UI.tab, [
         { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) },
@@ -824,6 +828,7 @@ function viewYouth() {
   const c = me(), f = UI.yf;
   let ys = S.prospects.slice();
   if (f.reg === "ENG") ys = ys.filter(y => y.country === "ENG"); else if (f.reg === "ABR") ys = ys.filter(y => y.country !== "ENG"); else if (f.reg !== "ALL") ys = ys.filter(y => y.country === f.reg || (f.reg === "ROW" && y.country == null));
+  const yOff = new Set(S.set.yCtyOff || []); if (yOff.size) ys = ys.filter(y => !yOff.has(prospectCountry(y)));  // country toggles
   if (f.pos !== "ALL") ys = ys.filter(y => y.pos === f.pos);
   if (f.st === "OPEN") ys = ys.filter(y => y.commit == null); else if (f.st === "MINE") ys = ys.filter(y => y.offers.includes(c.id) || y.rel[c.id] || y.commit === c.id); else if (f.st === "DONE") ys = ys.filter(y => y.commit != null);
   const commits = S.prospects.filter(y => y.commit === c.id);
@@ -866,6 +871,7 @@ function viewYouth() {
     <div class="filters"><label class="f">Region<select id="yf-reg" data-c="yf-reg">${regs.map(([k, l]) => `<option value="${k}" ${f.reg === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       <label class="f">Position<select id="yf-pos" data-c="yf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Show<select id="yf-st" data-c="yf-st">${[["OPEN", "Undecided"], ["MINE", "Your targets"], ["DONE", "Committed"], ["ALL", "Everyone"]].map(([k, l]) => `<option value="${k}" ${f.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
+    ${ctyTogHtml(S.set.yCtyOff, "ycty")}
     ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: "No prospects match." })}</section>`;
   const commitCard = `<section class="card"><div class="card-h"><h2>Committed to you</h2></div>${commits.length ? commits.map(y => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span><button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button> <span class="pos">${y.pos}</span> <span class="muted small">${esc(y.region)}</span></span>${rangeHtml(prospectPot(y))}</div>`).join("") : '<p class="muted">No commitments yet.</p>'}</section>`;
   /* Tabs rather than one long page: on a phone the class list sat below two other tables. */
