@@ -754,12 +754,24 @@ function viewTransfers() {
   const listedMine = c.squad.map(P).filter(p => p.listed || p.req).length;
   // Favourites: players you've starred on their card (S.fav), wherever they play; ones you've signed drop off.
   const favs = Object.keys(S.fav || {}).map(id => S.players[id]).filter(p => p && p.club !== S.club && !(p.loan && p.loan.from === S.club));
-  const tabs = [["offers", "Offers", offers.length], ["scouted", "Scouted", scoutedAll.length - removedN], ["fav", "Favourites", favs.length], ["search", "Search", null], ["mine", "Selling", listedMine], ["log", "Activity", null]];
+  const tabs = [["offers", "Offers", offers.length + S.inbox.filter(m => !m.done && (m.type === "bid" || m.type === "auction")).length], ["scouted", "Scouted", scoutedAll.length - removedN], ["fav", "Favourites", favs.length], ["search", "Search", null], ["mine", "Selling", listedMine], ["log", "Activity", null]];
   const open = windowOpen();
   let body;
   if (UI.tab === "offers") {
     const t = transferBudget(c);
-    body = `<div class="small" style="margin-bottom:8px">Budget about <b class="num">${money(Math.round(t.budget / 1e5) * 1e5)}</b> for a player on ${perWeek(t.wage)} · <button class="lnk" data-a="go" data-v="finances">details</button></div>` + table("toffers", [
+    // Bids received for your players (kept in the inbox, newest first): open ones with their buttons, then outcomes.
+    const recv = S.inbox.filter(m => m.type === "bid" || m.type === "auction").slice(0, 20);
+    const bidsOf = m => m.type === "auction" ? m.bids : [{ from: m.from, fee: m.fee }];
+    const outcome = m => { if (!m.done) return ""; const ch = m.choice || "";
+      if (m.reopened) return '<span class="warn">Agreed, then rivals stepped in (see the bidding war above)</span>';
+      if (ch === "accept" || ch.startsWith("acc:")) { const b = ch === "accept" ? bidsOf(m)[0] : bidsOf(m).find(x => x.from === +ch.slice(4)); return b ? `<span class="good">Sold to ${clubA(b.from, { short: true })} for ${money(b.fee)}</span>` : '<span class="good">Sold</span>'; }
+      return '<span class="muted">Rejected</span>'; };
+    const recvHtml = `<h3 style="margin:4px 0 6px">Bids received</h3>${recv.length ? recv.map(m => { const p = S.players[m.pid];
+      return `<div class="need-row" style="display:block"><div class="row between"><b>${p ? playerA(p) : "A former player"}</b><span class="tiny muted">${seasonLabel(m.y)} · ${m.w}${m.type === "auction" ? " · bidding war" : ""}</span></div>
+        <div class="small">${bidsOf(m).map(b => `${clubA(b.from, { short: true })} <b class="num">${money(b.fee)}</b>`).join(" · ")}</div>
+        ${m.done ? `<div class="small">${outcome(m)}</div>` : `<div class="row" style="gap:6px;margin-top:6px">${m.opts.map(([k, l], i) => `<button class="btn sm ${i === 0 ? "primary" : ""}" data-a="decide" data-v="${m.id}|${k}">${esc(l)}</button>`).join("")}</div>`}</div>`; }).join("") : '<p class="small muted">No bids for your players yet. List a player (Selling tab) to tell clubs he is available.</p>'}
+      <h3 style="margin:14px 0 6px">Your offers</h3>`;
+    body = recvHtml + `<div class="small" style="margin-bottom:8px">Budget about <b class="num">${money(Math.round(t.budget / 1e5) * 1e5)}</b> for a player on ${perWeek(t.wage)} · <button class="lnk" data-a="go" data-v="finances">details</button></div>` + table("toffers", [
       { k: "n", l: "Player", v: o => o.p.name, f: o => playerA(o.p) },
       { k: "pos", l: "Pos", v: o => ROLE_ORDER[o.p.pos], f: o => `<span class="pos">${o.p.pos}</span>` },
       { k: "age", l: "Age", r: 1, v: o => o.p.age, f: o => o.p.age },

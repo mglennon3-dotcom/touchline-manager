@@ -330,7 +330,8 @@ whichever you like (not only the highest), or reject them all. Unlisted players 
 single bid tells the market: a club that would pay at least 5% more can step in, and the sale becomes a bidding war
 decision with the agreed offer included (its club may raise); if nobody does, the sale goes through at the agreed
 fee. Accepted at the asking price, about half of sales draw a counter-bid; well above it, about a third. Your own
-purchases from AI clubs are never gazumped. The Selling tab shows each player's price
+purchases from AI clubs are never gazumped. The Offers tab lists bids received for your players (each club's
+bid, when, and the outcome), with buttons on any still waiting, above the offers you've made. The Selling tab shows each player's price
 and the interest: how many clubs could bid (they'd rate him, could pay, and he'd go). Listing a player who wants
 to stay costs 6 morale, given back if you take him off; one who wants out (asked to leave, or feels he's outgrown
 the club) doesn't mind.
