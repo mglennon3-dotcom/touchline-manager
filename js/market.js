@@ -69,40 +69,51 @@ function findNeed(c, minGap = 5) {
   }
   return gap >= minGap ? worst : null;
 }
+/* A week of AI recruitment. Every AI club scouts every week with its own hours (aiScoutSetup, aiScout), on the
+   same terms as you; intensity is the chance it bids this week, 0 outside the windows (scouting only). It looks
+   at 270 random players plus those it has reports on, ranks them on what it can see (aiRating), then works down
+   the top five: a player it knows well enough (its division, or a full report) and still rates is bid
+   for; one it doesn't know yet is scouted if the hours allow. One bid a week at most.
+   Before 5.46 clubs saw true ratings and needed no scouting; judged on bands alone, 73% of their signings came
+   in below their level, so they bid only on players they have looked at. */
 function aiTransferDay(intensity) {
   const all = Object.values(S.players).filter(p => p.age >= 18 && !p.loan);
   for (const c of activeClubs()) {
     if (isUser(c)) continue;
-    const ratio = scr(c), rich = c.cash > c.revBase * .6;
+    aiScoutSetup(c);
+    const ratio = scr(c), rich = c.cash > c.revBase * .6, window = intensity > 0;
     // Clubs over the cost line try to shift their biggest earner instead of buying.
-    if (ratio > 1.05 && c.owner !== "reckless" && R() < .5) { const top = c.squad.map(P).filter(p => !p.listed).sort((a, b) => b.wage - a.wage)[0]; if (top) top.listed = true; }
+    if (window && ratio > 1.05 && c.owner !== "reckless" && R() < .5) { const top = c.squad.map(P).filter(p => !p.listed).sort((a, b) => b.wage - a.wage)[0]; if (top) top.listed = true; }
     if (ratio > (c.owner === "reckless" ? 1.18 : .97)) continue;
-    if (R() > intensity * (rich ? 2 : 1)) continue;
     const role = findNeed(c, rich ? 1 : 5); if (!role) continue;
     const lvl = clubLevel(c), budget = c.cash + (c.owner === "reckless" ? c.revBase * .3 : 0);
-    const cands = [];
-    // 270 looks (90 before 5.46): with half the players abroad blank to a club and band misjudgements weeded out by
-    // scouting, 90 left AI clubs making half their usual number of signings.
-    for (let i = 0; i < 270; i++) {
-      const p = all[Math.floor(R() * all.length)];
-      if (!p || p.club === c.id || FAM[p.pos][role] < .9 || p.age > 31 || hasNamesake(c, p.name)) continue;
+    const pool = all.length ? Array.from({ length: 270 }, () => all[Math.floor(R() * all.length)]) : [];
+    for (const id of Object.keys(c.sc)) { const p = S.players[id]; if (p && !p.loan) pool.push(p); }
+    const seen = new Set(), cands = [];
+    for (const p of pool) {
+      if (!p || seen.has(p.id) || p.club === c.id || p.age < 18 || FAM[p.pos][role] < .9 || p.age > 31 || hasNamesake(c, p.name)) continue;
+      seen.add(p.id);
       const est = aiRating(p, c);  // what this club can see of him, not his true rating
       if (est == null || est < lvl - 1 || est > lvl + 8) continue;
       if (p.club >= 0 && C(p.club).rep > c.rep + 8 && !p.req) continue;
       const fee = askingPrice(p, c); if (fee > budget * .6) continue;
       cands.push([est - fee / 4e6 + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1, p]);
     }
-    // Before bidding the club scouts its shortlist (the top three on what it can see), as you would: judged on the band
-    // alone, the best-looking candidate is usually one it flatters, and 73% of AI signings in a test season came in
-    // below the club's level. Scouting only the top pick cut AI signings by two thirds.
-    const best = cands.sort((a, b) => b[0] - a[0]).slice(0, 3).map(x => x[1]).find(p => p.ovr >= lvl - 1);
-    if (!best) continue;
-    const fee = askingPrice(best, c), w = willingness(best, c);
-    if (w < .3) continue;
-    if (best.club === S.club) { if (best.listed || best.req || R() < .25) offerToUser(best, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); continue; }
-    if (best.club >= 0) { const seller = C(best.club); if (seller.squad.filter(id => FAM[P(id).pos][best.pos] >= .9).length <= 2 || rivalry(seller.id, c.id) >= 2) continue; }
-    transfer(best, c, fee, contractDemand(best, c, w), ri(2, 5));
-    if (regInfo(c).seniors > RULES.aiSeniorCap) trimSquad(c, false);
+    cands.sort((a, b) => b[0] - a[0]);
+    const bid = window && R() <= intensity * (rich ? 1.5 : 1);
+    for (const [, p] of cands.slice(0, 8)) {
+      // A full report first (a first look still left 29% of signings below the club's level in a test season).
+      const known = (p.club >= 0 && C(p.club).lg === c.lg) || (c.sc[p.id] || 0) >= 2;
+      if (!known) { aiScout(c, p); continue; }  // no hours left: it waits for next week's
+      if (!bid) continue;
+      const fee = askingPrice(p, c), w = willingness(p, c);
+      if (w < .3) continue;
+      if (p.club === S.club) { if (p.listed || p.req || R() < .25) offerToUser(p, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); break; }
+      if (p.club >= 0) { const seller = C(p.club); if (seller.squad.filter(id => FAM[P(id).pos][p.pos] >= .9).length <= 2 || rivalry(seller.id, c.id) >= 2) continue; }
+      transfer(p, c, fee, contractDemand(p, c, w), ri(2, 5)); delete c.sc[p.id];
+      if (regInfo(c).seniors > RULES.aiSeniorCap) trimSquad(c, false);
+      break;
+    }
   }
 }
 function offerToUser(p, from, fee) {

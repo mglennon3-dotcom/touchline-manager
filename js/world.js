@@ -242,16 +242,40 @@ function hiddenView(p, val, k) {
   const c = val + (seedOf(p.id, k) - .5) * w * .8;
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
-/* AI clubs see what you see. A rival judges players in its own division exactly; anyone else by the middle of a
-   band, as yours: 5 wide in its own country (its best-known, like yours), 6 wide abroad, where half the players'
-   ratings are blank to it and they are passed over. Each club's band is its own (seeded by club), so rivals
-   misjudge different players. Until 5.46 AI clubs used every player's true rating. Returns the 100 scale, or null. */
+/* AI clubs see what you see, by the same rules. Each keeps its own country knowledge (c.know, drawn like yours: its
+   home country best, one foreign speciality) and its own scouting reports (c.sc, player id -> 0-2, as S.scout).
+   Its own division is exact; a full report is exact; a first look is a narrow band; anyone else is the middle of a
+   band 5-6 wide by its knowledge gap, blank for a share of players exactly as yours are. Each club's bands are
+   seeded by club, so rivals misjudge different players. Until 5.46 AI clubs used true ratings. Returns the 100
+   scale, or null when the rating is blank to it. */
 function aiRating(p, c) {
   if (p.club === c.id || (p.club >= 0 && C(p.club).lg === c.lg)) return p.ovr;
-  const home = playerCountry(p) === c.country, k = p.id * 7919 + c.id * 104729;
-  if (!home && seedOf(k, 21) < .5) return null;
-  const w = home ? 5 : 6, lo = clamp(Math.round(r20(p.ovr) - w / 2 + (seedOf(k, 1) - .5) * w), 1, 20 - w);
-  return o100(lo + w / 2);
+  const lvl = (c.sc || {})[p.id] || 0; if (lvl >= 2) return p.ovr;
+  const code = playerCountry(p), k = p.id * 7919 + c.id * 104729, v = r20(p.ovr);
+  if (lvl === 1) { const w = Math.max(1, 2 * clamp(1.3 - knowOf(code, c) / 25, .5, 1.3)); return o100(clamp(v + (seedOf(k, 2) - .5) * w, 1, 20)); }
+  const ks = KNOW_KEYS.map(x => knowOf(x, c)), lo = Math.min(...ks), hi = Math.max(...ks), kn = knowOf(code, c);
+  const gap = hi > lo ? clamp((hi - kn) / (hi - lo), 0, 1) : clamp(1 - kn / 20, 0, 1);
+  if (seedOf(k, 21) < gap && seedOf(k, 22) < .5) return null;
+  const w = Math.round(5 + gap), b = clamp(Math.round(v - w / 2 + (seedOf(k, 1) - .5) * w), 1, 20 - w);
+  return o100(b + w / 2);
+}
+/* An AI club's weekly scouting hours, by your formula (recHours): its network level and its manager's
+   Recruitment. The level follows the money, as yours would: 2 as standard (your default), 3 when it has cash to
+   spare, 1 when it's over the cost-ratio line. */
+function aiScoutSetup(c) {
+  if (!c.know) c.know = newKnowledge(c.country);
+  if (!c.sc) c.sc = {};
+  c.scLvl = scr(c) > RULES.scrLimit ? 1 : c.cash > c.revBase * .6 ? 3 : 2;
+  c.hrs = Math.max(4, 8 + 3 * c.scLvl + Math.round((((c.coach || {}).rec || 10) - 10) * .6));
+}
+/* One look, at your price: the same hours (scoutHours), travel cost and knowledge gained as scoutPlayer. */
+function aiScout(c, p) {
+  const code = playerCountry(p), h = scoutHours(2, code, c); if (c.hrs < h) return false;
+  c.hrs -= h; const t = travelCost(code, c); if (t) { c.cash -= t; if (c.fin) c.fin.scouting = (c.fin.scouting || 0) + t; }
+  c.know[code] = Math.min(20, Math.round((knowOf(code, c) + .25) * 100) / 100);
+  c.sc[p.id] = Math.min(2, (c.sc[p.id] || 0) + (knowOf(code, c) >= 15 ? 2 : 1));
+  const ks = Object.keys(c.sc); if (ks.length > 100) delete c.sc[ks[0]];  // drops the lowest id, not the oldest; capped so 200-odd clubs don't bloat the save
+  return true;
 }
 const potView = p => hiddenView(p, r20(p.pot), 11);
 const injView = p => hiddenView(p, p.ir, 13);
@@ -535,12 +559,13 @@ function newKnowledge(home) {
   k[pick(KNOW_KEYS.filter(c => c !== home))] = ri(10, 13);  // every coach has one foreign speciality
   return k;
 }
-const knowOf = code => (S.me && S.me.know ? S.me.know[code] : 10) ?? 8;
+// c: an AI club, which keeps its own knowledge (c.know) on the same scale as yours; omitted, it's you.
+const knowOf = (code, c) => c && !isUser(c) ? (c.know || {})[code] ?? 8 : (S.me && S.me.know ? S.me.know[code] : 10) ?? 8;
 const playerCountry = p => p.club >= 0 ? C(p.club).country : (COUNTRY[p.nat] ? p.nat : "ROW");
 const prospectCountry = y => y.country || "ROW";
 const knowWidth = code => clamp(1.3 - knowOf(code) / 25, .5, 1.3);  // how much wider (or narrower) reports are
-function scoutHours(base, code) { return Math.max(1, Math.round(base * (code !== "ENG" ? 1.5 : 1) * (1.5 - knowOf(code) / 20))); }
-function travelCost(code) { return code === "ENG" ? 0 : Math.round([0, 6e4, 3e4, 1.5e4, 8e3, 5e3, 5e3][me().tier] * (code === "ROW" ? 2 : 1)); }
+function scoutHours(base, code, c) { return Math.max(1, Math.round(base * (code !== (c ? c.country : "ENG") ? 1.5 : 1) * (1.5 - knowOf(code, c) / 20))); }
+function travelCost(code, c = me()) { return code === c.country ? 0 : Math.round([0, 6e4, 3e4, 1.5e4, 8e3, 5e3, 5e3][c.tier] * (code === "ROW" ? 2 : 1)); }
 function learnCountry(code, amt = .25) { if (S.me && S.me.know) S.me.know[code] = Math.min(20, Math.round((knowOf(code) + amt) * 100) / 100); }
 function payTravel(code) { const t = travelCost(code); if (t) { me().cash -= t; me().fin.scouting = (me().fin.scouting || 0) + t; } return t; }
 

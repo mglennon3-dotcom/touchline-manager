@@ -338,7 +338,7 @@ function weekly() {
   autoScout();  // spends this week's leftover hours before they refill
   weeklyRecruiting();
   weeklyStories();
-  if (CAL.jan.includes(S.week + 1) || CAL.jan.includes(S.week)) aiTransferDay(.12);
+  aiTransferDay(CAL.jan.includes(S.week + 1) || CAL.jan.includes(S.week) ? .1 : 0);  // AI clubs scout every week, as you can; they bid only in the window
   if (S.week === CAL.jan[0] - 1) news(`The January transfer window is now open. Until it closes after week ${CAL.jan[CAL.jan.length - 1] + 1} you can buy, sell and loan players, and change which 25 seniors are registered.`, true, "transfer");
   if (S.week === CAL.jan[CAL.jan.length - 1]) news("The January transfer window has closed. Registrations are locked until preseason.", true, "transfer");
 }
@@ -590,7 +590,7 @@ function aiMaintain(c) {
     let have = c.squad.filter(id => P(id).pos === pos && P(id).age >= 18).length;
     while (have++ < n) {
       bumpTick(); const lvl = clubLevel(c);
-      const fa = S.fa.map(P).map(p => [p, aiRating(p, c)]).filter(([p, e]) => p.pos === pos && e != null && e >= lvl - 10 && e <= lvl + 2 && !hasNamesake(c, p.name)).sort((a, b) => b[1] - a[1]).map(x => x[0]).find(p => p.ovr >= lvl - 10);  // shortlisted on what the club can see (aiRating), then scouted before signing
+      const fa = S.fa.map(P).map(p => [p, aiRating(p, c)]).filter(([p, e]) => p.pos === pos && e != null && e >= lvl - 10 && e <= lvl + 2 && !hasNamesake(c, p.name)).sort((a, b) => b[1] - a[1]).map(x => x[0]).find(p => (c.sc || {})[p.id] >= 1);  // only free agents it has scouted (aiTransferDay); otherwise a journeyman filler. Before 5.46 clubs took the best free agents unseen the moment the season ended, leaving 7 in the pool by preseason
       if (fa) { S.fa = S.fa.filter(id => id !== fa.id); fa.club = c.id; fa.yrs = ri(1, 3); fa.wage = wageDemand(fa, c.rep); fa.joined = S.year; c.squad.push(fa.id); }
       // Fillers are journeymen a little below the club's level; generating young ones here fed a ratings spiral.
       // Anchored to reputation, not current level, so divisions neither spiral up nor drain away over decades.
@@ -608,9 +608,11 @@ function aiMaintain(c) {
 
 /* ---------- summer ---------- */
 /* Preseason: five weeks before every season, the first included, with the transfer window open. AI clubs
-   do business each week (.6 a week over five matches the old .5 a day over six). */
+   do business each week, more as the window goes on. */
 function summerStep() {
-  aiTransferDay(.6);
+  // Business builds through preseason rather than landing in week one (it was a flat .6 a week). With scouting
+  // all season, clubs start the window with reports in hand, and the flat rate front-loaded the market.
+  aiTransferDay([.3, .45, .6, .75, .9][S.summerDay] ?? .6);
   if (S.summerDay === 1) aiLoans();
   // Preseason weeks recover like the season's days (a week of them, for every club). It was a flat +10 a
   // week for your squad only, against 18-25 for a friendly, so a side with a friendly a week started the
