@@ -588,42 +588,41 @@ function ageAndContracts() {
   if (up.length) news(`${up.map(p => p.name).join(", ")} ${up.length > 1 ? "have" : "has"} turned 21 and moved up from the academy to the first-team squad. Register ${up.length > 1 ? "them" : "him"} on the Squad page before the season starts.`, true, "youth");
 }
 const FA_YEARS = 3;  // free agents unsigned this many seasons leave the game
-/* Graduate intake, at the end of every season. Each club's academy puts up a pool of five local 16-year-olds
-   (academyPlayer: potential from its Youth development rating); it keeps up to three. Yours wait on the Academy
-   page for you to choose (S.intake) until the end of preseason week 2 (INTAKE_DEADLINE), which leaves three weeks of
-   the window for other clubs to sign the ones you release. Only those you tick by then join (up to three, within
-   the academy's 15 places, ACAD_CAP); nobody is chosen for you, so ticking none releases all five. Those you don't keep become free agents, so anyone can sign them in the window. AI
-   clubs keep their best one or two (the number they used to get); the ones they let go
-   join the free agents if they're worth a contract (potential 9+), otherwise they leave the game, which keeps the
-   pool from swelling by a thousand teenagers a year. Before 5.50 every club simply got 1-2 graduates (yours 1). */
+/* Graduate intake, at the end of every season. Your academy puts up a pool of five local 16-year-olds (academyPlayer:
+   potential from its Youth development rating); they wait on the Academy page (S.intake) until the end of preseason
+   week 2 (INTAKE_DEADLINE), which leaves three weeks of the window for other clubs to sign the ones you release. Only
+   those you tick by then join (up to three, within the academy's 15 places, ACAD_CAP); nobody is chosen for you, so
+   ticking none releases all five. AI clubs get one or two graduates, as before, and keep each unless he's well
+   below the club's level or they have no room; the ones they let go join the free agents if they're worth a contract
+   (potential 9+), otherwise they leave the game. Unkept graduates become free agents, so anyone can sign them in the
+   window. Before 5.50 every club simply got 1-2 graduates (yours 1). 5.50-5.51.1 gave AI clubs pools of five too,
+   which lifted every division 0.3-0.8 points in six seasons however they were tuned. */
 const INTAKE_POOL = 5, INTAKE_KEEP = 3, INTAKE_DEADLINE = 2;  // decide by the end of preseason week 2
 const ACAD_CAP = 15;  // academy places: graduates and players sent down need a free one
 const acadCount = c => c.squad.filter(id => P(id).acad).length;
 const intakeRoom = () => Math.max(0, Math.min(INTAKE_KEEP, ACAD_CAP - acadCount(me())));
 function graduateIntakes() {
   for (const c of activeClubs()) {
-    // A pool is pitched two points (of 20) below a single graduate: choosing the best of five otherwise lifted every
-    // division 0.3-0.8 points and the number of 18+ players by 40% in six seasons (long-sim, 5.50.1).
-    const pool = Array.from({ length: INTAKE_POOL }, () => { const p = academyPlayer(c, 16); p.yt[c.country] = 1; p.pot = Math.max(38, p.pot - 6); setRating(p, clamp(p.ovr - 6, 33, p.pot)); return p; });
+    const make = () => { const p = academyPlayer(c, 16); p.yt[c.country] = 1; return p; };
     if (isUser(c)) {
+      const pool = Array.from({ length: INTAKE_POOL }, make);
       for (const p of pool) { c.squad = c.squad.filter(id => id !== p.id); p.club = -1; p.intake = true; S.scout[p.id] = 2; }
       S.intake = { ids: pool.map(p => p.id), pick: [] };
       news(`Your academy has ${INTAKE_POOL} local 16-year-olds ready to join. Choose up to ${INTAKE_KEEP} (or none) on the Academy page by the end of preseason week ${INTAKE_DEADLINE}; the rest are released as free agents. Academy places: ${acadCount(c)}/${ACAD_CAP} used.`, true, "youth");
       continue;
     }
-    // The same 15 places: an AI club counts its 20-and-unders outside the first team's regulars (it has no
-    // separate academy), and keeps graduates only while it has room.
-    const ranked = pool.sort((a, b) => b.pot - a.pot);
-    const room = Math.min(ri(1, 2), ACAD_CAP - c.squad.filter(id => P(id).age <= ACAD_MAX_AGE && !pool.some(q => q.id === id)).length);  // keeps one or two, as many as it used to get
-    ranked.forEach((p, i) => {
-      if (i < room) return;
+    // The same 15 places: an AI club counts its 20-and-unders (it has no separate academy).
+    const lvl = clubLevel(c), grads = Array.from({ length: ri(1, 2) }, make);
+    for (const p of grads) {
+      const young = c.squad.filter(id => P(id).age <= ACAD_MAX_AGE && id !== p.id).length;
+      if (young < ACAD_CAP && p.pot >= lvl - 9) continue;  // kept: room for him, and he could reach about the club's level
       c.squad = c.squad.filter(id => id !== p.id);
       if (p.pot >= o100(9)) toFreeAgent(p); else delete S.players[p.id];
-    });
+    }
   }
   S.intakeY = S.year;
 }
-/* Your choice (or, at the season start, the best three by potential). */
+/* Your choice (at the deadline, or at kick-off if it was somehow missed, the best three by potential). */
 function settleIntake(auto) {
   const it = S.intake; if (!it) return;
   const c = me(), kids = it.ids.map(id => S.players[id]).filter(Boolean);

@@ -208,14 +208,14 @@ Head-to-head records are kept for every rivalry.
 
 **Free agents** who go three seasons without a club leave the game at the end of the third season. (The pool is
 also held to 300 at each season's end, dropping the least valuable.)
-**Graduate intake.** At the end of each season every club's academy offers a pool of five local 16-year-olds,
-their potential set by its Youth development rating. Yours appear at the top of the Academy page with their
-rating and potential: keep up to three, or none, by the end of preseason week 2. Those you don't keep are
-released as free agents, leaving three weeks of the window for any club to sign them. Nobody is picked for you:
-at the deadline whoever is ticked joins and the rest go, so ticking none releases all five. The academy holds 15: graduates and players sent down need a free
-place (youth recruits who committed still join), so promote or release to make room. Pools are pitched a little below a single graduate of old, since you choose the best of them. AI clubs keep their
-best one or two, while they have under 15 players aged 20 and under; the ones they release join the free agents if
-their potential is 9 or more.
+**Graduate intake.** At the end of each season your academy offers a pool of five local 16-year-olds, their
+potential set by its Youth development rating. They appear at the top of the Academy page with their rating and
+potential: keep up to three, or none, by the end of preseason week 2. Those you don't keep are released as free
+agents, leaving three weeks of the window for any club to sign them. Nobody is picked for you: at the deadline
+whoever is ticked joins and the rest go, so ticking none releases all five. The academy holds 15: graduates and
+players sent down need a free place (youth recruits who committed still join), so promote or release to make room.
+AI clubs get one or two graduates and keep each unless he's well below the club's level or they have no room
+(15 players aged 20 and under); the ones they release join the free agents if their potential is 9 or more.
 **Youth development** is a club rating out of 20, only loosely tied to division, so a small club can run an
 excellent academy. It sets the potential of each summer's graduates, how fast under-21s improve, and how many
 places you can offer prospects. It is one of six factors prospects weigh (with distance, playing time, formation
