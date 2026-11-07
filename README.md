@@ -326,7 +326,11 @@ advertised to every club, and each window week the clubs that could bid (they'd 
 may open the bidding: most weeks with plenty of interest at his value, less often the dearer he is. Rivals join in
 a **bidding war**: each has its own top price (its budget, and what it rates him at), the price rises until one is
 left, and the winner pays just over the runner-up's top bid. One decision lists every club's final bid: sell to
-whichever you like (not only the highest), or reject them all. Unlisted players still draw the odd single bid. The Selling tab shows each player's price
+whichever you like (not only the highest), or reject them all. Unlisted players still draw the odd single bid. Accepting any
+single bid tells the market: a club that would pay at least 5% more can step in, and the sale becomes a bidding war
+decision with the agreed offer included (its club may raise); if nobody does, the sale goes through at the agreed
+fee. Accepted at the asking price, about half of sales draw a counter-bid; well above it, about a third. Your own
+purchases from AI clubs are never gazumped. The Selling tab shows each player's price
 and the interest: how many clubs could bid (they'd rate him, could pay, and he'd go). Listing a player who wants
 to stay costs 6 morale, given back if you take him off; one who wants out (asked to leave, or feels he's outgrown
 the club) doesn't mind.

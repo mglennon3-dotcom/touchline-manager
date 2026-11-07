@@ -145,6 +145,8 @@ function resolveDecision(m, choice) {
   if (m.type === "bid") {
     if (!p || p.club !== S.club) return "That player has already left.";
     const from = C(m.from);
+    // Accepting tells the market: rival clubs may top the agreed fee (acceptedOffer), reopening it as a bidding war.
+    if (choice === "accept") { const re = acceptedOffer(p, from, m.fee); if (re) return re; }
     if (choice === "accept") { const n = rivalry(from.id, S.club); transfer(p, from, m.fee, contractDemand(p, from, willingness(p, from)), ri(2, 5)); fixUserLineup(); if (n) { S.board = clamp(S.board - 2 * n, 0, 100); return `${p.name} sold to ${from.name} for ${money(m.fee)}. Selling to your rivals has angered the supporters (board −${2 * n}).`; } return `${p.name} sold to ${from.name} for ${money(m.fee)}.`; }
     if (p.amb > .6 && from.rep > me().rep) { p.mood = Math.max(0, p.mood - 18); return `Bid rejected. ${p.name} is upset to miss the move.`; }
     return "Bid rejected.";

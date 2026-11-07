@@ -170,21 +170,45 @@ function listedMarket(intensity) {
 }
 function startAuction(p, opener, openFee) {
   if (S.inbox.some(m => !m.done && (m.type === "bid" || m.type === "auction") && m.pid === p.id)) return;
-  const budget = bidBudget, pool = activeClubs().filter(b => b.id !== opener.id && keenOn(p, b));
+  const pool = activeClubs().filter(b => b.id !== opener.id && keenOn(p, b));
   const join = clamp(1.5 / Math.max(1, pool.length), .05, .5);  // about one or two rivals on average, however many could
   const rivals = shuffle(pool).filter(() => R() < join).slice(0, 3);
   if (!rivals.length) return offerToUser(p, opener, openFee);
-  const top = b => Math.max(askingPrice(p, b) * .85, Math.min(budget(b), askingPrice(p, b) * rf(.85, 1.4)));
-  const bids = [{ c: opener, max: Math.max(openFee, top(opener)) }, ...rivals.map(c => ({ c, max: top(c) }))].sort((a, b) => b.max - a.max);
-  bids[0].fee = Math.min(bids[0].max, bids[1].max * 1.05);
+  auctionDecision(p, runAuction(p, opener, openFee, rivals), `Bidding war for ${p.name}`, "went head to head for");
+}
+/* Each bidder's private top price: what it rates him at (85-140% of the asking price it sees), within what it can
+   spend; the opener never below its own bid. The price rises until one is left, who pays 5% over the runner-up's
+   top (never more than its own); the others' final bids are their tops. Returns the bids, best first. */
+function runAuction(p, opener, openFee, rivals) {
+  const top = b => Math.max(askingPrice(p, b) * .85, Math.min(bidBudget(b), askingPrice(p, b) * rf(.85, 1.4)));
+  // rivals: clubs, or { c, max } when their top price was already drawn (acceptedOffer)
+  const bids = [{ c: opener, max: Math.max(openFee, top(opener)) }, ...rivals.map(r => r.c ? r : { c: r, max: top(r) })].sort((a, b) => b.max - a.max);
+  bids[0].fee = bids.length > 1 ? Math.min(bids[0].max, bids[1].max * 1.05) : openFee;
   for (const b of bids.slice(1)) b.fee = b.max;
   for (const b of bids) b.fee = roundFee(b.fee);
-  bids.sort((a, b) => b.fee - a.fee);
+  return bids.sort((a, b) => b.fee - a.fee);
+}
+function auctionDecision(p, bids, title, verb, lead = "") {
   const r20s = Math.round(r20(p.ovr)), ambUp = p.amb > .6 && bids.some(b => b.c.rep > me().rep);
   addDecision({ type: "auction", pid: p.id, bids: bids.map(b => ({ from: b.c.id, fee: b.fee })),
-    title: `Bidding war for ${p.name}: ${bids.length} clubs, best ${money(bids[0].fee)}`,
-    body: `${bids.length} clubs went head to head for ${p.name} (${p.pos}, ${p.age}, rated ${r20s}). Final bids: ${bids.map(b => `${b.c.name} (${leagueName(leagueKey(b.c))}) ${money(b.fee)}`).join("; ")}. Your asking price ${money(askingPrice(p))}; his value ${money(value(p))}.${ambUp ? " He is ambitious and would like a move to a bigger club." : ""}`,
+    title: `${title}: ${bids.length} clubs, best ${money(bids[0].fee)}`,
+    body: `${lead}${bids.length} clubs ${verb} ${p.name} (${p.pos}, ${p.age}, rated ${r20s}). Final bids: ${bids.map(b => `${b.c.name} (${leagueName(leagueKey(b.c))}) ${money(b.fee)}`).join("; ")}. Your asking price ${money(askingPrice(p))}; his value ${money(value(p))}.${ambUp ? " He is ambitious and would like a move to a bigger club." : ""}`,
     opts: [...bids.map(b => [`acc:${b.c.id}`, `Sell to ${b.c.short || b.c.name} · ${money(b.fee)}`]), ["reject", "Reject all"]] });
+}
+/* You accepted a single bid: the market hears an offer has been agreed, and any club that wants him and would pay
+   more can step in (each keen club rates him privately, as in a bidding war; only those whose top beats the agreed
+   fee bid). If someone does, the bidding is reopened as a decision with the agreed offer included (its club may
+   raise); if nobody does, the sale goes through at the agreed fee. Your own purchases never get this. */
+function acceptedOffer(p, buyer, fee) {
+  const pool = activeClubs().filter(b => b.id !== buyer.id && keenOn(p, b));
+  // About one club on average takes a look, and steps in only if it would pay 5% more: rivals came in on 23 of 30
+  // accepted offers when one and a half looked and 2% more was enough.
+  const join = clamp(1 / Math.max(1, pool.length), .05, .5);
+  const top = b => Math.min(bidBudget(b), askingPrice(p, b) * rf(.85, 1.4));
+  const rivals = shuffle(pool).filter(() => R() < join).map(c => ({ c, max: top(c) })).filter(r => r.max > fee * 1.05).slice(0, 3);
+  if (!rivals.length) return null;
+  auctionDecision(p, runAuction(p, buyer, fee, rivals), `Counter-bids for ${p.name}`, "are now in for", `You agreed ${money(fee)} with ${buyer.name}, and word got out. `);
+  return `Word got out that you'd agreed a fee for ${p.name}, and ${rivals.length === 1 ? "another club wants" : `${rivals.length} more clubs want`} him: see the new decision.`;
 }
 function offerToUser(p, from, fee) {
   if (S.inbox.some(m => !m.done && (m.type === "bid" || m.type === "auction") && m.pid === p.id)) return;
