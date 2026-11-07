@@ -290,7 +290,7 @@ function potentialPick(c) {
 /* A fresh XI: the same optimiser, but anyone under 80% fitness counts only once every fresher option is used
    (including moving a fresh player out of position). "Pick best XI" weighs fitness lightly: a player at 60%
    keeps 84% of his strength, so tired regulars kept being picked. */
-const FRESH_FIT = 80;
+const FRESH_FIT = 85;  // was 80; at 80 a side could start at "amber" fitness, which isn't fresh
 function freshPick(ids, f) {
   return optimisePick(ids.map(P).filter(avail), slotsOf(f), Array(11).fill(null), (p, role) => eff(p, role) - (p.fit < FRESH_FIT ? 500 : 0));
 }

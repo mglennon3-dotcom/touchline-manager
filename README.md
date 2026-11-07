@@ -74,7 +74,7 @@ everyone outside the matchday squad and swap him in), Selection (the squad list 
 Picking a side: "Pick best XI" (Tactics page) asks your assistant for the strongest side, and it will move a
 player out of his usual position when his attributes make him better there than the specialist, say a
 tough-tackling midfielder at centre-back. AI clubs pick the same way. "Pick fresh XI" (Tactics page and the
-match card) picks the best side from players at 80%+ fitness, using tired players only where nobody fresh can
+match card) picks the best side from players at 85%+ fitness, using tired players only where nobody fresh can
 fill a spot. "Pick high-potential XI" favours players 23 and under with room to grow (up to about 4 points of credit for a
 teenager far below his ceiling): academy players rated Ready to start can start and those rated Ready can be
 substitutes, and the bench takes young prospects first. Across 15 clubs it changed 0-3 players, costing 0-0.4
