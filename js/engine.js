@@ -326,9 +326,10 @@ const matchWinner = M => M.pens ? (M.pens[0] > M.pens[1] ? M.h.club : M.a.club) 
    modest striker who wins the golden boot out-rates a star who plays badly. Everything but his own actions scales
    with his minutes, so a late substitute sits near 6 unless he does something. (5.40 rated quality, (ovr - level)
    / 4.1: a good centre-back got 9.4 for an ordinary game, a weaker substitute 4.8 the minute he came on.) */
-// Measured over a season of starts: median 6.15, 7+ 22%, 8+ 5.5%, 9+ 1.7%, 10 0.5%; late substitutes 6.0; a red card
-// about 3.9; the season's best average led by the top scorer (36 goals: 7.47).
-const RTW = { base: 6, off: .4, res: .3, q: 9, qcap: 0, g: 1.3, a: .8, xg: .5, kp: .15, sot: .08, tk: .16, int: .14, clr: .06, bk: .2, bt: .35, sv: .22, cs: .65, ga: .15, noise: .25 };
+// A wide curve, measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%
+// (median 6.23). One goal is about 7.4, two 8.8, two and an assist 9.9, a hat-trick 10. Late substitutes 6.0, a
+// red card about 3.9. (5.41 sat too many games between 5 and 7: under 5 in only 4%.)
+const RTW = { base: 6, off: .4, res: .4, q: 9, qcap: 0, g: 1.15, a: .75, xg: .25, miss: .4, kp: .2, sot: .08, tk: .2, int: .18, clr: .08, bk: .25, bt: .45, sv: .22, cs: .8, ga: .25, noise: .45 };
 function matchRating(M, i, id, W = RTW) {
   const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), on = s.on.find(o => o.p.id === id);
   const mins = on ? M.min - on.from : (s.mins[id] ?? 0), m = clamp(mins / Math.max(30, M.done ? M.end : M.min), 0, 1);
@@ -337,7 +338,8 @@ function matchRating(M, i, id, W = RTW) {
   const g = M.goals.filter(x => x.pid === id).length, a = M.goals.filter(x => x.ast === id).length;
   const form = (M.form ||= {})[id] ??= gauss();
   const lvl = M.lvl || (M.lvl = (clubLevel(C(M.h.club)) + clubLevel(C(M.a.club))) / 2), x = (M.ps || {})[id] || {};
-  const did = g * W.g + a * W.a + W.xg * (x.xg || 0) + W.kp * (x.kp || 0) + W.sot * (x.sot || 0) + W.tk * (x.tk || 0) + (W.int || 0) * (x.int || 0) + (W.clr || 0) * (x.clr || 0) + W.bk * (x.bk || 0) - (W.bt || 0) * (x.bt || 0) + (p.pos === "GK" ? W.sv * (x.sv || 0) : 0);
+  // Chances count a little for getting into position, and chances missed cost: xG well above his goals is points off.
+  const did = g * W.g + a * W.a + W.xg * (x.xg || 0) - (W.miss || 0) * Math.max(0, (x.xg || 0) - g) + W.kp * (x.kp || 0) + W.sot * (x.sot || 0) + W.tk * (x.tk || 0) + (W.int || 0) * (x.int || 0) + (W.clr || 0) * (x.clr || 0) + W.bk * (x.bk || 0) - (W.bt || 0) * (x.bt || 0) + (p.pos === "GK" ? W.sv * (x.sv || 0) : 0);
   let ctx = (win ? W.res : loss ? -W.res : 0) + clamp((p.ovr - lvl) / W.q, -W.qcap, W.qcap) + form * W.noise - W.off;
   if (LINE[p.pos] === "DEF" || p.pos === "GK") { ctx -= o2.goals * W.ga; if (o2.goals === 0 && mins >= 60) ctx += W.cs; }
   let rt = W.base + m * ctx + did;
