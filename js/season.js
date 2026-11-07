@@ -590,7 +590,7 @@ function aiMaintain(c) {
     let have = c.squad.filter(id => P(id).pos === pos && P(id).age >= 18).length;
     while (have++ < n) {
       bumpTick(); const lvl = clubLevel(c);
-      const fa = S.fa.map(P).filter(p => p.pos === pos && p.ovr >= lvl - 10 && p.ovr <= lvl + 2 && !hasNamesake(c, p.name)).sort((a, b) => b.ovr - a.ovr)[0];
+      const fa = S.fa.map(P).map(p => [p, aiRating(p, c)]).filter(([p, e]) => p.pos === pos && e != null && e >= lvl - 10 && e <= lvl + 2 && !hasNamesake(c, p.name)).sort((a, b) => b[1] - a[1]).map(x => x[0]).find(p => p.ovr >= lvl - 10);  // shortlisted on what the club can see (aiRating), then scouted before signing
       if (fa) { S.fa = S.fa.filter(id => id !== fa.id); fa.club = c.id; fa.yrs = ri(1, 3); fa.wage = wageDemand(fa, c.rep); fa.joined = S.year; c.squad.push(fa.id); }
       // Fillers are journeymen a little below the club's level; generating young ones here fed a ratings spiral.
       // Anchored to reputation, not current level, so divisions neither spiral up nor drain away over decades.

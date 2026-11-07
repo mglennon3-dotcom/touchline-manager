@@ -80,15 +80,22 @@ function aiTransferDay(intensity) {
     if (R() > intensity * (rich ? 2 : 1)) continue;
     const role = findNeed(c, rich ? 1 : 5); if (!role) continue;
     const lvl = clubLevel(c), budget = c.cash + (c.owner === "reckless" ? c.revBase * .3 : 0);
-    let best = null, bs = -1e9;
-    for (let i = 0; i < 90; i++) {
+    const cands = [];
+    // 270 looks (90 before 5.46): with half the players abroad blank to a club and band misjudgements weeded out by
+    // scouting, 90 left AI clubs making half their usual number of signings.
+    for (let i = 0; i < 270; i++) {
       const p = all[Math.floor(R() * all.length)];
-      if (!p || p.club === c.id || FAM[p.pos][role] < .9 || p.age > 31 || p.ovr < lvl - 1 || p.ovr > lvl + 8 || hasNamesake(c, p.name)) continue;
+      if (!p || p.club === c.id || FAM[p.pos][role] < .9 || p.age > 31 || hasNamesake(c, p.name)) continue;
+      const est = aiRating(p, c);  // what this club can see of him, not his true rating
+      if (est == null || est < lvl - 1 || est > lvl + 8) continue;
       if (p.club >= 0 && C(p.club).rep > c.rep + 8 && !p.req) continue;
       const fee = askingPrice(p, c); if (fee > budget * .6) continue;
-      const sc = p.ovr - fee / 4e6 + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1;
-      if (sc > bs) { bs = sc; best = p; }
+      cands.push([est - fee / 4e6 + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1, p]);
     }
+    // Before bidding the club scouts its shortlist (the top three on what it can see), as you would: judged on the band
+    // alone, the best-looking candidate is usually one it flatters, and 73% of AI signings in a test season came in
+    // below the club's level. Scouting only the top pick cut AI signings by two thirds.
+    const best = cands.sort((a, b) => b[0] - a[0]).slice(0, 3).map(x => x[1]).find(p => p.ovr >= lvl - 1);
     if (!best) continue;
     const fee = askingPrice(best, c), w = willingness(best, c);
     if (w < .3) continue;

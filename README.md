@@ -281,6 +281,10 @@ first look to a few points, a full report to the exact rating and a tight potent
 Min rating filter use the middle of the band (a blank rating sorts last and fails the filter), and Team Needs
 upgrades need even the bottom of the band to be an upgrade. Attributes and injury risk still need scouting.
 Match stats (apps, goals, average rating) are public.
+**AI clubs see what you see.** A rival judges players in its own division exactly and everyone else by the middle
+of a band: 5 wide in its own country, 6 wide abroad, where half the players' ratings are blank to it. Each club's
+bands are its own, so rivals misjudge different players. Before bidding it scouts its top three candidates and
+drops any who fall short, as you would. Good players abroad are more often left for you to find.
 **Contracts running out.** A player whose deal is ending won't sign again if he's unhappy (mood under 45) or
 has asked to leave, at your club or any other. Yours leave as free agents when the contract ends. AI clubs
 otherwise keep most of their under-32s who are good enough for the side, and the rest join the free-agent pool,

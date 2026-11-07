@@ -242,6 +242,17 @@ function hiddenView(p, val, k) {
   const c = val + (seedOf(p.id, k) - .5) * w * .8;
   return [clamp(Math.round(c - w / 2), 1, 20), clamp(Math.round(c + w / 2), 1, 20)];
 }
+/* AI clubs see what you see. A rival judges players in its own division exactly; anyone else by the middle of a
+   band, as yours: 5 wide in its own country (its best-known, like yours), 6 wide abroad, where half the players'
+   ratings are blank to it and they are passed over. Each club's band is its own (seeded by club), so rivals
+   misjudge different players. Until 5.46 AI clubs used every player's true rating. Returns the 100 scale, or null. */
+function aiRating(p, c) {
+  if (p.club === c.id || (p.club >= 0 && C(p.club).lg === c.lg)) return p.ovr;
+  const home = playerCountry(p) === c.country, k = p.id * 7919 + c.id * 104729;
+  if (!home && seedOf(k, 21) < .5) return null;
+  const w = home ? 5 : 6, lo = clamp(Math.round(r20(p.ovr) - w / 2 + (seedOf(k, 1) - .5) * w), 1, 20 - w);
+  return o100(lo + w / 2);
+}
 const potView = p => hiddenView(p, r20(p.pot), 11);
 const injView = p => hiddenView(p, p.ir, 13);
 const viewMid = v => v ? (v[0] + v[1]) / 2 : 0;
