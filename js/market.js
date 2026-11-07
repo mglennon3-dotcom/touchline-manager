@@ -68,7 +68,7 @@ function transfer(p, to, fee, wage, yrs, plan = 1) {
   // "wants more playing time" on day one for anyone signed to start, before he'd had a game.
   p.pt = expectedShare(p, to);
   refreshRegistration(to); if (from) refreshRegistration(from);
-  const big = fee >= 15e6 || isUser(to) || (from && isUser(from));
+  const big = fee >= 15e6 * MONEY || isUser(to) || (from && isUser(from));
   S.tlog.unshift({ y: S.year, w: whenLabel(), pid: p.id, name: p.name, from: from ? from.id : -1, to: to.id, fee });
   if (S.tlog.length > 300) S.tlog.length = 300;
   if (big) news(`${p.name} (${p.pos}, rated ${Math.round(r20(p.ovr))}) ${from ? `moves from ${from.name}` : "signs as a free agent"} to ${to.name}${fee ? ` for ${money(fee)}` : ""}.`, isUser(to) || (from && isUser(from)), "transfer");
@@ -133,7 +133,7 @@ function aiTransferDay(intensity) {
       if (est == null || est < lvl - 1 || est > lvl + 8) continue;
       if (p.club >= 0 && C(p.club).rep > c.rep + 8 && !p.req) continue;
       const fee = askingPrice(p, c); if (fee > budget * .6) continue;
-      cands.push([est - fee / 4e6 + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1, p]);
+      cands.push([est - fee / (4e6 * MONEY) + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1, p]);
     }
     cands.sort((a, b) => b[0] - a[0]);
     const bid = window && R() <= intensity * (rich ? 1.5 : 1);

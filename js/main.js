@@ -440,7 +440,35 @@ function initAcademy() {
   const moved = c.squad.map(P).filter(p => p.age <= 18 && !keep.has(p.id) && !p.loan); moved.forEach(p => p.acad = true);
   return moved.length;
 }
+/* 5.61: the economy moved to real-world money (MONEY = 10). An older save has every amount multiplied by ten (so its
+   finances keep their proportions), then ticket prices are reset by division and demand, with base income adjusted
+   so each club's total income is unchanged by the new prices. */
+function moneyRescale(k) {
+  const num = o => { if (o) for (const f in o) if (typeof o[f] === "number") o[f] *= k; };
+  for (const c of S.clubs) {
+    for (const f of ["revBase", "revSeason", "cash"]) if (typeof c[f] === "number") c[f] = Math.round(c[f] * k);
+    num(c.fin); num(c.pre);
+    for (const d of c.deals || []) { d.amt *= k; num(d.bonus); }
+    if (c.build) for (const f of ["cost", "perWeek", "paid"]) if (typeof c.build[f] === "number") c.build[f] *= k;
+    for (const s of c.schemes || []) s.amt *= k;
+  }
+  for (const p of Object.values(S.players)) { p.wage = Math.round(p.wage * k); if (p.am) p.am.per = Math.round(p.am.per * k); }
+  for (const d of S.dues || []) { d.per *= k; d.fee *= k; }
+  for (const b of Object.values(S.bids || {})) { if (b.fee) b.fee *= k; if (b.ask) b.ask *= k; }
+  for (const t of S.tlog || []) if (t.fee) t.fee *= k;
+  for (const m of S.inbox || []) { for (const f of ["fee", "amt"]) if (typeof m[f] === "number") m[f] *= k; for (const b of m.bids || []) b.fee *= k; for (const o of m.offers || []) { o.amt *= k; num(o.bonus); } }
+  for (const f of S.friendlies || []) for (const x of ["net", "gate", "fee"]) if (typeof f[x] === "number") f[x] *= k;
+  num(S.revK); num(S.spK);
+  for (const c of activeClubs()) {
+    if (c.cap == null) continue;
+    const oldMd = matchdayEstimate(c) * k;
+    setTicketPrice(c); const d = oldMd - matchdayEstimate(c);
+    c.revBase = Math.round(c.revBase + d); if (c.revSeason) c.revSeason = Math.round(c.revSeason + d);
+  }
+  UI.bid = null;
+}
 function upgradeSave() {  // bring an older save up to date; runs on load and on import
+  if (!S.money10 && S.clubs) { moneyRescale(MONEY); S.money10 = 1; if (S.club != null) news("The game now uses real-world money: every amount in your save is ten times bigger, so your finances are in the same proportions. Ticket prices now follow the division (60 in the Premier Division down to 7 in the fifth tier) and demand.", true, "finance"); }
   // Repairs keepers whose fitness went NaN after playing outfield (fixed in 5.22.0).
   for (const p of Object.values(S.players)) { if (!isFinite(p.fit)) p.fit = 90; if (p.gs == null) p.gs = newGrowthSpeed(); }  // 5.34: hidden growth speed
   // 5.33: the academy. Teenagers (18 and under) outside the current matchday squad move into it.

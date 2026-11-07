@@ -183,7 +183,7 @@ function signingDay() {
     if (y.commit == null || C(y.commit).gone) continue;
     const c = C(y.commit); y.signed = true;
     const p = makePlayer({ pos: y.pos, base: y.ovr + 9, age: 16, nat: y.nat, club: c.id, rep: c.rep });
-    p.name = y.name; p.ir = y.ir || p.ir; setRating(p, clamp(y.ovr + ri(0, 4), 33, 70)); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 20000;
+    p.name = y.name; p.ir = y.ir || p.ir; setRating(p, clamp(y.ovr + ri(0, 4), 33, 70)); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 20000 * MONEY;
     p.yt[c.country] = 1; p.from = y.region; if (isUser(c)) p.acad = true;  // your recruits start in the academy
     c.squad.push(p.id);
   }
@@ -216,7 +216,7 @@ function autoScout() {
     for (const n of needs.slice(0, 4)) for (const p of Object.values(S.players)) {
       if (p.club === S.club || p.club < 0 && !S.fa.includes(p.id) || p.loan || p.age < 18 || p.age > 31 || scoutLevel(p) >= 2 || (S.scoutHide || {})[p.id] || FAM[p.pos][n.role] < .9 || !ok(playerCountry(p))) continue;
       if (ratingMid(p) < n.weakest + .5 || (p.club >= 0 && askingPrice(p) > budget)) continue;
-      players.push({ k: "p", o: p, cost: scoutHours(2, playerCountry(p)), s: ratingMid(p) - n.weakest + n.score * .2 - (p.club >= 0 ? askingPrice(p) / 1e7 : 0) });
+      players.push({ k: "p", o: p, cost: scoutHours(2, playerCountry(p)), s: ratingMid(p) - n.weakest + n.score * .2 - (p.club >= 0 ? askingPrice(p) / (1e7 * MONEY) : 0) });
     }
     const seen = new Set(); players = players.filter(x => !seen.has(x.o.id) && seen.add(x.o.id));
   }

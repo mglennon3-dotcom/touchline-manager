@@ -69,19 +69,20 @@ function makePlayer(o) {
 
 /* Market value ignores contract length; value() applies it. */
 function baseValue(p) {
-  let v = 50000 * Math.pow(1.19, p.ovr - 50);
+  let v = 50000 * MONEY * Math.pow(1.19, p.ovr - 50);
   if (p.age < 24) v *= 1 + (p.pot - p.ovr) * .045;
   if (p.age > 28) v *= Math.max(.12, 1 - (p.age - 28) * .14);
-  return v;
+  // Real football tops out around 200M: above 100M values rise more slowly (the curve made the best player 310M).
+  return v > 1e8 ? 1e8 * Math.pow(v / 1e8, .6) : v;
 }
 function value(p) {
   const v = baseValue(p) * (p.yrs <= 1 ? .6 : p.yrs === 2 ? .85 : 1);
   const mag = Math.pow(10, Math.max(0, Math.floor(Math.log10(v)) - 1));
-  return Math.max(10000, Math.round(v / mag) * mag);
+  return Math.max(10000 * MONEY, Math.round(v / mag) * mag);
 }
 // Wages follow what he can do now more than what he might become: half the potential premium that baseValue gives
 // an under-24's transfer value (the full premium priced teenagers' wages like established stars').
-function wageDemand(p, rep) { const prem = p.age < 24 ? (1 + (p.pot - p.ovr) * .0225) / (1 + (p.pot - p.ovr) * .045) : 1; return Math.max(15000, Math.round(baseValue(p) * prem * .16 * (.75 + rep / 200) / 1000) * 1000); }
+function wageDemand(p, rep) { const prem = p.age < 24 ? (1 + (p.pot - p.ovr) * .0225) / (1 + (p.pot - p.ovr) * .045) : 1; return Math.max(15000 * MONEY, Math.round(baseValue(p) * prem * .16 * (.75 + rep / 200) / 1000) * 1000); }
 /* A new deal at his own club: his market wage, but a player content enough to stay doesn't ask for more than
    double what he earns now or 20% over the club's top earner, whichever is higher (never less than he's on);
    a loyal one asks less again (below).
@@ -462,7 +463,7 @@ function academyPlayer(c, age) {
   const sk = skillSample();
   p.pot = clamp(Math.round(sk ? pick(sk) + gauss() * 1.5 : o100(5 + c.academy * .55 + gauss() * 2.2)), 33, 95);
   setRating(p, clamp(p.pot - ri(6, 14) - (18 - age) * 3, 33, p.pot));
-  p.wage = Math.max(12000, Math.round(wageDemand(p, c.rep) * .6 / 1000) * 1000);
+  p.wage = Math.max(12000 * MONEY, Math.round(wageDemand(p, c.rep) * .6 / 1000) * 1000);
   p.yt[c.country] = Math.max(1, age - 15); p.yrs = ri(2, 3);
   c.squad.push(p.id);
   return p;
@@ -506,7 +507,7 @@ function setupFinances(c) {
 }
 function newWorld() {
   S = { v: 5, year: 2026, phase: "season", week: 0, di: 0, days: [], summerDay: 0, club: null, nextPid: 1, players: {}, clubs: [], fa: [], towns: {},
-    leagues: {}, ko: {}, cont: {}, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
+    leagues: {}, ko: {}, cont: {}, money10: 1, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
     history: [], career: [], hof: [], scout: {}, me: null, acad20: true, stadiums: true, sponsors: true, dem2: true, reg2: true, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
     set: { live: true }, qual: null, lastPos: {}, sacked: false, _tick: 1 };
   for (const key of Object.keys(LG)) {
@@ -595,7 +596,7 @@ const playerCountry = p => p.club >= 0 ? C(p.club).country : (COUNTRY[p.nat] ? p
 const prospectCountry = y => y.country || "ROW";
 const knowWidth = code => clamp(1.3 - knowOf(code) / 25, .5, 1.3);  // how much wider (or narrower) reports are
 function scoutHours(base, code, c) { return Math.max(1, Math.round(base * (code !== (c ? c.country : "ENG") ? 1.5 : 1) * (1.5 - knowOf(code, c) / 20))); }
-function travelCost(code, c = me()) { return code === c.country ? 0 : Math.round([0, 6e4, 3e4, 1.5e4, 8e3, 5e3, 5e3][c.tier] * (code === "ROW" ? 2 : 1)); }
+function travelCost(code, c = me()) { return code === c.country ? 0 : Math.round([0, 6e4, 3e4, 1.5e4, 8e3, 5e3, 5e3][c.tier] * MONEY * (code === "ROW" ? 2 : 1)); }
 function learnCountry(code, amt = .25) { if (S.me && S.me.know) S.me.know[code] = Math.min(20, Math.round((knowOf(code) + amt) * 100) / 100); }
 function payTravel(code) { const t = travelCost(code); if (t) { me().cash -= t; me().fin.scouting = (me().fin.scouting || 0) + t; } return t; }
 

@@ -289,7 +289,7 @@ income, sponsorship, league gates at today's ticket forecast, the merit payment 
 wages at today's bill, running costs, scouting, stadium works and any cost-ratio levy. Cup runs, sponsor
 bonuses and future transfers count once they happen. In preseason it projects the coming season. Checked
 by projecting at week 6 and playing the season out: a Premier club came to €34.4M projected against €38.9M
-actual (the gap was a cup run), and a fifth-tier club to €230k against €260k.
+actual (the gap was a cup run), and a fifth-tier club to €230k against €260k (before the 5.61 money rescale).
 **What you know about a player.** Your own players and everyone in your division show their exact rating.
 Every other player shows bands for his rating and his potential, each always containing the true figure. What
 you get depends on how well you know his country, measured against your own range of knowledge: in your
@@ -360,6 +360,14 @@ income goes to at least 90% of its new division's lower quartile, and the yearly
 below that; its sponsorship rises at least as far. A relegated club is capped at 110% of its new division's upper
 quartile. (Before, promotion scaled income by about 1.4x and closed 20% of the remaining gap a season, leaving a
 promoted club on its old division's money for years.)
+**Money and ticket prices.** The game uses real-world money (5.61; it was about a tenth of it): a Premier Division
+club earns around 240-300M a year, its median player is worth about 20M on about 77k a week, and the best players
+reach about 180M (values above 100M rise more slowly). Older saves were multiplied by ten on loading, so their
+finances keep their proportions. Ticket prices follow the division, 60 in the Premier Division, 35 in the First,
+20 in the Second, 15 in the Third, 7 in the fifth tier and 5 in the sixth (45/22/12 abroad), and the interest in
+the club: one that could sell its ground out well over charges up to 30% more, one that can't fill it up to 15%
+less. They're reset each summer and when a club changes division; your price setting is a multiplier on top.
+Ticket income comes out of a club's existing income rather than on top of it.
 **Preseason accounts.** Transfers in the summer window count in the coming season's accounts (they used to go
 into the season just finished), and the preseason cost ratio counts only income that carries into that season:
 regular income plus profit on players sold this summer, not last season's prize money, merit payment or sales.

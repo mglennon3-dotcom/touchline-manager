@@ -810,7 +810,7 @@ function viewTransfers() {
       <label class="f">Max age<select id="tf-age" data-c="tf-age">${[40, 30, 27, 24, 21].map(a => `<option value="${a}" ${f.age === a ? "selected" : ""}>${a === 40 ? "Any" : a}</option>`).join("")}</select></label>
       <label class="f">Min rating<select id="tf-min" data-c="tf-min">${[0, 6, 8, 10, 12, 14, 16].map(a => `<option value="${a}" ${f.min === a ? "selected" : ""}>${a ? a + "+" : "Any"}</option>`).join("")}</select></label>
       <label class="f">Interest<select id="tf-int" data-c="tf-int">${[["ALL", "Any"], ["keen", "Keen"], ["open", "Open or keen"], ["sign", "Would sign (not Not interested)"], ["no", "Not interested"]].map(([k, l]) => `<option value="${k}" ${(f.int || "ALL") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-      ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
+      ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => a * MONEY).map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
       ${UI.tab !== "fa" ? `<label class="f">League<select id="tf-lg" data-c="tf-lg"><option value="ALL">All leagues</option><option value="ABROAD" ${f.lg === "ABROAD" ? "selected" : ""}>All foreign leagues</option>${lgOpts(f.lg)}</select></label>` : ""}</div>
       ${!listTab ? ctyTogHtml(S.set.ctyOff, "cty") : ""}
       ${poolN > 200 ? `<p class="tiny muted" style="margin:0 0 6px">${poolN.toLocaleString()} players match: showing the first 200 in the order you sort by.</p>` : ""}
@@ -1021,7 +1021,7 @@ function viewFinances() {
   const c = me(), f = c.fin, ratio = scr(c);
   const mk = v => clamp(v / 1.5 * 100, 0, 100);
   const cases = S.cases.filter(k => !isForeign(C(k.club))).slice(-12).reverse();
-  const acadCost = Math.round((c.academy + 1) * 1.5e6 * [0, 1, .4, .2, .1, .06, .05][c.tier]);
+  const acadCost = Math.round((c.academy + 1) * 1.5e6 * MONEY * [0, 1, .4, .2, .1, .06, .05][c.tier]);
   return `<div class="grid2"><div class="stack">${projectionCard(c)}${transferBudgetCard(c)}<section class="card"><div class="card-h"><h2>Squad Cost Ratio</h2><span class="eyebrow">${seasonLabel(S.year)}</span></div>
     <div class="prose"><p>Wages, transfer amortisation and agent fees, as a share of football revenue plus profit on player sales. Above <b>${pct(RULES.scrLimit)}</b> you pay a levy at the end of the season; above <b>${pct(RULES.scrSporting)}</b> you are charged and face a points deduction the following season.</p></div>
     <div class="gauge" role="img" aria-label="Projected ratio ${pct(ratio)}"><span class="tick" style="left:${mk(.85)}%">85%</span><span class="tick" style="left:${mk(1.15)}%">115%</span><span class="mk" style="left:${mk(ratio)}%"><span>${pct(ratio)}</span></span></div>

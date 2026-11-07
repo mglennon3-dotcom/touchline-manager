@@ -29,9 +29,10 @@ function initStadium(c) {
   // Demand is anchored to the club's own ground at the start, then grows with prestige, form and engagement.
   c.dem0 = c.cap * rf(.88, 1.08); c.rep0 = c.rep; c.fans0 = c.fans;
   const att = Math.min(c.cap, demandOf(c));
-  const md = c.revBase * MATCHDAY_SHARE;
-  c.price = Math.max(5, md / (homeGames(c) * att));
-  c.revBase = Math.round(c.revBase - md);
+  // Ticket income comes out of the club's existing income (so it rebalances rather than inflates), at the division's
+  // price; never more than 60% of it.
+  setTicketPrice(c); c.price = Math.min(c.price, c.revBase * .6 / Math.max(1, homeGames(c) * att));
+  c.revBase = Math.round(c.revBase - c.price * homeGames(c) * att);
   c.build = null; c.att = [0, 0];  // season attendance: total, home games
   c.tkt = c.tkt || 1;
 }
@@ -102,8 +103,18 @@ function aiStadium(c) {
   const q = expansionQuote(c, kind);
   if (c.cash > q.cost * .35 && q.cost < c.revBase * 1.5) startExpansion(c, kind);
 }
-/* Ticket prices move with the club's income, so promotion lifts them and relegation cuts them. */
-function rescalePrice(c, ratio) { c.price = Math.max(5, c.price * Math.sqrt(ratio)); }
+/* Ticket prices follow the division (TICKET_BASE: 60 in the Premier Division down to 7 in the fifth tier, 5 in the
+   sixth; 45/22/12 abroad) and the interest in the club: a club that could sell its ground out a couple of times over
+   charges up to 30% more, one that can't fill it up to 15% less. Set when a club is made, each summer, and when it
+   changes division (5.61). Before, prices were carved from income and most clubs below the top two divisions sat
+   on a 5 floor. Your own choice of price is the multiplier on top (c.tkt). */
+const ticketBase = c => (isForeign(c) ? TICKET_BASE.ABROAD : TICKET_BASE.ENG)[c.tier] || 5;
+function setTicketPrice(c) {
+  const fill = demandOf(c) / Math.max(1, capacityNow(c));
+  // A typical club (demand a little under capacity) charges the division's price; the range is 85-130% of it.
+  c.price = Math.round(ticketBase(c) * clamp(1 + .5 * (fill - .95), .85, 1.3) * 2) / 2;
+}
+function rescalePrice(c, ratio) { c.price = Math.max(1, c.price * Math.sqrt(ratio)); }  // unused since 5.61 (setTicketPrice)
 
 /* What a price would do over a home game, for the price picker. */
 function ticketForecast(c, pm) {

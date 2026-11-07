@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.60.5";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.61.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -236,7 +236,13 @@ const CUPS = {
   FA: { name: "National Cup", rounds: ["Fourth qualifying round", "First round", "Second round", "Third round", "Fourth round", "Fifth round", "Quarter-finals", "Semi-finals", "Final"] },
   LC: { name: "League Cup", rounds: ["First round", "Second round", "Third round", "Fourth round", "Quarter-finals", "Semi-finals", "Final"] },
 };
-const CONT = { CC: { name: "Champions Cup", short: "CC", prize: [16e6, 2.5e6, 12e6] }, CS: { name: "Continental Shield", short: "CS", prize: [5e6, 1e6, 5e6] }, CT: { name: "Continental Trophy", short: "CT", prize: [2e6, .5e6, 2e6] } };
+/* Money scale (5.61). The game's money was about a tenth of real football's, so real ticket prices would have been
+   bigger than clubs' whole incomes. Everything money-related is built from this: player values (and so wages and
+   fees), wage floors, prize money, scouting costs. Club incomes follow from wage bills when a world is made. */
+const MONEY = 10;
+/* Ticket prices by division, before demand (stadium.js setTicketPrice): English tiers 1-6, foreign tiers 1-3. */
+const TICKET_BASE = { ENG: [0, 60, 35, 20, 15, 7, 5], ABROAD: [0, 45, 22, 12] };
+const CONT = { CC: { name: "Champions Cup", short: "CC", prize: [16e6 * MONEY, 2.5e6 * MONEY, 12e6 * MONEY] }, CS: { name: "Continental Shield", short: "CS", prize: [5e6 * MONEY, 1e6 * MONEY, 5e6 * MONEY] }, CT: { name: "Continental Trophy", short: "CT", prize: [2e6 * MONEY, .5e6 * MONEY, 2e6 * MONEY] } };
 const CONT_ROUNDS = ["Round of 16", "Quarter-finals", "Semi-finals", "Final"];
 
 /* ---------- player attributes, out of 20 (10 is average, 20 world class) ---------- */
