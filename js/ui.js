@@ -2,7 +2,7 @@
 /* Rendering. Every page is a function returning HTML; actions are wired by data-a attributes in main.js. */
 const UI = { page: "home", sel: null, modal: null, sort: {}, menu: false, busy: false, toastT: 0,
   lg: null, cupK: "FA", tab: "offers", tf: { pos: "ALL", age: 40, min: 0, fee: 0, lg: "ALL" }, sqf: "ALL",
-  yf: { reg: "ENG", pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5, awY: null, awL: null };
+  yf: { pos: "ALL", st: "OPEN" }, nf: "ALL", startL: "E1", confirm: null, bid: null, histN: 5, awY: null, awL: null };
 const PAGES = [["home", "Home"], ["manager", "Manager"], ["squad", "Squad"], ["needs", "Team Needs"], ["tactics", "Tactics"], ["fixtures", "Fixtures"], ["league", "Leagues"], ["cups", "Cups"], ["transfers", "Transfers"], ["youth", "Youth"], ["academy", "Academy"], ["finances", "Finances"], ["news", "News"], ["history", "History"]];
 
 /* ---------- atoms ---------- */
@@ -856,7 +856,8 @@ function scoutAssistHtml() {
 function viewYouth() {
   const c = me(), f = UI.yf;
   let ys = S.prospects.slice();
-  if (f.reg === "ENG") ys = ys.filter(y => y.country === "ENG"); else if (f.reg === "ABR") ys = ys.filter(y => y.country !== "ENG"); else if (f.reg !== "ALL") ys = ys.filter(y => y.country === f.reg || (f.reg === "ROW" && y.country == null));
+  // Countries are chosen with the toggles below the filters; the old Region select (England by default) was removed
+  // because it overrode them: switching Spain on still showed only English prospects.
   const yOff = new Set(S.set.yCtyOff || []); if (yOff.size) ys = ys.filter(y => !yOff.has(prospectCountry(y)));  // country toggles
   if (f.pos !== "ALL") ys = ys.filter(y => y.pos === f.pos);
   if (f.st === "OPEN") ys = ys.filter(y => y.commit == null); else if (f.st === "MINE") ys = ys.filter(y => y.offers.includes(c.id) || y.rel[c.id] || y.commit === c.id); else if (f.st === "DONE") ys = ys.filter(y => y.commit != null);
@@ -897,8 +898,7 @@ function viewYouth() {
   const classCard = `<section class="card"><div class="card-h"><h2>Youth recruitment · class of ${S.year + 1}</h2>
     <span class="small">Hours this week <b class="num">${S.rec.hours}/${recHours()}</b> · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b> · Youth development <b class="num">${c.academy}/20</b></span></div>
     <div class="prose small" style="margin-bottom:12px"><p>Fifteen-year-olds from England and abroad choose an academy this season and join next summer. Each weighs six things differently, with two that matter most to him: distance from home, a route to first-team minutes, whether your formation uses his position, squad dynamics, prestige and your youth development rating. Scouting narrows his rating and reveals what he cares about; speaking to his youth coaches (a sharper estimate of his potential, his injury history and a small word in his ear), calls, hosting him at your ground and visiting his family at home build the relationship (a home visit counts most with lads who want to stay near home or care about squad dynamics). Commitments start from week 9 and aren't binding until signing day, so a better offer can still flip a prospect, yours included.</p></div>
-    <div class="filters"><label class="f">Region<select id="yf-reg" data-c="yf-reg">${regs.map(([k, l]) => `<option value="${k}" ${f.reg === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
-      <label class="f">Position<select id="yf-pos" data-c="yf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
+    <div class="filters"><label class="f">Position<select id="yf-pos" data-c="yf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
       <label class="f">Show<select id="yf-st" data-c="yf-st">${[["OPEN", "Undecided"], ["MINE", "Your targets"], ["DONE", "Committed"], ["ALL", "Everyone"]].map(([k, l]) => `<option value="${k}" ${f.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     ${ctyTogHtml(S.set.yCtyOff, "ycty")}
     ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: (S.set.yCtyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No prospects match." })}</section>`;
