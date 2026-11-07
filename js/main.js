@@ -488,6 +488,16 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   if (!S.amnestyV && S.club != null && !S.sacked) { if (S.phase === "season" && scr(me()) > RULES.scrLimit) { S.amnesty = { y: S.year, club: S.club }; news(`Cost-ratio amnesty for ${seasonLabel(S.year)}: the preseason figures understated your ratio, so this season brings no levy, charge or points deduction. Normal rules apply from next season.`, true, "finance"); } S.amnestyV = 1; }
   // 5.60: a bigger prospect pool abroad; this year's class is topped up now rather than waiting a year.
   if (!S.pool2) { const n = S.club != null ? topUpProspects() : 0; if (n) news(`More prospects abroad: ${n} more 15-year-olds from outside England are in this year's youth class.`, false, "youth"); S.pool2 = 1; }
+  // 5.60.2: the English surname list grew from 90 to 371. English players at AI clubs carrying one of the original 90
+  // get a new surname three times in four (the old names' fair share of the new list is about a quarter); first names
+  // stay, and nobody gets a namesake at his club. Your players, and anyone on loan from you, keep their names.
+  if (!S.names3 && S.club != null) {
+    const OLD90 = new Set(NAMES.ENG[1].slice(0, 90));
+    for (const c of activeClubs()) { if (isUser(c)) continue;
+      for (const id of c.squad) { const p = P(id), [first, ...rest] = p.name.split(" ");
+        if (p.nat !== "ENG" || (p.loan && p.loan.from === S.club) || !OLD90.has(rest.join(" ")) || R() > .75) continue;
+        for (let i = 0; i < 20; i++) { const n = first + " " + pick(NAMES.ENG[1]); if (!hasNamesake(c, n, p.id)) { p.name = n; break; } } } }
+    S.names3 = 1; }
   // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
   if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
