@@ -474,3 +474,5 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 /* away: your club's colour stays on your (right-hand) side of each bar */
 .cmp.away .split .a{background:var(--muted);opacity:.45}.cmp.away .split .b{background:var(--club,var(--accent));opacity:1}
 .cmp-labels{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:4px}.cmp-labels>span:last-child{text-align:right}
+/* fitness as a number on the Tactics pitch: a small pill in the fitness colour */
+.slot .fpct{font:700 11px/1 var(--f-mono);color:#fff;background:var(--fc);border-radius:7px;padding:2px 5px;margin-top:1px}
