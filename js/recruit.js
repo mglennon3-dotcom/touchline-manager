@@ -16,20 +16,28 @@ const FACTOR_HELP = {
 };
 const starsOf = pot => pot >= 86 ? 5 : pot >= 80 ? 4 : pot >= 73 ? 3 : pot >= 66 ? 2 : 1;
 
+/* Each year's class: 80 from England, 18 from each of the seven countries abroad and 30 from further afield (Brazil,
+   Argentina, West Africa, Scandinavia). It was 7 and 22: a single foreign country showed a handful of names. */
+const PROSPECTS = { ENG: 80, abroad: 18, row: 30 };
+function addProspect(nat, country, region, lat, lon) {
+  const pot = clamp(Math.round(62 + Math.pow(R(), 1.8) * 32 + gauss() * 2), 52, 95);
+  const pri = {}; for (const [k] of FACTORS) pri[k] = .6 + R() * .6;
+  const top = shuffle(FACTORS.map(f => f[0])).slice(0, 2); pri[top[0]] += 2.2; pri[top[1]] += 1.2;
+  const tot = sum(Object.values(pri)); for (const k in pri) pri[k] /= tot;
+  // Ids are "y<year>-<n>", n one past the highest in the class, so a top-up never reuses one.
+  const n = S.prospects.reduce((m, x) => Math.max(m, +String(x.id).split("-")[1] || 0), -1) + 1;
+  const y = { id: "y" + S.year + "-" + n, name: nameFor(nat), nat, country, region, lat: lat + rf(-.6, .6), lon: lon + rf(-.8, .8),
+    pos: pick(["GK", "CB", "CB", "FB", "DM", "CM", "CM", "AM", "W", "W", "ST", "ST"]), ovr: clamp(Math.round(pot * .55 + gauss() * 3), 30, 60), pot, open: +rf(.15, 1).toFixed(2),
+    pri, top, sc: 0, known: false, ir: clamp(Math.round(10 + gauss() * 3.2), 1, 20), rel: {}, offers: [], visit: false, called: -1, commit: null, cw: null };
+  S.prospects.push(y); return y;
+}
+const addFrom = code => { const [r, la, lo] = pick(COUNTRY[code].regions); return addProspect(code, code, r, la, lo); };
+const addRow = () => { const [code, r, la, lo] = pick(ABROAD); return addProspect(code, null, r, la, lo); };
 function newProspectClass() {
   S.prospects = [];
-  const add = (nat, country, region, lat, lon, open) => {
-    const pot = clamp(Math.round(62 + Math.pow(R(), 1.8) * 32 + gauss() * 2), 52, 95);
-    const pri = {}; for (const [k] of FACTORS) pri[k] = .6 + R() * .6;
-    const top = shuffle(FACTORS.map(f => f[0])).slice(0, 2); pri[top[0]] += 2.2; pri[top[1]] += 1.2;
-    const tot = sum(Object.values(pri)); for (const k in pri) pri[k] /= tot;
-    S.prospects.push({ id: "y" + S.year + "-" + S.prospects.length, name: nameFor(nat), nat, country, region, lat: lat + rf(-.6, .6), lon: lon + rf(-.8, .8),
-      pos: pick(["GK", "CB", "CB", "FB", "DM", "CM", "CM", "AM", "W", "W", "ST", "ST"]), ovr: clamp(Math.round(pot * .55 + gauss() * 3), 30, 60), pot, open: +rf(.15, 1).toFixed(2),
-      pri, top, sc: 0, known: false, ir: clamp(Math.round(10 + gauss() * 3.2), 1, 20), rel: {}, offers: [], visit: false, called: -1, commit: null, cw: null });
-  };
-  for (let i = 0; i < 80; i++) { const [r, la, lo] = pick(COUNTRY.ENG.regions); add("ENG", "ENG", r, la, lo); }
-  for (const K of COUNTRIES.filter(k => k.code !== "ENG")) for (let i = 0; i < 7; i++) { const [r, la, lo] = pick(K.regions); add(K.code, K.code, r, la, lo); }
-  for (let i = 0; i < 22; i++) { const [code, r, la, lo] = pick(ABROAD); add(code, null, r, la, lo); }
+  for (let i = 0; i < PROSPECTS.ENG; i++) addFrom("ENG");
+  for (const K of COUNTRIES.filter(k => k.code !== "ENG")) for (let i = 0; i < PROSPECTS.abroad; i++) addFrom(K.code);
+  for (let i = 0; i < PROSPECTS.row; i++) addRow();
   // AI clubs pick their targets for the year
   for (const c of activeClubs()) {
     if (isUser(c) || c.tier >= 5 || (isForeign(c) && c.tier >= 2)) continue;
@@ -40,6 +48,19 @@ function newProspectClass() {
     for (const { y } of shuffle(cands).slice(0, k)) y.rel[c.id] = rf(.02, .08);
   }
   S.rec.offers = 0; S.rec.hours = recHours();
+}
+/* Top up a class made before the pool grew (5.60), and let AI clubs in those countries take an interest in the new
+   names as they would at the start of the year. */
+function topUpProspects() {
+  if (!S.prospects || !S.prospects.length) return 0;
+  const added = [];
+  for (const K of COUNTRIES.filter(k => k.code !== "ENG")) for (let n = S.prospects.filter(y => y.country === K.code).length; n < PROSPECTS.abroad; n++) added.push(addFrom(K.code));
+  for (let n = S.prospects.filter(y => y.country == null).length; n < PROSPECTS.row; n++) added.push(addRow());
+  for (const y of added) {
+    const keen = activeClubs().filter(c => !isUser(c) && c.tier < 5 && !(isForeign(c) && c.tier >= 2) && (y.country === c.country || c.rep >= 80 || c.academy >= 16 || (y.country == null && c.rep >= 70)));
+    for (const c of shuffle(keen).slice(0, ri(0, 2))) y.rel[c.id] = rf(.02, .08);
+  }
+  return added.length;
 }
 const recHours = () => Math.max(4, 8 + 3 * S.rec.scoutLvl + Math.round((S.me.rec - 10) * .6));
 const recMult = () => .7 + .03 * S.me.rec;  // a good recruiter builds relationships faster

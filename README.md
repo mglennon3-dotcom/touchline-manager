@@ -99,7 +99,8 @@ Trips abroad cost travel, shown on the button.
 The first club to offer a place (while the offer stands) gets an edge, worth about a home visit: he remembers
 who believed in him first. It settles about a quarter of contested races, and offering early to your top
 targets won 9 of 12 in testing against 5-8 without it. The Offered tab and his profile show who offered first.
-The Youth page has four tabs: Offered, Scouted, All prospects (the full class with filters) and Committed.
+Each year's youth class has 80 prospects from England, 18 from each of the seven countries abroad and 30 from
+further afield (Brazil, Argentina, West Africa, Scandinavia). The Youth page has four tabs: Offered, Scouted, All prospects (the full class with filters) and Committed.
 Offered and Scouted are your working lists: **Offered places** (everyone you've offered a place who
 hasn't signed: your standing among his suitors, how many other offers he has, or which club he chose) and
 **Scouted prospects** (everyone you've scouted but not offered). Offering moves a prospect from the second
@@ -314,7 +315,7 @@ which AI clubs draw on at once to fill thin positions.
 **Countries to search.** Under the search filters on the Transfers page, a toggle for each country (and the rest
 of the world) switches it on or off for every search tab: All players, Free agents, Transfer listed and Loan
 targets. A player counts by his club's country (a free agent by his nationality). Your choice is saved; "Select all"
-and "Unselect all" switch every country on or off (handy for picking just one or two), and the Scouted tab always lists everyone. The Youth page's All prospects tab has its own set of toggles, saved separately (a prospect counts by where he lives; Brazil, Argentina, West Africa and Scandinavia are Rest of world).
+and "Unselect all" switch every country on or off (handy for picking just one or two), and the Scouted tab always lists everyone. The Youth page's All prospects tab has its own set of toggles (the only country filter there), saved separately (a prospect counts by where he lives; Brazil, Argentina, West Africa and Scandinavia are Rest of world).
 **Favourites.** Tap the ☆ by a player's name on his card to star him: he joins the Favourites tab on Transfers
 (separate from Scouted, and any country), where the ★ takes him off again. Prospects work the same way, with a
 Favourites tab on the Youth page.
