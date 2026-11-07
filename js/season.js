@@ -497,7 +497,10 @@ function endSeason() {
   const move = (id, to, dir) => {
     const c = C(id), from = c.lg; S.leagues[from].clubs = S.leagues[from].clubs.filter(x => x !== id); S.leagues[to].clubs.push(id);
     c.lg = to; c.tier = LG[to].tier;
-    const ratio = Math.pow(S.revK[to] / S.revK[from], .7); c.revBase = Math.round(c.revBase * ratio); rescalePrice(c, ratio); sponsorClause(c, dir);
+    // Ticket prices follow the division, not S.revK (which runs lower in the second and third tiers than the fifth and
+    // sixth, so promotion could cut them): at least +15% going up, at least -13% going down. c.movedY keeps the
+    // season-end drift from moving a club's price again that summer.
+    const ratio = Math.pow(S.revK[to] / S.revK[from], .7); c.revBase = Math.round(c.revBase * ratio); rescalePrice(c, dir === "up" ? Math.max(ratio, 1.15 * 1.15) : Math.min(ratio, .87 * .87)); c.movedY = S.year; sponsorClause(c, dir);
     // Relegation clauses: wages fall roughly in line with income.
     if (dir === "down") { c.rep = Math.max(8, c.rep - 4); for (const pid of c.squad) P(pid).wage = Math.round(P(pid).wage * clamp(ratio * 1.1, .55, .95)); if (isUser(c)) news("Relegation clauses cut the squad's wages.", true, "finance"); }
     else c.rep = Math.min(90, c.rep + 4);
@@ -534,7 +537,8 @@ function endSeason() {
   // reputation follows results; income drifts toward what that reputation earns in the division
   for (const key of Object.keys(S.leagues)) rec.L[key].table.forEach(([id], i) => { const c = C(id); if (c.gone) return; const target = LG[key].rep[0] - (i + 1) * LG[key].rep[1]; c.rep = clamp(Math.round(c.rep * .85 + target * .15), 8, 99); });
   const floors = Object.fromEntries(Object.keys(S.leagues).map(k => [k, divFloor(k)]));  // shared broadcast money (settleIncome)
-  for (const c of activeClubs()) { const fair = Math.max(S.revK[c.lg] * Math.pow(1.061, c.rep), floors[c.lg] || 0), old = c.revBase; c.revBase = Math.round(c.revBase * .8 + fair * .2); rescalePrice(c, c.revBase / Math.max(1, old)); c.lastAtt = c.att[1] ? Math.round(c.att[0] / c.att[1]) : c.lastAtt; c.att = [0, 0]; aiStadium(c); }
+  // A club that just changed division keeps the ticket price its move set (c.movedY).
+  for (const c of activeClubs()) { const fair = Math.max(S.revK[c.lg] * Math.pow(1.061, c.rep), floors[c.lg] || 0), old = c.revBase; c.revBase = Math.round(c.revBase * .8 + fair * .2); if (c.movedY !== S.year) rescalePrice(c, c.revBase / Math.max(1, old)); c.lastAtt = c.att[1] ? Math.round(c.att[0] / c.att[1]) : c.lastAtt; c.att = [0, 0]; aiStadium(c); }
 
   // finances close: the summer share of income and costs, then the cost-ratio check
   for (const c of activeClubs()) {
@@ -649,7 +653,7 @@ function settleIncome(c, dir) {
   const old = c.revBase;
   if (dir === "up") c.revBase = Math.max(c.revBase, Math.round(divFloor(c.lg)));
   else c.revBase = Math.min(c.revBase, Math.round(divQuart(c.lg, x => x.revBase, .75) * 1.1));
-  if (c.revBase !== old) rescalePrice(c, c.revBase / Math.max(1, old));
+  if (c.revBase !== old) rescalePrice(c, c.revBase / Math.max(1, old));  // up when promoted, down when relegated
 }
 /* Graduate intake, at the end of every season. Your academy puts up a pool of five local 16-year-olds (academyPlayer:
    potential from its Youth development rating); they wait on the Academy page (S.intake) until the end of preseason
