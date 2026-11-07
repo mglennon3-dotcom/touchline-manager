@@ -111,10 +111,13 @@ coaches have watched one of your players aged 23 and under for 30 weeks they giv
 the Academy page (from "Slow to develop" to "Picks things up very quickly"): right 73% of the time at
 Development 10 and 86% at 20, never more than one band out.
 
-**Match ratings** follow one scale: 6 an average game, 7 good, 8 great, 9 amazing, 10 perfect. Quality against
-the standard of the match carries most of it, then goals, assists, chances he got (xG), key passes, shots on
-target, a keeper's saves, results and clean sheets. Measured over 50,000 starts: median 6.1, 7+ in 22%, 8+ in
-6%, 9+ in 1.5%, 10 in 0.3%; over a season the typical regular averages about 5.9 and the league's best 8.6-8.7.
+**Match ratings** follow one scale: 6 an average game, 7 good, 8 great, 9 amazing, 10 perfect, and only what a
+player did in the match counts: goals, assists, chances he got (xG), key passes, shots on target, tackles and
+interceptions, blocks, a keeper's saves, clean sheets and goals conceded, the result and cards. Ability counts only
+through what it lets him do, so a modest striker who wins the golden boot out-rates a star who plays badly. All but
+his own actions scale with his minutes, so a late substitute sits near 6; a red card costs 2. Measured over a season
+of starts: median 6.15, 7+ 22%, 8+ 5.5%, 9+ 1.7%, 10 0.5%; the season's best averages (about 7.5) belong to the top
+scorers. The ratings line shows each player's shots, xG, key passes, xA, tackles/interceptions, blocks or saves.
 **Development** follows the same rating scale for every age: a season averaging 5 or less slows a player's weekly
 progress (x0.85), 6 is neutral, 7 (good) speeds it (x1.15) and 8+ (great) more (x1.25). With 60%+ of the minutes,
 a good season (7+) raises his potential by 1-3 at the end of it and a great one (8+) by 2-4.

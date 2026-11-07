@@ -264,9 +264,9 @@ function quickLeagueRound(key, r) {
     rd.push({ h, a, hg, ag }); L.n++; recordRivalry(h, a, hg, ag); gateFor(H, a); fansAfterMatch(H, hg, ag, a); fansAfterMatch(A, ag, hg, h);
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
       const xi = autoPick(eligibleIds(c), c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
-      const lvl = (clubLevel(H) + clubLevel(A)) / 2;  // as in matchRating: quality against the standard of the match
-      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.05 + (won ? .3 : lost ? -.3 : 0) + (p.ovr - lvl) / 4.1 + .3 + gauss() * .25, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
-      for (let g = 0; g < gf; g++) { const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); s.s.g++; s.s.lg++; s.s.rt += .8; }
+      // Ratings as matchRating, without the detail these quick-simmed games don't have (goals add 1.3 below).
+      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.1 + (won ? .3 : lost ? -.3 : 0) + gauss() * .35, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
+      for (let g = 0; g < gf; g++) { const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); s.s.g++; s.s.lg++; s.s.rt += 1.3; }
       c.wkMatches++;
     }
   }

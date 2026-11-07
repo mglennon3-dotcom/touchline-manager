@@ -184,6 +184,16 @@ function sendOff(M, i, o, why, games) {
 
 /* Chance quality multiplier: a gamma(2) draw divided by 2 (mean 1); about 1 shot in 9 is twice the average or better. */
 const CHANCE_SPREAD = () => -Math.log((1 - R()) * (1 - R())) / 2;
+/* Defending, which the match didn't record: when an attack comes to nothing someone won the ball back (tackles
+   and interceptions, tk), and some missed shots were blocked (bk). Mostly centre-backs and holding midfielders,
+   and good tacklers and markers more often. They show on the ratings line and count in the rating, so a
+   defender's mark comes from what he did rather than from his ability alone. */
+const DEF_ROLE = { GK: 0, CB: 3, FB: 2, DM: 3, CM: 1.5, AM: .5, W: .4, ST: .2 };
+const psOf = (M, id) => (M.ps = M.ps || {})[id] || (M.ps[id] = { sh: 0, sot: 0, xg: 0, kp: 0, xa: 0, sv: 0 });
+function defAct(M, i, D, kind) {
+  const o = wpick(D.on, o => DEF_ROLE[o.slot] * Math.pow(((o.p.at.tac ?? 6) + (o.p.at.mar ?? 6)) / 20, 2));
+  if (o) { const x = psOf(M, o.p.id); x[kind] = (x[kind] || 0) + 1; }
+}
 const BIG_CHANCE = .25;  // the xG at which a chance counts as a big one: about 1 shot in 9
 function step(M) {
   if (M.done) return;
@@ -237,8 +247,8 @@ function step(M) {
       M.goals.push({ side: k, pid: sh.p.id, ast: as ? as.p.id : null, min: M.min, n: sur(sh.p) });
       lg(M, "goal", k, "GOAL! " + fillT(pick(header ? T_HEAD : T_GOAL), { s: sh.p.name }) + (as ? `, set up by ${sur(as.p)}.` : "."));
     } else if (r < q + .23) { A.sot++; xs.sot++; if (gk) { st(gk.p.id).sv++; D.sav = (D.sav || 0) + 1; } if (R() < .4 && gk) lg(M, "save", k, fillT(pick(T_SAVE), { s: sur(sh.p), k: sur(gk.p) }) + "."); }
-    else if (R() < .25) lg(M, "miss", k, fillT(pick(T_MISS), { s: sur(sh.p) }) + ".");
-  }
+    else { if (D.on.length && R() < .35) defAct(M, 1 - k, D, "bk"); if (R() < .25) lg(M, "miss", k, fillT(pick(T_MISS), { s: sur(sh.p) }) + "."); }
+  } else if (D.on.length && R() < .5) defAct(M, 1 - k, D, "tk");  // an attack broken up: a tackle or interception
   for (let i = 0; i < 2; i++) {
     const s = sd[i], outf = s.on.filter(o => o.slot !== "GK");
     if (outf.length && R() < .021 * (1 + .15 * M.riv)) {  // derbies are feistier
@@ -301,24 +311,30 @@ const matchWinner = M => M.pens ? (M.pens[0] > M.pens[1] ? M.h.club : M.a.club) 
    as it stands, during the game), goals, assists, his quality against his team's, a clean sheet or goals
    conceded for defenders and keepers, and bookings. The random part is drawn once per player per match,
    so what you see at the final whistle is what goes on his record. */
-function matchRating(M, i, id) {
-  const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), c = C(s.club), on = s.on.find(o => o.p.id === id);
-  const mins = on ? M.min - on.from : (s.mins[id] ?? 0);
+/* Match ratings on one scale: 6 an average game, 7 good, 8 great, 9 amazing, 10 perfect. Only what he did in the
+   match counts: goals, assists, chances he got (xG), key passes, shots on target, tackles and interceptions, blocks,
+   a keeper's saves, a defence's clean sheet or goals conceded, the result, cards. His ability doesn't count in itself
+   (it shows through what he does: better finishers get more chances, better defenders win the ball more), so a
+   modest striker who wins the golden boot out-rates a star who plays badly. Everything but his own actions scales
+   with his minutes, so a late substitute sits near 6 unless he does something. (5.40 rated quality, (ovr - level)
+   / 4.1: a good centre-back got 9.4 for an ordinary game, a weaker substitute 4.8 the minute he came on.) */
+// Measured over a season of starts: median 6.15, 7+ 22%, 8+ 5.5%, 9+ 1.7%, 10 0.5%; late substitutes 6.0; a red card
+// about 3.9; the season's best average led by the top scorer (36 goals: 7.47).
+const RTW = { base: 6, off: .4, res: .3, q: 9, qcap: 0, g: 1.3, a: .8, xg: .5, kp: .15, sot: .08, tk: .16, bk: .2, sv: .22, cs: .65, ga: .2, noise: .25 };
+function matchRating(M, i, id, W = RTW) {
+  const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), on = s.on.find(o => o.p.id === id);
+  const mins = on ? M.min - on.from : (s.mins[id] ?? 0), m = clamp(mins / Math.max(30, M.done ? M.end : M.min), 0, 1);
   const win = M.done ? s.goals > o2.goals || (M.pens && matchWinner(M) === s.club) : s.goals > o2.goals;
   const loss = M.done ? s.goals < o2.goals || (M.pens && matchWinner(M) !== s.club) : s.goals < o2.goals;
   const g = M.goals.filter(x => x.pid === id).length, a = M.goals.filter(x => x.ast === id).length;
-  const form = (M.form ||= {})[id] ??= gauss() * .25;
-  // The scale: 6 an average game, 7 good, 8 great, 9 amazing, 10 perfect. Quality against the standard of this match
-  // (the two sides' average level) carries most of it, so the best players are great most weeks; then what he did:
-  // goals, assists, chances he got (xG), key passes, shots on target, a keeper's saves, the result. Measured on a
-  // season: starters' median game 6.0, about a quarter 7+, 5% 8+, 1% 9+; the league's best average 8.5-9. (Quality
-  // against his own club at /25 bunched averages between 6 and 7, and the best barely reached 7.)
+  const form = (M.form ||= {})[id] ??= gauss();
   const lvl = M.lvl || (M.lvl = (clubLevel(C(M.h.club)) + clubLevel(C(M.a.club))) / 2), x = (M.ps || {})[id] || {};
-  const did = .4 * (x.xg || 0) + .12 * (x.kp || 0) + .06 * (x.sot || 0) + (p.pos === "GK" ? .12 * (x.sv || 0) : 0);
-  let rt = 6.05 + (win ? .3 : loss ? -.3 : 0) + g * .8 + a * .4 + (p.ovr - lvl) / 4.1 + did + form;
-  if (LINE[p.pos] === "DEF" || p.pos === "GK") { rt -= o2.goals * .14; if (o2.goals === 0 && mins >= 60) rt += .55; }
+  const did = g * W.g + a * W.a + W.xg * (x.xg || 0) + W.kp * (x.kp || 0) + W.sot * (x.sot || 0) + W.tk * (x.tk || 0) + W.bk * (x.bk || 0) + (p.pos === "GK" ? W.sv * (x.sv || 0) : 0);
+  let ctx = (win ? W.res : loss ? -W.res : 0) + clamp((p.ovr - lvl) / W.q, -W.qcap, W.qcap) + form * W.noise - W.off;
+  if (LINE[p.pos] === "DEF" || p.pos === "GK") { ctx -= o2.goals * W.ga; if (o2.goals === 0 && mins >= 60) ctx += W.cs; }
+  let rt = W.base + m * ctx + did;
   if (M.cards.includes(id)) rt -= .2;
-  if (M.reds.some(r => r[0] === id)) rt -= 1;
+  if (M.reds.some(r => r[0] === id)) rt -= 2;  // a sending-off costs his side the game: about 4 (it was -1, leaving 5.1)
   return clamp(rt, 3, 10);
 }
 function applyMatch(M) {

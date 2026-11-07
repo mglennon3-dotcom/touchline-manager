@@ -487,7 +487,7 @@ function viewSquad() {
     { k: "app", l: "Apps", r: 1, v: p => p.s.app, f: p => p.s.app },
     { k: "g", l: "G", r: 1, v: p => p.s.g, f: p => p.s.g },
     { k: "a", l: "A", r: 1, v: p => p.s.a, f: p => p.s.a, cls: "hide-sm" },
-    { k: "rt", l: "Avg", r: 1, v: p => p.s.app ? p.s.rt / p.s.app : 0, f: p => p.s.app ? (p.s.rt / p.s.app).toFixed(2) : "—", cls: "hide-sm" },
+    { k: "rt", l: "Avg rating", r: 1, v: p => p.s.app ? p.s.rt / p.s.app : 0, f: p => p.s.app ? `<span class="mr ${mrCls(p.s.rt / p.s.app)}">${(p.s.rt / p.s.app).toFixed(2)}</span>` : "—" },
     ...(S.set.sqAdv ? ADV_COLS : []),  // off by default: nine more columns made the squad page heavy
   ];
   return `<div class="stack">${needsCard(false)}<section class="card"><div class="card-h"><h2>Squad</h2>
@@ -1139,6 +1139,7 @@ function advLine(x) {
   if (x.sh) t.push(`${x.sh} sh${x.sot ? ` (${x.sot} on)` : ""}`, `${x.xg.toFixed(2)} xG`);
   if (x.kp) t.push(`${x.kp} KP`, `${x.xa.toFixed(2)} xA`);
   if (x.sv) t.push(`${x.sv} save${x.sv > 1 ? "s" : ""}`);
+  if (x.tk || x.bk) t.push([x.tk ? `${x.tk} tkl/int` : "", x.bk ? `${x.bk} blk` : ""].filter(Boolean).join(" · "));
   return t.join(" · ");
 }
 /* Season advanced stats, for the squad table. G−xG is finishing: above zero, he scores more than his chances

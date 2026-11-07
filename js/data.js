@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.40.2";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.41.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
