@@ -434,7 +434,10 @@ function academyPlayer(c, age) {
   const p = makePlayer({ pos: pick(["CB", "FB", "DM", "CM", "AM", "W", "ST", "CB", "GK"]), base: 50, age, nat: c.country, club: c.id, rep: c.rep });
   // Academy kids peak around the club's own level: a few exceed it, most fall short.
   // The academy rating drives a graduate's ceiling far more than the club's division does.
-  p.pot = clamp(Math.round(o100(5 + c.academy * .55 + gauss() * 2.2) + (lvlForRep(c.rep) - 60) * .25), 38, 92);
+  // Graduates are a lottery: the academy sets the middle, but the spread is wide (3.2 points of 20, was 2.2), and
+  // about one in twenty is a gem or a dud well outside it.
+  const luck = R() < .05 ? ri(3, 6) : R() < .05 ? -ri(2, 4) : 0;
+  p.pot = clamp(Math.round(o100(5 + c.academy * .55 + gauss() * 3.2 + luck) + (lvlForRep(c.rep) - 60) * .25), 38, 92);
   setRating(p, clamp(p.pot - ri(6, 14) - (18 - age) * 3, 33, p.pot));
   p.wage = Math.max(12000, Math.round(wageDemand(p, c.rep) * .6 / 1000) * 1000);
   p.yt[c.country] = Math.max(1, age - 15); p.yrs = ri(2, 3);

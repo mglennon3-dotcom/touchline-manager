@@ -208,8 +208,9 @@ Head-to-head records are kept for every rivalry.
 
 **Free agents** who go three seasons without a club leave the game at the end of the third season. (The pool is
 also held to 300 at each season's end, dropping the least valuable.)
-**Graduate intake.** At the end of each season your academy offers a pool of five local 16-year-olds, their
-potential set by its Youth development rating. They appear at the top of the Academy page with their rating and
+**Graduate intake.** At the end of each season your academy offers a pool of five local 16-year-olds. Their
+potential is a lottery centred on the Youth development rating: at 10 most land between 7 and 15 of 20 (median
+11), and about one in twenty is a gem or a dud well outside that. They appear at the top of the Academy page with their rating and
 potential: keep up to three, or none, by the end of preseason week 2. Those you don't keep are released as free
 agents, leaving three weeks of the window for any club to sign them. Nobody is picked for you: at the deadline
 whoever is ticked joins and the rest go, so ticking none releases all five. The academy holds 15: graduates and
