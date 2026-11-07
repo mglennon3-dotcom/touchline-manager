@@ -363,6 +363,8 @@ function assessSCR() {
       if (R() < s.risk) { schemeBad = true; s.found = true; news(`The league rules ${c.name}'s ${s.what} was not at fair market value. ${money(s.amt)} is struck from their accounts.`, isUser(c) || c.lg === me().lg || c.lg === "E1", "finance"); }
     }
     const adj = schemeBad ? cost / Math.max(1, rev - sum(c.schemes.filter(s => s.y === S.year && s.found), s => s.amt)) : ratio;
+    // An amnesty (S.amnesty, a season you were misled about the ratio): no charge, deduction or levy that season.
+    if (isUser(c) && S.amnesty && S.amnesty.y === S.year && S.amnesty.club === c.id) { if (adj > RULES.scrLimit) news(`Cost-ratio amnesty: your ${pct(adj)} ratio this season brings no levy, charge or points deduction. Normal rules apply from next season.`, true, "finance"); continue; }
     // Points deductions are an English-league sanction; foreign clubs only pay the levy.
     if (adj > RULES.scrSporting && !isForeign(c)) {
       const pts = Math.min(15, 6 + Math.floor((adj - RULES.scrSporting) / .05) + (schemeBad ? 2 : 0));

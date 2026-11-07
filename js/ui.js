@@ -972,6 +972,8 @@ function finProjection(c) {
   ];
   const ratio = scr(c), rev = annualIncome(c) + oneOffs(c);
   const levy = ratio > RULES.scrLimit && ratio <= RULES.scrSporting ? Math.round((ratio - RULES.scrLimit) * rev * .5) : 0;
+  const amn = S.amnesty && S.amnesty.y === S.year && S.amnesty.club === c.id && !summer;
+  if (amn) cost.push(["Cost-ratio levy", g("levy"), 0, `amnesty this season: no levy, charge or deduction at ${pct(ratio)}`]); else
   cost.push(["Cost-ratio levy", g("levy"), levy, ratio > RULES.scrSporting ? `ratio ${pct(ratio)}: above ${pct(RULES.scrSporting)} that's a charge and a points deduction, not a levy` : levy ? `ratio ${pct(ratio)} against ${pct(RULES.scrLimit)}` : ""]);
   const tot = rows => rows.reduce((a, r) => [a[0] + r[1], a[1] + r[1] + r[2]], [0, 0]);
   const [incSo, incAll] = tot(inc), [costSo, costAll] = tot(cost);

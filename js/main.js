@@ -482,6 +482,10 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
       if (t.from === c.id) { f.sales += t.fee; f.sold += t.fee; } else if (t.to === c.id) { f.bought += t.fee; f.agent += t.fee * .05; } }
     S.preFix = 1; }
   if (S.phase === "summer") S.preFix = 1;  // a save in preseason now books the summer correctly (acct)
+  // 5.59.1: a one-off amnesty for one save, misled by the pre-5.58 preseason ratio (71% shown, ~150% real): no levy,
+  // charge or deduction for the cost ratio in its current season. Granted to whoever loads this version mid-season
+  // with the ratio over the limit; it covers this season only.
+  if (!S.amnestyV && S.club != null && !S.sacked) { if (S.phase === "season" && scr(me()) > RULES.scrLimit) { S.amnesty = { y: S.year, club: S.club }; news(`Cost-ratio amnesty for ${seasonLabel(S.year)}: the preseason figures understated your ratio, so this season brings no levy, charge or points deduction. Normal rules apply from next season.`, true, "finance"); } S.amnestyV = 1; }
   // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
   if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
