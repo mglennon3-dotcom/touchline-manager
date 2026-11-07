@@ -149,6 +149,17 @@ function resolveDecision(m, choice) {
     if (p.amb > .6 && from.rep > me().rep) { p.mood = Math.max(0, p.mood - 18); return `Bid rejected. ${p.name} is upset to miss the move.`; }
     return "Bid rejected.";
   }
+  if (m.type === "auction") {
+    if (!p || p.club !== S.club) return "That player has already left.";
+    if (choice.startsWith("acc:")) {
+      const b = m.bids.find(x => x.from === +choice.slice(4)), to = C(b.from), n = rivalry(to.id, S.club);
+      transfer(p, to, b.fee, contractDemand(p, to, willingness(p, to)), ri(2, 5)); fixUserLineup();
+      if (n) S.board = clamp(S.board - 2 * n, 0, 100);
+      return `${p.name} sold to ${to.name} for ${money(b.fee)}${b.fee < m.bids[0].fee ? `, not the highest bid (${money(m.bids[0].fee)})` : ""}.${n ? " Selling to a rival didn't go down well." : ""}`;
+    }
+    if (p.amb > .6 && m.bids.some(x => C(x.from).rep > me().rep)) { p.mood = Math.max(0, p.mood - 18); return `All bids rejected. ${p.name} is upset to miss the move.`; }
+    return "All bids rejected.";
+  }
   if (m.type === "req") {
     if (!p) return "";
     if (choice === "list") { p.listed = true; return `${p.name} is on the transfer list. Clubs will be told he's available.`; }

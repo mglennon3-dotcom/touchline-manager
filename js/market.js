@@ -100,6 +100,10 @@ const interestWord = n => n >= 25 ? ["High", "good"] : n >= 8 ? ["Moderate", ""]
    in below their level, so they bid only on players they have looked at. */
 function aiTransferDay(intensity) {
   const all = Object.values(S.players).filter(p => p.age >= 18 && !p.loan && !p.intake);
+  // Listing a player (or his transfer request) tells every club he's available: they all look at him, on top of
+  // their random looks. Before 5.56 only a club whose sample happened to include him saw him, and four players listed
+  // through a whole preseason drew no bids at all.
+  const onMarket = all.filter(p => p.listed || p.req);
   for (const c of activeClubs()) {
     if (isUser(c)) continue;
     aiScoutSetup(c);
@@ -111,6 +115,7 @@ function aiTransferDay(intensity) {
     const lvl = clubLevel(c), budget = c.cash + (c.owner === "reckless" ? c.revBase * .3 : 0);
     const pool = all.length ? Array.from({ length: 270 }, () => all[Math.floor(R() * all.length)]) : [];
     for (const id of Object.keys(c.sc)) { const p = S.players[id]; if (p && !p.loan) pool.push(p); }
+    pool.push(...onMarket);
     const seen = new Set(), cands = [];
     for (const p of pool) {
       if (!p || seen.has(p.id) || p.club === c.id || p.age < 18 || FAM[p.pos][role] < .9 || p.age > 31 || hasNamesake(c, p.name)) continue;
@@ -132,18 +137,59 @@ function aiTransferDay(intensity) {
       if (w < .3) continue;
       // A listed player draws a bid every time a club settles on him at up to his value; dearer, fewer clubs follow
       // through (half as often at 150%, a fifth at 180%+). Unlisted, one time in four.
-      if (p.club === S.club) { if (p.req || (p.listed ? R() < clamp(2 - (p.listPct || 1), .2, 1) : R() < .25)) offerToUser(p, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); break; }
+      if (p.club === S.club) { if (p.req || (p.listed ? R() < clamp(2 - (p.listPct || 1), .2, 1) : R() < .25)) (p.listed ? startAuction : offerToUser)(p, c, Math.round(fee * rf(.85, 1.05) / 1e5) * 1e5); break; }
       if (p.club >= 0) { const seller = C(p.club); if (seller.squad.filter(id => FAM[P(id).pos][p.pos] >= .9).length <= 2 || rivalry(seller.id, c.id) >= 2) continue; }
       transfer(p, c, fee, contractDemand(p, c, w), ri(2, 5)); delete c.sc[p.id];
       if (regInfo(c).seniors > RULES.aiSeniorCap) trimSquad(c, false);
       break;
     }
   }
+  listedMarket(intensity);
+}
+/* A bidding war for one of your listed players. The club that settled on him opens; other clubs that could bid
+   (keenOn) join, about one or two on average, up to four bidders in all. Each has a private top price: what it
+   rates him at (85-140% of the asking price it sees) and no more than 60% of what it can spend. The price rises
+   until one is left, who pays 5% over the runner-up's top bid (never more than its own). One decision lists every
+   club's final bid; you take whichever you like, or none. With only the opener it's an ordinary bid. */
+const bidBudget = b => (b.cash + (b.owner === "reckless" ? b.revBase * .3 : 0)) * .6;
+/* Would club b bid for p? It rates him (what it can see is in its range), can pay the price and he'd go. */
+function keenOn(p, b) {
+  if (isUser(b) || b.tier > 6 || b.gone) return false;
+  const lvl = clubLevel(b), est = aiRating(p, b);
+  return est != null && est >= lvl - 1 && est <= lvl + 8 && askingPrice(p, b) <= bidBudget(b) && willingness(p, b) >= .3;
+}
+/* Each week of a window, your listed players are advertised: every keen club has a 3% chance to open the bidding
+   (so about 70% a week with 40 keen clubs), scaled down for a dear price as in aiTransferDay. */
+function listedMarket(intensity) {
+  if (S.club == null || !intensity) return;
+  for (const p of me().squad.map(P).filter(p => p.listed && !p.loan)) {
+    const keen = activeClubs().filter(b => keenOn(p, b)); if (!keen.length) continue;
+    const chance = (1 - Math.pow(.97, keen.length)) * clamp(2 - (p.listPct || 1), .2, 1) * clamp(intensity / .6, .4, 1.5);
+    if (R() < chance) { const c = pick(keen); startAuction(p, c, Math.round(askingPrice(p, c) * rf(.85, 1.05) / 1e4) * 1e4); }
+  }
+}
+function startAuction(p, opener, openFee) {
+  if (S.inbox.some(m => !m.done && (m.type === "bid" || m.type === "auction") && m.pid === p.id)) return;
+  const budget = bidBudget, pool = activeClubs().filter(b => b.id !== opener.id && keenOn(p, b));
+  const join = clamp(1.5 / Math.max(1, pool.length), .05, .5);  // about one or two rivals on average, however many could
+  const rivals = shuffle(pool).filter(() => R() < join).slice(0, 3);
+  if (!rivals.length) return offerToUser(p, opener, openFee);
+  const top = b => Math.max(askingPrice(p, b) * .85, Math.min(budget(b), askingPrice(p, b) * rf(.85, 1.4)));
+  const bids = [{ c: opener, max: Math.max(openFee, top(opener)) }, ...rivals.map(c => ({ c, max: top(c) }))].sort((a, b) => b.max - a.max);
+  bids[0].fee = Math.min(bids[0].max, bids[1].max * 1.05);
+  for (const b of bids.slice(1)) b.fee = b.max;
+  for (const b of bids) b.fee = roundFee(b.fee);
+  bids.sort((a, b) => b.fee - a.fee);
+  const r20s = Math.round(r20(p.ovr)), ambUp = p.amb > .6 && bids.some(b => b.c.rep > me().rep);
+  addDecision({ type: "auction", pid: p.id, bids: bids.map(b => ({ from: b.c.id, fee: b.fee })),
+    title: `Bidding war for ${p.name}: ${bids.length} clubs, best ${money(bids[0].fee)}`,
+    body: `${bids.length} clubs went head to head for ${p.name} (${p.pos}, ${p.age}, rated ${r20s}). Final bids: ${bids.map(b => `${b.c.name} (${leagueName(leagueKey(b.c))}) ${money(b.fee)}`).join("; ")}. Your asking price ${money(askingPrice(p))}; his value ${money(value(p))}.${ambUp ? " He is ambitious and would like a move to a bigger club." : ""}`,
+    opts: [...bids.map(b => [`acc:${b.c.id}`, `Sell to ${b.c.short || b.c.name} · ${money(b.fee)}`]), ["reject", "Reject all"]] });
 }
 function offerToUser(p, from, fee) {
-  if (S.inbox.some(m => !m.done && m.type === "bid" && m.pid === p.id)) return;
+  if (S.inbox.some(m => !m.done && (m.type === "bid" || m.type === "auction") && m.pid === p.id)) return;
   addDecision({ type: "bid", pid: p.id, from: from.id, fee, title: `${from.name} bid ${money(fee)} for ${p.name}`,
-    body: `${from.name} (${leagueName(leagueKey(from))}) have offered ${money(fee)} for ${p.name}, ${p.age}, ${p.pos} rated ${p.ovr}. His market value is ${money(value(p))}.${p.req ? " He has asked to leave." : ""}${from.rep > me().rep && p.amb > .6 ? " He is ambitious and would like the move." : ""}`,
+    body: `${from.name} (${leagueName(leagueKey(from))}) have offered ${money(fee)} for ${p.name}, ${p.age}, ${p.pos} rated ${Math.round(r20(p.ovr))}. His market value is ${money(value(p))}.${p.req ? " He has asked to leave." : ""}${from.rep > me().rep && p.amb > .6 ? " He is ambitious and would like the move." : ""}`,
     opts: [["accept", "Accept the bid"], ["reject", "Reject"]] });
 }
 
