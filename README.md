@@ -111,13 +111,13 @@ coaches have watched one of your players aged 23 and under for 30 weeks they giv
 the Academy page (from "Slow to develop" to "Picks things up very quickly"): right 73% of the time at
 Development 10 and 86% at 20, never more than one band out.
 
-**Match ratings** run from about 6.5 for an ordinary game to 8.5+ for the league's best: quality against the
-standard of the match counts, and so do the chances a player gets (xG), key passes, shots on target and a keeper's
-saves, as well as goals, assists, results and clean sheets. Over a season the median regular averages about 6.5,
-the top 10% about 7.3-7.6 and the very best 8.5-8.9.
+**Match ratings** follow one scale: 6 an average game, 7 good, 8 great, 9 amazing, 10 perfect. Quality against
+the standard of the match carries most of it, then goals, assists, chances he got (xG), key passes, shots on
+target, a keeper's saves, results and clean sheets. Measured over 50,000 starts: median 6.1, 7+ in 22%, 8+ in
+6%, 9+ in 1.5%, 10 in 0.3%; over a season the typical regular averages about 5.9 and the league's best 8.6-8.7.
 **Young players' development** rewards playing well in the first team: for players 21 and under the match-rating
-boost is full at a season average of 7.0, and a breakout season (60%+ of minutes) that raises potential needs
-7.0 too. Older players need 7.8 and 7.5.
+boost rises from a 5.6 average (the median youngster) and is full at 6.8 (their top 10%), and a breakout season
+(60%+ of minutes) that raises potential needs 6.8 too. Older players need 7.5 and 7.2.
 
 **Academy** (its own page): your youth players are kept apart from the first team. Summer graduates and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the

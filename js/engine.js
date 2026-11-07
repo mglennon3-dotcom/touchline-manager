@@ -307,14 +307,15 @@ function matchRating(M, i, id) {
   const win = M.done ? s.goals > o2.goals || (M.pens && matchWinner(M) === s.club) : s.goals > o2.goals;
   const loss = M.done ? s.goals < o2.goals || (M.pens && matchWinner(M) !== s.club) : s.goals < o2.goals;
   const g = M.goals.filter(x => x.pid === id).length, a = M.goals.filter(x => x.ast === id).length;
-  const form = (M.form ||= {})[id] ??= gauss() * .3;
-  // Quality against the standard of this match (the two sides' average level), and what he did beyond goals and
-  // assists: chances he got (xG), key passes, shots on target, a keeper's saves. Quality was measured against his
-  // own club at /25, which bunched season averages between 6 and 7: the best players in the league averaged
-  // barely 7. Now they reach 8.5 and more.
+  const form = (M.form ||= {})[id] ??= gauss() * .25;
+  // The scale: 6 an average game, 7 good, 8 great, 9 amazing, 10 perfect. Quality against the standard of this match
+  // (the two sides' average level) carries most of it, so the best players are great most weeks; then what he did:
+  // goals, assists, chances he got (xG), key passes, shots on target, a keeper's saves, the result. Measured on a
+  // season: starters' median game 6.0, about a quarter 7+, 5% 8+, 1% 9+; the league's best average 8.5-9. (Quality
+  // against his own club at /25 bunched averages between 6 and 7, and the best barely reached 7.)
   const lvl = M.lvl || (M.lvl = (clubLevel(C(M.h.club)) + clubLevel(C(M.a.club))) / 2), x = (M.ps || {})[id] || {};
-  const did = .5 * (x.xg || 0) + .15 * (x.kp || 0) + .08 * (x.sot || 0) + (p.pos === "GK" ? .15 * (x.sv || 0) : 0);
-  let rt = 6.5 + (win ? .35 : loss ? -.35 : 0) + g * .95 + a * .5 + (p.ovr - lvl) / 6 + did + form;
+  const did = .4 * (x.xg || 0) + .12 * (x.kp || 0) + .06 * (x.sot || 0) + (p.pos === "GK" ? .12 * (x.sv || 0) : 0);
+  let rt = 6.05 + (win ? .3 : loss ? -.3 : 0) + g * .8 + a * .4 + (p.ovr - lvl) / 4.1 + did + form;
   if (LINE[p.pos] === "DEF" || p.pos === "GK") { rt -= o2.goals * .14; if (o2.goals === 0 && mins >= 60) rt += .55; }
   if (M.cards.includes(id)) rt -= .2;
   if (M.reds.some(r => r[0] === id)) rt -= 1;

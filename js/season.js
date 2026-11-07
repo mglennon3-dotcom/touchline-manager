@@ -265,8 +265,8 @@ function quickLeagueRound(key, r) {
     for (const [c, gf, ga] of [[H, hg, ag], [A, ag, hg]]) {
       const xi = autoPick(eligibleIds(c), c.formation).filter(x => x != null).map(P), won = gf > ga, lost = gf < ga;
       const lvl = (clubLevel(H) + clubLevel(A)) / 2;  // as in matchRating: quality against the standard of the match
-      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.4 + (won ? .35 : lost ? -.35 : 0) + (p.ovr - lvl) / 6 + .4 + gauss() * .3, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
-      for (let g = 0; g < gf; g++) { const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); s.s.g++; s.s.lg++; s.s.rt += .9; }
+      for (const p of xi) { p.s.app++; p.s.min += 90; p.wm += 90; p.s.rt += clamp(6.05 + (won ? .3 : lost ? -.3 : 0) + (p.ovr - lvl) / 4.1 + .3 + gauss() * .25, 3, 10); if (R() < .009 * injMult(p)) injure(p); }
+      for (let g = 0; g < gf; g++) { const s = wpick(xi, p => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[p.pos] * p.ovr); s.s.g++; s.s.lg++; s.s.rt += .8; }
       c.wkMatches++;
     }
   }
@@ -321,9 +321,9 @@ function weekly() {
       if (p.inj > 0) p.inj--;
       // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.
       if (p.ovr < p.pot) {
-        // Match ratings: the full boost (x1.15) at a season average of 7.0 for players 21 and under (about the top 20% of
-        // youngsters since 5.40 widened ratings: median ~6.3, top 10% ~7.2) and 7.8 for the rest (about the top 5%).
-        const form = p.s.app >= 3 ? clamp((p.s.rt / p.s.app - 6) / (p.age <= 21 ? .667 : 1.2), 0, 1.5) : .5;
+        // Match ratings (6 an average game, 7 good, 8 great): the boost rises from a 5.6 season average, the median
+        // youngster, and is full (x1.15) at 6.8 for players 21 and under, about their top 10%, and at 7.5 for the rest.
+        const form = p.s.app >= 3 ? clamp((p.s.rt / p.s.app - 5.6) / (p.age <= 21 ? .8 : 1.267), 0, 1.5) : .5;
         const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * 1.12 * t.grow * (p.age <= 21 ? acad : 1)
           * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * (.85 + .2 * form) * gsMult(p);
         if (R() < ch) growAttrs(p, 1);
@@ -555,11 +555,11 @@ function ageAndContracts() {
     if (p.age >= 29) { declineAttrs(p, ri(0, Math.min(4, p.age - 27))); p.pot = p.ovr; }
     else if (p.age <= 24) {
       // Young players who don't play, or are miserable, lose some of their ceiling; a breakout season raises it.
-      const avg = p.s.app ? p.s.rt / p.s.app : 6.5;
+      const avg = p.s.app ? p.s.rt / p.s.app : 6;
       let d = ri(-2, 1);
       if (p.age >= 18 && p.pt < .25) d -= ri(1, 3);
       if (p.mood < 35) d -= ri(0, 2);
-      if (p.pt > .6 && avg >= (p.age <= 22 ? 7 : 7.5)) d += ri(1, 3);  // a breakout season: 7.0 for youngsters (21 and under before today's birthday), 7.5 (about the top 10%) for the rest
+      if (p.pt > .6 && avg >= (p.age <= 22 ? 6.8 : 7.2)) d += ri(1, 3);  // a breakout season: 6.8 (their top 10%) for youngsters (21 and under before today's birthday), 7.2 for the rest
       p.pot = clamp(p.pot + d, p.ovr, 95);
     }
     p.fit = 100; p.sus = 0; p.inj = Math.max(0, p.inj - 10); p.yc = 0; p.req = p.req && p.mood < 40; p.promise = null;
