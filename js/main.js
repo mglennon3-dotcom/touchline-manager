@@ -474,6 +474,14 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
     const up = LG[c.lg].tier < LG[h.lg].tier, now = sponsorTotal(c); settleIncome(c, up ? "up" : "down");  // promoted or relegated last season
     if (now) { const lim = up ? divQuart(c.lg, sponsorTotal, .25) * .9 : divQuart(c.lg, sponsorTotal, .75) * 1.1; if (up ? now < lim : now > lim) scaleDeals(c, lim / now); }
     if (S.phase === "season") c.revSeason = up ? Math.max(c.revSeason || 0, c.revBase) : Math.min(c.revSeason || c.revBase, c.revBase); } S.promoFix = 1; }
+  // 5.59: before 5.58 a preseason's transfers were booked to the season just finished. If this season has started and
+  // the summer's business sits in last season's books, move it across from the transfer log (fees counted as profit:
+  // the book value at the time isn't kept). Only your club, only last summer's window.
+  if (!S.preFix && S.club != null && !S.sacked && S.phase === "season") { const c = me(), f = c.fin;
+    for (const t of S.tlog || []) { if (t.y !== S.year - 1 || !/^Pre/.test(t.w) || !t.fee) continue;
+      if (t.from === c.id) { f.sales += t.fee; f.sold += t.fee; } else if (t.to === c.id) { f.bought += t.fee; f.agent += t.fee * .05; } }
+    S.preFix = 1; }
+  if (S.phase === "summer") S.preFix = 1;  // a save in preseason now books the summer correctly (acct)
   // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
   if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
