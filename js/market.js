@@ -62,7 +62,7 @@ function transfer(p, to, fee, wage, yrs, plan = 1) {
   const big = fee >= 15e6 || isUser(to) || (from && isUser(from));
   S.tlog.unshift({ y: S.year, w: whenLabel(), pid: p.id, name: p.name, from: from ? from.id : -1, to: to.id, fee });
   if (S.tlog.length > 300) S.tlog.length = 300;
-  if (big) news(`${p.name} (${p.pos}, ${p.ovr}) ${from ? `moves from ${from.name}` : "signs as a free agent"} to ${to.name}${fee ? ` for ${money(fee)}` : ""}.`, isUser(to) || (from && isUser(from)), "transfer");
+  if (big) news(`${p.name} (${p.pos}, rated ${Math.round(r20(p.ovr))}) ${from ? `moves from ${from.name}` : "signs as a free agent"} to ${to.name}${fee ? ` for ${money(fee)}` : ""}.`, isUser(to) || (from && isUser(from)), "transfer");
 }
 
 /* AI clubs buy where their squad is thin for the shape they play. */
