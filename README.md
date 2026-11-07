@@ -354,6 +354,11 @@ Both the Transfers and Youth pages show this week's scouting hours above the tab
 Sorting a search sorts every player who matches, then shows the first 200, so the cheapest-first order is the
 whole market's. The search filters include Interest: Keen, Open or keen, Would sign (everyone but Not interested, who turn
 any offer down) or Not interested.
+**Promotion and relegation money.** Broadcast money is largely shared within a division: a promoted club's base
+income goes to at least 90% of its new division's lower quartile, and the yearly adjustment never drags it back
+below that; its sponsorship rises at least as far. A relegated club is capped at 110% of its new division's upper
+quartile. (Before, promotion scaled income by about 1.4x and closed 20% of the remaining gap a season, leaving a
+promoted club on its old division's money for years.)
 **Preseason accounts.** Transfers in the summer window count in the coming season's accounts (they used to go
 into the season just finished), and the preseason cost ratio counts only income that carries into that season:
 regular income plus profit on players sold this summer, not last season's prize money, merit payment or sales.

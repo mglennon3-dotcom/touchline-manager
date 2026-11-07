@@ -469,6 +469,8 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // year, which doesn't change until kick-off), so some showed "Too early to tell" after a full season of 44 games.
   // Anyone with a completed season for your club in his record is known to your coaches.
   if (!S.seenV2 && S.club != null && !S.sacked) { for (const id of me().squad) { const p = P(id); if ((p.hist || []).some(h => h[2] === S.club)) p.seen = Math.max(p.seen || 0, GS_SEEN); } S.seenV2 = 1; }
+  // 5.59: clubs promoted at the last season's end were left on their old division's income; bring them up once.
+  if (!S.promoFix) { for (const c of activeClubs()) { const h = (c.hist || [])[c.hist.length - 1]; if (h && h.y >= S.year - 1 && LG[h.lg] && LG[c.lg] && LG[c.lg].tier < LG[h.lg].tier && !LG[c.lg].foreign) { settleIncome(c, "up"); const now = sponsorTotal(c), fl = divQuart(c.lg, sponsorTotal, .25) * .9; if (now && now < fl) scaleDeals(c, fl / now); if (S.phase === "season") c.revSeason = Math.max(c.revSeason || 0, c.revBase); } } S.promoFix = 1; }
   // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
   if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.

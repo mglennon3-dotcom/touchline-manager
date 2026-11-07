@@ -457,6 +457,7 @@ function endSeason() {
     // Relegation clauses: wages fall roughly in line with income.
     if (dir === "down") { c.rep = Math.max(8, c.rep - 4); for (const pid of c.squad) P(pid).wage = Math.round(P(pid).wage * clamp(ratio * 1.1, .55, .95)); if (isUser(c)) news("Relegation clauses cut the squad's wages.", true, "finance"); }
     else c.rep = Math.min(90, c.rep + 4);
+    settleIncome(c, dir);
     moves.push([id, dir, from, to]);
   };
   for (const key of ["E1", "E2", "E3", "E4"]) for (const id of downs[key]) move(id, LG_BELOW[key], "down");
@@ -488,7 +489,8 @@ function endSeason() {
 
   // reputation follows results; income drifts toward what that reputation earns in the division
   for (const key of Object.keys(S.leagues)) rec.L[key].table.forEach(([id], i) => { const c = C(id); if (c.gone) return; const target = LG[key].rep[0] - (i + 1) * LG[key].rep[1]; c.rep = clamp(Math.round(c.rep * .85 + target * .15), 8, 99); });
-  for (const c of activeClubs()) { const fair = S.revK[c.lg] * Math.pow(1.061, c.rep), old = c.revBase; c.revBase = Math.round(c.revBase * .8 + fair * .2); rescalePrice(c, c.revBase / Math.max(1, old)); c.lastAtt = c.att[1] ? Math.round(c.att[0] / c.att[1]) : c.lastAtt; c.att = [0, 0]; aiStadium(c); }
+  const floors = Object.fromEntries(Object.keys(S.leagues).map(k => [k, divFloor(k)]));  // shared broadcast money (settleIncome)
+  for (const c of activeClubs()) { const fair = Math.max(S.revK[c.lg] * Math.pow(1.061, c.rep), floors[c.lg] || 0), old = c.revBase; c.revBase = Math.round(c.revBase * .8 + fair * .2); rescalePrice(c, c.revBase / Math.max(1, old)); c.lastAtt = c.att[1] ? Math.round(c.att[0] / c.att[1]) : c.lastAtt; c.att = [0, 0]; aiStadium(c); }
 
   // finances close: the summer share of income and costs, then the cost-ratio check
   for (const c of activeClubs()) {
@@ -589,6 +591,22 @@ function ageAndContracts() {
   if (up.length) news(`${up.map(p => p.name).join(", ")} ${up.length > 1 ? "have" : "has"} turned 21 and moved up from the academy to the first-team squad. Register ${up.length > 1 ? "them" : "him"} on the Squad page before the season starts.`, true, "youth");
 }
 const FA_YEARS = 3;  // free agents unsigned this many seasons leave the game
+/* A club that changes division lands near the new division's money straight away. Broadcast income differs between
+   divisions mostly through reputation (S.revK is only 1.65x higher in the second tier than the third), so scaling by
+   the ratio and closing 20% of the gap a season left a promoted club on third-tier money for years: one earned
+   2.03M a year in the second division, where the poorest club earned 3.1M, and ran a 150% cost ratio. So broadcast
+   money is treated as largely shared: promoted, a club's base income is at least 90% of the division's lower
+   quartile (divFloor), and the season-end drift never pulls it back below that; relegated, at most 110% of the
+   upper quartile. Sponsorship follows (sponsorClause). The floor sits below the quartile it's taken from, so it
+   doesn't ratchet the division's money up. */
+function divQuart(lg, f, q) { const v = S.leagues[lg].clubs.map(C).filter(c => !c.gone).map(f).sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) * q)] : 0; }
+const divFloor = lg => divQuart(lg, c => c.revBase, .25) * .9;
+function settleIncome(c, dir) {
+  const old = c.revBase;
+  if (dir === "up") c.revBase = Math.max(c.revBase, Math.round(divFloor(c.lg)));
+  else c.revBase = Math.min(c.revBase, Math.round(divQuart(c.lg, x => x.revBase, .75) * 1.1));
+  if (c.revBase !== old) rescalePrice(c, c.revBase / Math.max(1, old));
+}
 /* Graduate intake, at the end of every season. Your academy puts up a pool of five local 16-year-olds (academyPlayer:
    potential from its Youth development rating); they wait on the Academy page (S.intake) until the end of preseason
    week 2 (INTAKE_DEADLINE), which leaves three weeks of the window for other clubs to sign the ones you release. Only

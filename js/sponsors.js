@@ -47,10 +47,14 @@ function sponsorPay(c, share) {
 }
 /* Clauses: promotion lifts a deal, relegation cuts it. */
 function sponsorClause(c, dir) {
-  const k = dir === "up" ? 1.2 : .75;
-  for (const d of c.deals || []) { d.amt = Math.round(d.amt * k); for (const b in d.bonus) d.bonus[b] = Math.round(d.bonus[b] * k); }
-  if (isUser(c)) news(`Sponsorship clauses: your deals are ${dir === "up" ? "raised by 20% after promotion" : "cut by 25% after relegation"}.`, true, "finance");
+  // +20% / -25%, and in any case at least 90% of the division's lower-quartile sponsorship (promoted) or at most 110%
+  // of its upper quartile (relegated): a flat +20% left a promoted club on a quarter of its new rivals' sponsorship.
+  const now = sponsorTotal(c); if (!now) return;
+  const target = dir === "up" ? Math.max(now * 1.2, divQuart(c.lg, sponsorTotal, .25) * .9) : Math.min(now * .75, divQuart(c.lg, sponsorTotal, .75) * 1.1);
+  scaleDeals(c, target / now);
+  if (isUser(c)) news(`Sponsorship clauses: your deals are ${dir === "up" ? "raised after promotion, to at least the going rate near the bottom of your new division" : "cut after relegation"}.`, true, "finance");
 }
+function scaleDeals(c, k) { for (const d of c.deals || []) { d.amt = Math.round(d.amt * k); for (const b in d.bonus) d.bonus[b] = Math.round(d.bonus[b] * k); } }
 /* End of season: bonuses for what the club achieved, then renewals. */
 function sponsorSeason(c, achieved) {
   let paid = 0; const why = [];
