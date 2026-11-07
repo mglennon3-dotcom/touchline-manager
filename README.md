@@ -154,7 +154,7 @@ is January, weeks 19 to 22.
 club near your level (or in the top division) or a top-flight side abroad. Smaller clubs always agree; much
 bigger ones may refuse to visit but will usually host you. A home friendly draws about a third of a league
 crowd (more for a big-name visitor) at 60% of your ticket price, less a 30% appearance fee if the visitors
-are much bigger; away at a bigger club, they pay you 15% of their gate. Friendlies are played live or
+are much bigger; away at a bigger club, they pay you 15% of their gate. Sort the opponent list "Most money first" to see each club's expected take for the chosen venue, highest first. Friendlies are played live or
 simulated like any match, with real fitness and injuries, but don't count: no table, appearances, goals,
 cards, bans or ratings.
 

@@ -411,6 +411,9 @@ function friendliesHtml() {
   const openWks = []; for (let w = S.summerDay; w < CAL.summerDays; w++) if (!friendlyAt(w)) openWks.push(w);
   const wk = openWks.includes(u.wk) ? u.wk : openWks[0], home = u.home !== false, opts = friendlyOptions();
   const groups = {}; for (const o of opts) (groups[o.lg] ||= []).push(o);
+  // "Most money first": what the friendly is expected to bring in at the chosen venue (home: gate less any
+  // appearance fee you pay; away: the fee they pay you), so the list re-sorts when you switch Home/Away.
+  const byMoney = u.sort === "money";
   const sel = opts.find(o => o.id === u.opp), est = sel ? friendlyMoney(c, sel, home) : null;
   const row = f => { const o = C(f.opp); return `<div class="need-row"><span><b>Week ${f.wk + 1}</b> · ${f.home ? "vs" : "at"} ${clubA(o.id)} <span class="tiny muted">${leagueName(o.lg)}${o.country !== c.country ? " · " + COUNTRY[o.country].name : ""}</span></span>
     ${f.played ? `<span class="small">${f.gf}–${f.ga} <span class="muted">· ${f.home ? `crowd ${f.att.toLocaleString()}, ` : ""}${f.net >= 0 ? "+" : ""}${money(f.net)}</span></span>` : `<span class="row" style="gap:6px"><span class="small muted">${f.wk === S.summerDay ? "this week" : "upcoming"}</span><button class="btn sm" data-a="fricancel" data-v="${f.wk}">Cancel</button></span>`}</div>`; };
@@ -418,7 +421,10 @@ function friendliesHtml() {
     ${list.length ? list.map(row).join("") : '<p class="small muted">None booked. A friendly gets minutes into legs, lets you try a formation or a new signing, and a home one brings in a gate.</p>'}
     ${openWks.length ? `<div class="fri-book row small"><label class="row">Week <select data-c="fri-wk">${openWks.map(w => `<option value="${w}" ${w === wk ? "selected" : ""}>${w + 1}${w === S.summerDay ? " (this week)" : ""}</option>`).join("")}</select></label>
       <label class="row">Venue <select data-c="fri-home"><option value="H" ${home ? "selected" : ""}>Home</option><option value="A" ${home ? "" : "selected"}>Away</option></select></label>
-      <label class="row">Opponent <select data-c="fri-opp"><option value="">Choose a club…</option>${Object.entries(groups).map(([k, os]) => `<optgroup label="${esc((LG[k].foreign ? COUNTRY[LG[k].c].name + ": " : "") + leagueName(k))}">${os.sort((a, b) => b.rep - a.rep).map(o => `<option value="${o.id}" ${o.id === u.opp ? "selected" : ""}>${esc(o.name)}</option>`).join("")}</optgroup>`).join("")}</select></label>
+      <label class="row">Sort <select data-c="fri-sort"><option value="lg">By league</option><option value="money" ${byMoney ? "selected" : ""}>Most money first</option></select></label>
+      <label class="row">Opponent <select data-c="fri-opp"><option value="">Choose a club…</option>${byMoney
+        ? opts.map(o => [o, friendlyMoney(c, o, home).net]).sort((a, b) => b[1] - a[1] || b[0].rep - a[0].rep).map(([o, net]) => `<option value="${o.id}" ${o.id === u.opp ? "selected" : ""}>${net >= 0 ? "+" : ""}${money(net)} · ${esc(o.name)} (${esc(leagueName(o.lg))})</option>`).join("")
+        : Object.entries(groups).map(([k, os]) => `<optgroup label="${esc((LG[k].foreign ? COUNTRY[LG[k].c].name + ": " : "") + leagueName(k))}">${os.sort((a, b) => b.rep - a.rep).map(o => `<option value="${o.id}" ${o.id === u.opp ? "selected" : ""}>${esc(o.name)}</option>`).join("")}</optgroup>`).join("")}</select></label>
       <button class="btn sm primary" data-a="friask">Ask them</button></div>
       ${est ? `<p class="tiny muted" style="margin-top:4px">${home ? `Expected crowd about ${est.att.toLocaleString()} at friendly prices: gate ~${money(est.gate)}${est.fee ? `, less a ${money(-est.fee)} appearance fee (they're the bigger club)` : ""}.` : est.fee ? `They pay you an appearance fee of about ${money(est.fee)}.` : "No fee: they're no bigger than you."}${sel.rep > c.rep + 12 && home ? " A club this much bigger may not want to visit." : ""}</p>` : ""}` : '<p class="small muted">No weeks left to book.</p>'}</div>`;
 }

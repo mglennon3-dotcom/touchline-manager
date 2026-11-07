@@ -192,7 +192,7 @@ const ACT = {
     S.bench = b; save(); render(); },
   // From the match card: drop a sub (yours or automatic; he isn't brought back automatically) or add one.
   benchdrop: v => { const id = +v, cur = benchFor(me(), S.lineup); S.bench = cur.filter(x => x !== id && (S.bench || []).includes(x)); (S.benchNo ||= []).includes(id) || S.benchNo.push(id); save(); render(); },
-  friask: () => { const f = UI.fri || {}; if (f.opp == null) return toast("Choose an opponent first."); const r = bookFriendly(f.wk ?? S.summerDay, f.opp, f.home !== false); UI.fri = { home: f.home }; save(); render(); toast(r); },
+  friask: () => { const f = UI.fri || {}; if (f.opp == null) return toast("Choose an opponent first."); const r = bookFriendly(f.wk ?? S.summerDay, f.opp, f.home !== false); UI.fri = { home: f.home, sort: f.sort }; save(); render(); toast(r); },
   fricancel: v => { const r = cancelFriendly(+v); save(); render(); toast(r); },
   benchauto: () => { S.bench = null; S.benchNo = []; save(); render(); toast("Bench back to automatic: your best available players."); },
   potpick: () => { const c = me(), r = potentialPick(c); UI.sel = null; save(); render();
@@ -295,7 +295,7 @@ const ACT = {
 const CHG = {
   acadsel: (v, el) => { S.set.acadSel = el.checked; if (!el.checked) { S.acadPick = []; S.bench = (S.bench || []).filter(x => !P(x) || !P(x).acad); fixUserLineup(); } save(); render(); toast(el.checked ? "Academy players can now be picked for the first team." : "Academy players are out of first-team selection again."); },
   rotate: (v, el) => { S.set.rotate = el.checked; save(); render(); toast(el.checked ? "Your assistant will pick a fresh XI before every match." : "Rotation off: your XI stays as you set it."); },
-  "fri-wk": v => { (UI.fri ||= {}).wk = +v; render(); }, "fri-home": v => { (UI.fri ||= {}).home = v === "H"; render(); }, "fri-opp": v => { (UI.fri ||= {}).opp = +v; render(); },
+  "fri-wk": v => { (UI.fri ||= {}).wk = +v; render(); }, "fri-home": v => { (UI.fri ||= {}).home = v === "H"; render(); }, "fri-opp": v => { (UI.fri ||= {}).opp = +v; render(); }, "fri-sort": v => { (UI.fri ||= {}).sort = v; render(); },
   benchgk: (v, el) => { S.set.benchGK = el.checked; save(); render(); toast(el.checked ? "A substitute goalkeeper will always be named." : "No automatic substitute goalkeeper. If your keeper goes off, an outfielder goes in goal."); },
   benchadd: v => { if (v) ACT.benchtoggle(v); },
   autoscout: (v, el) => { S.set.autoScout = el.checked; delete S.set.autoAbroad; save(); render(); toast(el.checked ? "Scouting assistant on: spare hours, England only, no cost." : "Scouting assistant off."); },
