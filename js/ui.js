@@ -687,7 +687,7 @@ function upcomingFixtures(n) {
   }
   return up;
 }
-const upcomingRow = u => `<div class="res ct ct-${compType(u.d)}" style="grid-template-columns:84px 1fr"><span class="num muted">${dayName(u.d.ord, true)} · Wk ${u.d.w + 1}</span><span>${u.h === S.club ? "v" : "@"} ${clubA(u.h === S.club ? u.a : u.h, { flag: 1 })}<br><span class="tiny muted">${esc(u.label)}</span></span></div>`;
+const upcomingRow = u => `<div class="res ct ct-${compType(u.d)}" style="grid-template-columns:auto 1fr;column-gap:10px"><span class="num muted" style="white-space:nowrap">${dayName(u.d.ord, true)} · Wk ${u.d.w + 1}</span><span>${u.h === S.club ? "v" : "@"} ${clubA(u.h === S.club ? u.a : u.h, { flag: 1 })}<br><span class="tiny muted">${esc(u.label)}</span></span></div>`;
 function viewFixtures() {
   const played = (S.myRes || []).slice().reverse(), up = upcomingFixtures(14);
   return `<div class="grid2"><section class="card"><div class="card-h"><h2>Results</h2><span class="small muted">${seasonLabel(S.year)}</span></div>${played.length ? played.map(resultRow).join("") : '<p class="muted">No matches played yet.</p>'}</section>
