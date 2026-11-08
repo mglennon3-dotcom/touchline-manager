@@ -565,6 +565,12 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // 5.62.1: one-off, alongside the amnesty: the save misled by the old preseason ratio has its wage bill halved (every
   // player at the club, academy included). Only a save holding that amnesty is touched.
   if (!S.wageHalf && S.amnesty && S.club != null && !S.sacked && S.amnesty.club === S.club) { const c = me(), before = sum(c.squad, id => P(id).wage); for (const id of c.squad) { const p = P(id); p.wage = Math.round(p.wage / 2 / 100) * 100; } S.wageHalf = 1; news(`Wage bill halved, a one-off correction for the preseason figures: from ${perWeek(before)} to ${perWeek(sum(c.squad, id => P(id).wage))}. New contracts are priced normally.`, true, "finance"); }
+  // 5.62.5: results from before match days were stored get one from the calendar: league on Saturday (the first of a
+  // week's two league games on Tuesday), cup ties Wednesday, European games Tuesday.
+  if (!S.ordFill) { const lgSeen = {}, lgN = {}; for (const r of S.myRes || []) if (r.comp === "L") lgN[r.w] = (lgN[r.w] || 0) + 1;
+    for (const r of S.myRes || []) { if (r.ord != null || r.comp === "F") continue;
+    if (r.comp === "L") { const n = lgSeen[r.w] = (lgSeen[r.w] || 0) + 1; r.ord = lgN[r.w] > 1 && n === 1 ? 2 : 3; }  // two league games that week: the first was midweek
+    else r.ord = r.comp === "G" ? 0 : 1; } S.ordFill = 1; }
   // 5.55: listed players get a price you set. Ones already listed keep roughly what they were going for.
   if (S.club != null && !S.sacked) for (const id of me().squad) { const p = P(id); if (p.listed && p.listPct == null) p.listPct = clamp(Math.round(askingPrice(p) / value(p) * 10) / 10, .8, 2); }
   // 5.54.1: players you signed this season who haven't played yet start from what they expect, not a flat 50%.
