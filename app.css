@@ -486,3 +486,10 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .star{border:0;background:none;padding:0 4px;font-size:1.1em;line-height:1;color:var(--muted);cursor:pointer;vertical-align:middle}
 .star.on{color:var(--accent-ink)}
 .modal-h h2 .star{font-size:.8em}
+
+/* Competition colours: a stripe and a light tint on each fixture, result and the next-match card */
+.ct{--ctc:transparent;border-left:4px solid var(--ctc);background:color-mix(in srgb,var(--ctc) 9%,transparent)}
+.res.ct{padding-left:8px;border-radius:6px}
+.ct-lg{--ctc:#2f7d32} .ct-fa{--ctc:#1f4fc4} .ct-lc{--ctc:#7c3aed} .ct-eu{--ctc:#d4a017} .ct-po{--ctc:#c2410c} .ct-fr{--ctc:#64748b}
+.ct-key{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.ct-key .ct{font-size:12px;padding:3px 8px;border-radius:6px}

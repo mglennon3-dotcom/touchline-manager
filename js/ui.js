@@ -324,7 +324,7 @@ const newsItem = n => `<li class="${n.hi ? "hi" : ""}">${esc(n.t)}<small>${seaso
 function resultRow(r) {
   const mine = r.h === S.club ? r.hg : r.ag, th = r.h === S.club ? r.ag : r.hg;
   let x = mine > th ? "W" : mine < th ? "L" : "D"; if (r.pens) { const mp = r.h === S.club ? r.pens[0] : r.pens[1], tp = r.h === S.club ? r.pens[1] : r.pens[0]; x = mp > tp ? "W" : "L"; }
-  return `<div class="res"><span class="h">${clubA(r.h, { flag: 1 })}</span><span class="sc">${r.hg}–${r.ag}${r.et ? " aet" : ""}</span><span>${clubA(r.a, { flag: 1 })}</span>
+  return `<div class="res ct ct-${compType(r)}"><span class="h">${clubA(r.h, { flag: 1 })}</span><span class="sc">${r.hg}–${r.ag}${r.et ? " aet" : ""}</span><span>${clubA(r.a, { flag: 1 })}</span>
     <span class="tiny muted" style="grid-column:1/-1;text-align:center"><span class="form"><i class="${x}">${x}</i></span>${rivalry(r.h, r.a) ? ` <b>${rivalry(r.h, r.a) >= 2 ? "Derby" : "Rivalry"}</b> ·` : ""} ${r.ord != null ? dayName(r.ord, true) + " · " : ""}${esc(r.label)}${r.pens ? ` · ${r.pens[0]}–${r.pens[1]} pens` : ""}${r.sc.length ? " · " + r.sc.map(([s, n, m]) => `${esc(n)} ${m}′`).join(", ") : ""}${r.att ? ` · crowd ${r.att.toLocaleString()}` : ""}</span></div>`;
 }
 function miniTable(L, rows, offset) {
@@ -364,7 +364,7 @@ function nextMatchCard() {
     if (S.phase === "season" && r && r.p > 0) return `<span class="stand"><span><b>${ord(i + 1)}</b> · ${r.pts} pts</span><span class="muted">GF ${r.gf} · GA ${r.ga}</span></span>`;
     const last = S.lastPos[T.id]; return `<span class="stand muted">${last ? `Last season: ${ord(last)}` : "No league games yet"}</span>`; };
   const team = T => `<div class="team">${crest(T, 46)}<b>${esc(T.name)}</b><span class="tiny muted">${T.country !== HOME ? COUNTRY[T.country].name + " · " : ""}${leagueName(T.lg)}</span>${standLine(T)}${formChips(formOf(T.id))}</div>`;
-  return `<section class="card" style="--club:${c.color}"><div class="card-h"><h2>Next match</h2><span class="eyebrow">${esc(compLabel(fx))} · ${dayName(nx.day.ord)} · Week ${nx.day.w + 1}${fx.neutral ? " · Neutral venue" : fx.h === S.club ? " · Home" : " · Away"}</span></div>
+  return `<section class="card ct ct-${compType(fx)}" style="--club:${c.color}"><div class="card-h"><h2>Next match</h2><span class="eyebrow">${esc(compLabel(fx))} · ${dayName(nx.day.ord)} · Week ${nx.day.w + 1}${fx.neutral ? " · Neutral venue" : fx.h === S.club ? " · Home" : " · Away"}</span></div>
     ${rivalry(S.club, opp.id) ? `<p class="derby"><span class="chip rival r${rivalry(S.club, opp.id)}">${RIVAL_WORD[rivalry(S.club, opp.id)].toUpperCase()}</span> ${esc(rivalName(S.club, opp.id).replace(/^the /, "The "))} · your record ${recStr(h2hOf(c, opp.id))}. Win and the board, the fans and the dressing room will love it; lose and they won't forget.</p>` : ""}
     ${fx.ko ? `<p class="small muted" style="text-align:center">First leg: ${C(fx.a).short} ${fx.ko.aggA}–${fx.ko.aggH} ${C(fx.h).short}</p>` : ""}
     <div class="fixture">${team(H)}<div class="vs">v</div>${team(A)}</div>
@@ -687,12 +687,13 @@ function upcomingFixtures(n) {
   }
   return up;
 }
-const upcomingRow = u => `<div class="res" style="grid-template-columns:84px 1fr"><span class="num muted">${dayName(u.d.ord, true)} · Wk ${u.d.w + 1}</span><span>${u.h === S.club ? "v" : "@"} ${clubA(u.h === S.club ? u.a : u.h, { flag: 1 })}<br><span class="tiny muted">${esc(u.label)}</span></span></div>`;
+const upcomingRow = u => `<div class="res ct ct-${compType(u.d)}" style="grid-template-columns:84px 1fr"><span class="num muted">${dayName(u.d.ord, true)} · Wk ${u.d.w + 1}</span><span>${u.h === S.club ? "v" : "@"} ${clubA(u.h === S.club ? u.a : u.h, { flag: 1 })}<br><span class="tiny muted">${esc(u.label)}</span></span></div>`;
 function viewFixtures() {
   const played = (S.myRes || []).slice().reverse(), up = upcomingFixtures(14);
   return `<div class="grid2"><section class="card"><div class="card-h"><h2>Results</h2><span class="small muted">${seasonLabel(S.year)}</span></div>${played.length ? played.map(resultRow).join("") : '<p class="muted">No matches played yet.</p>'}</section>
     <section class="card"><div class="card-h"><h2>Coming up</h2></div>${up.length ? up.map(upcomingRow).join("") : '<p class="muted">Nothing scheduled.</p>'}
-    <p class="hint" style="margin-top:8px">Cup and knockout opponents appear once they're drawn.</p></section></div>`;
+    <p class="hint" style="margin-top:8px">Cup and knockout opponents appear once they're drawn.</p>
+    <div class="ct-key">${COMP_TYPES.map(([k, l]) => `<span class="ct ct-${k}">${l}</span>`).join("")}</div></section></div>`;
 }
 
 /* ---------- leagues ---------- */

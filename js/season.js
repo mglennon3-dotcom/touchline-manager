@@ -232,6 +232,18 @@ function dayFixtures(day) {
   }
   return out;
 }
+/* What kind of game a fixture is, for its colour: lg league, fa National Cup, lc League Cup, eu European, po play-off,
+   fr friendly. Takes a fixture ({ comp, key }), a calendar day ({ k, comp }) or a stored result (older results have
+   no key, so their label decides). */
+function compType(x) {
+  if (!x) return "lg";
+  const key = x.k === "ko" || x.k === "grp" ? x.comp : x.key, comp = x.k === "lg" ? "L" : x.k === "grp" ? "G" : x.comp;
+  if (comp === "F") return "fr"; if (comp === "L" || x.k === "lg") return "lg"; if (comp === "G" || x.k === "grp") return "eu";
+  if (key) return key === "FA" ? "fa" : key === "LC" ? "lc" : /^PO/.test(key) ? "po" : CONT[key] ? "eu" : "lg";
+  const l = x.label || "";
+  return l.startsWith(CUPS.FA.name) ? "fa" : l.startsWith(CUPS.LC.name) ? "lc" : /play-offs/.test(l) ? "po" : Object.values(CONT).some(c => l.startsWith(c.name)) ? "eu" : /friendly/i.test(l) ? "fr" : "lg";
+}
+const COMP_TYPES = [["lg", "League"], ["fa", "National Cup"], ["lc", "League Cup"], ["eu", "European"], ["po", "Play-offs"], ["fr", "Friendly"]];
 function compLabel(fx) {
   if (fx.comp === "F") return "Preseason friendly";
   if (fx.comp === "L") return leagueName(fx.key);
@@ -292,7 +304,7 @@ function recordResult(fx, M) {
   }
   recordRivalry(fx.h, fx.a, hg, ag);
   if (fx.h === S.club || fx.a === S.club) {
-    S.myRes.push({ w: S.week, ord: (S.days[S.di] || {}).ord, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, att, sc: M.goals.map(g => [g.side, g.n, g.min]) });
+    S.myRes.push({ w: S.week, ord: (S.days[S.di] || {}).ord, key: fx.key, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, att, sc: M.goals.map(g => [g.side, g.n, g.min]) });
     if (cg) { const mine = fx.h === S.club ? cg.h : cg.a; if (mine) news(`${compLabel(fx)}: crowd ${cg.att.toLocaleString()}${fx.neutral ? " at a neutral venue" : ""}. Your share of the gate: ${money(mine)}.`, false, fx.comp === "G" || S.ko[fx.key]?.kind === "cont" ? "cont" : "cup"); }
     afterUserMatch(fx, M);
   }
