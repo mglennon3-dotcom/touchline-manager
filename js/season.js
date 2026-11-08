@@ -292,7 +292,7 @@ function recordResult(fx, M) {
   }
   recordRivalry(fx.h, fx.a, hg, ag);
   if (fx.h === S.club || fx.a === S.club) {
-    S.myRes.push({ w: S.week, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, att, sc: M.goals.map(g => [g.side, g.n, g.min]) });
+    S.myRes.push({ w: S.week, ord: (S.days[S.di] || {}).ord, label: compLabel(fx), comp: fx.comp, h: fx.h, a: fx.a, hg, ag, pens: M.pens, et: M.et, att, sc: M.goals.map(g => [g.side, g.n, g.min]) });
     if (cg) { const mine = fx.h === S.club ? cg.h : cg.a; if (mine) news(`${compLabel(fx)}: crowd ${cg.att.toLocaleString()}${fx.neutral ? " at a neutral venue" : ""}. Your share of the gate: ${money(mine)}.`, false, fx.comp === "G" || S.ko[fx.key]?.kind === "cont" ? "cont" : "cup"); }
     afterUserMatch(fx, M);
   }
@@ -331,6 +331,9 @@ function userFixture(fxs) { return fxs.find(fx => fx.h === S.club || fx.a === S.
    weekends on Saturday) and recovery is per day elapsed. */
 const SLOT_DAY = [2, 3, 2, 6];  // ord 0 European, 1 cup, 2 midweek league, 3 weekend league
 const dayNo = d => d.w * 7 + SLOT_DAY[d.ord ?? 3];
+// SLOT_DAY counts from Sunday: European nights and midweek league on Tuesday, cup ties Wednesday, league Saturday.
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const dayName = (ord, short) => { const n = DAY_NAMES[SLOT_DAY[ord ?? 3]]; return short ? n.slice(0, 3) : n; };
 // Each day a player wins back a share of what he's lost, so the more tired he is the faster he recovers.
 // A flat daily amount (the first version of this) let fatigue snowball: an unrotated XI on Intense fell to
 // about 50% by week 13, lowest player 33%. Stamina speeds recovery: 20 recovers 40% faster than 0.
