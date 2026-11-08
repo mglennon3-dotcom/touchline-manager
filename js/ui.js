@@ -299,7 +299,11 @@ function viewHome() {
   const c = me(), parts = [];
   for (const m of openDecisions()) parts.push(`<section class="decision"><div class="eyebrow">Decision needed · ${m.w}</div><h3>${esc(m.title)}</h3><p>${esc(m.body)}</p><div class="row">${m.opts.map(([k, l], i) => `<button class="btn ${i === 0 ? "primary" : ""}" data-a="decide" data-v="${m.id}|${k}">${l}</button>`).join("")}</div></section>`);
   if (S.phase === "summer" && S.seasonOver && !S.seasonOverSeen) parts.push(seasonReview());
-  if (S.phase === "season") { if (CAL.jan.includes(S.week)) parts.push(janCard()); parts.push(nextMatchCard()); } else parts.push(summerCard());
+  if (S.phase === "season") { if (CAL.jan.includes(S.week)) parts.push(janCard()); parts.push(nextMatchCard());
+    // The fixtures after the next match (that one has its own card above).
+    const up = upcomingFixtures(6).slice(1);
+    if (up.length) parts.push(`<section class="card"><div class="card-h"><h2>Coming up</h2><button class="lnk small" data-a="go" data-v="fixtures">All fixtures</button></div>${up.map(upcomingRow).join("")}</section>`);
+  } else parts.push(summerCard());
   const recent = (S.myRes || []).slice(-6).reverse();
   if (recent.length) parts.push(`<section class="card"><div class="card-h"><h2>Recent results</h2><button class="lnk small" data-a="go" data-v="fixtures">All fixtures</button></div>${recent.map(resultRow).join("")}</section>`);
   const L = S.leagues[c.lg], t = standings(L), i = t.findIndex(r => r.id === c.id), lo = clamp(i - 3, 0, t.length - 7);
@@ -673,15 +677,21 @@ function viewTactics() {
 }
 
 /* ---------- fixtures ---------- */
-function viewFixtures() {
-  const played = (S.myRes || []).slice().reverse(), up = [];
-  if (S.phase === "season") for (let i = S.di; i < S.days.length && up.length < 14; i++) {
+/* Your next n fixtures (league rounds, and cup or European ties once drawn), for the Fixtures page and Home. */
+function upcomingFixtures(n) {
+  const up = [];
+  if (S.phase === "season") for (let i = S.di; i < S.days.length && up.length < n; i++) {
     const d = S.days[i];
     if (d.k === "lg") { const r = d.rounds[me().lg]; if (r == null) continue; const pr = S.leagues[me().lg].fixtures[r].find(([h, a]) => h === S.club || a === S.club); if (pr) up.push({ d, h: pr[0], a: pr[1], label: leagueName(me().lg) + (d.mid ? " · midweek" : "") }); }
     else if (d.k === "grp" || (d.k === "ko" && S.ko[d.comp].rounds[d.r].ties)) { const fx = userFixture(dayFixtures(d)); if (fx) up.push({ d, h: fx.h, a: fx.a, label: compLabel(fx) }); }
   }
+  return up;
+}
+const upcomingRow = u => `<div class="res" style="grid-template-columns:84px 1fr"><span class="num muted">${dayName(u.d.ord, true)} · Wk ${u.d.w + 1}</span><span>${u.h === S.club ? "v" : "@"} ${clubA(u.h === S.club ? u.a : u.h, { flag: 1 })}<br><span class="tiny muted">${esc(u.label)}</span></span></div>`;
+function viewFixtures() {
+  const played = (S.myRes || []).slice().reverse(), up = upcomingFixtures(14);
   return `<div class="grid2"><section class="card"><div class="card-h"><h2>Results</h2><span class="small muted">${seasonLabel(S.year)}</span></div>${played.length ? played.map(resultRow).join("") : '<p class="muted">No matches played yet.</p>'}</section>
-    <section class="card"><div class="card-h"><h2>Coming up</h2></div>${up.length ? up.map(u => `<div class="res" style="grid-template-columns:84px 1fr"><span class="num muted">${dayName(u.d.ord, true)} · Wk ${u.d.w + 1}</span><span>${u.h === S.club ? "v" : "@"} ${clubA(u.h === S.club ? u.a : u.h, { flag: 1 })}<br><span class="tiny muted">${esc(u.label)}</span></span></div>`).join("") : '<p class="muted">Nothing scheduled.</p>'}
+    <section class="card"><div class="card-h"><h2>Coming up</h2></div>${up.length ? up.map(upcomingRow).join("") : '<p class="muted">Nothing scheduled.</p>'}
     <p class="hint" style="margin-top:8px">Cup and knockout opponents appear once they're drawn.</p></section></div>`;
 }
 
