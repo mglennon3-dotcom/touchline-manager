@@ -267,6 +267,9 @@ start of the season that it will be their last, others surprise you at the end.
   National Cup winner (or the runner-up, if the winner already qualifies). Two-legged knockout rounds.
 - *Continental Trophy*: the third tier, 7th and 8th from each top division, with England's first place going
   to the League Cup winner (or runner-up). Two-legged knockout rounds.
+- On the Cups page your own ties are boxed and shaded in the accent colour, with your club's name in bold,
+  so you can find them in a full draw; your row in a Champions Cup group, the entrants list and a winner's
+  line are picked out the same way (5.62.7).
 
 **End-of-season awards:** every English division names a Player of the Season, Young Player of the
 Season (21 or under), Golden Boot, Golden Glove (most clean sheets), Playmaker (most assists), Manager of

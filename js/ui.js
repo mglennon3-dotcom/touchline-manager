@@ -728,11 +728,13 @@ function viewLeague() {
 
 /* ---------- cups ---------- */
 function tieHtml(t) {
-  if (t.bye) return `<div class="tie"><span class="${t.h === S.club ? "me" : ""}">${clubA(t.h, { flag: 1 })}</span><span class="tiny muted">bye</span></div>`;
+  // Your own ties stand out in the draw: a round of 32 ties is a lot of club names to scan for your own.
+  const mine = t.h === S.club || t.a === S.club ? " mine" : "";
+  if (t.bye) return `<div class="tie${mine}"><span class="${t.h === S.club ? "me" : ""}">${clubA(t.h, { flag: 1 })}</span><span class="tiny muted">bye</span></div>`;
   const agg = t.g1 ? [t.g1[0] + (t.g2 ? t.g2[0] : 0), t.g1[1] + (t.g2 ? t.g2[1] : 0)] : null;
   const extra = t.legs === 2 && t.g1 ? `1st leg ${C(t.a).short} ${t.g1[1]}–${t.g1[0]} ${C(t.h).short}${t.g2 ? ` · 2nd leg ${t.g2[0]}–${t.g2[1]}` : ""}` : "";
   const pens = t.pens ? `${extra ? " · " : ""}${C(t.pens[0] > t.pens[1] ? t.h : t.a).short} win ${Math.max(...t.pens)}–${Math.min(...t.pens)} on penalties` : "";
-  return `<div class="tie"><span class="${t.w === t.h ? "w" : ""} ${t.h === S.club ? "me" : ""}">${clubA(t.h, { flag: 1 })}</span><span class="num">${agg ? agg[0] : ""}</span><span class="${t.w === t.a ? "w" : ""} ${t.a === S.club ? "me" : ""}">${clubA(t.a, { flag: 1 })}</span><span class="num">${agg ? agg[1] : ""}</span>${extra || pens ? `<span class="tiny muted" style="grid-column:1/-1">${extra}${pens}</span>` : ""}</div>`;
+  return `<div class="tie${mine}"><span class="${t.w === t.h ? "w" : ""} ${t.h === S.club ? "me" : ""}">${clubA(t.h, { flag: 1 })}</span><span class="num">${agg ? agg[0] : ""}</span><span class="${t.w === t.a ? "w" : ""} ${t.a === S.club ? "me" : ""}">${clubA(t.a, { flag: 1 })}</span><span class="num">${agg ? agg[1] : ""}</span>${extra || pens ? `<span class="tiny muted" style="grid-column:1/-1">${extra}${pens}</span>` : ""}</div>`;
 }
 function koRounds(comp) {
   return comp.rounds.map(rd => rd.ties ? `<div><h3 style="margin-bottom:6px">${rd.name}${rd.legs === 2 ? ' <span class="tiny muted">two legs</span>' : ""}</h3><div class="ties">${rd.ties.map(tieHtml).join("")}</div></div>` : "").join("") || '<p class="muted">Not drawn yet.</p>';
@@ -743,9 +745,9 @@ function viewCups() {
   const about = { FA: "All seven divisions. Non-league clubs start in the fourth qualifying round, the Second and Third Divisions join in the first round, and the top two divisions in the third. One match per tie, extra time and penalties, neutral final. The winner earns a Continental Shield place, passing to the runner-up if the winner already qualifies.", LC: "The top four divisions. Clubs in Europe join in the third round. Two-legged semi-finals. The winner earns a Continental Shield place if not already qualified.", CC: "The top four from England and seven other leagues. Eight groups of four, no two clubs from the same country in a group. Group winners meet runners-up in a two-legged round of 16; one-off final.", CS: "Sixteen clubs: 5th and 6th from each top division, with England's 5th-place spot going to the National Cup winner (or runner-up, if the winner already qualifies). Two-legged knockout rounds, one-off final.", CT: "The third tier of European football: 7th and 8th from each top division, with England's spot going to the League Cup winner (or runner-up). Two-legged knockout rounds, one-off final." }[k] || leagueRules(comp.lg);
   let body = "";
   if (k === "CC") { const K = S.cont[k]; body = `<div class="rounds">${K.groups.map((g, gi) => `<div><h3 style="margin-bottom:6px">Group ${"ABCDEFGH"[gi]}</h3>${table(`g${k}${gi}`, [{ k: "n", l: "Club", f: r => clubA(r.id, { flag: 1 }) }, { k: "p", l: "P", r: 1, f: r => r.p }, { k: "gd", l: "GD", r: 1, f: r => r.gf - r.ga }, { k: "pts", l: "Pts", r: 1, f: r => `<b>${r.pts}</b>` }], groupTable(k, gi), { rowCls: r => r.id === S.club ? "me" : "" })}</div>`).join("")}</div><div class="rounds" style="margin-top:14px">${comp.rounds.some(r => r.ties) ? koRounds(comp) : ""}</div>`; }
-  else body = `${comp.kind === "cont" && !comp.rounds[0].ties ? `<p class="small" style="margin-bottom:8px">Entrants: ${S.cont[k].entrants.map(id => clubA(id, { flag: 1 })).join(", ")}</p>` : ""}<div class="rounds">${koRounds(comp)}</div>`;
+  else body = `${comp.kind === "cont" && !comp.rounds[0].ties ? `<p class="small" style="margin-bottom:8px">Entrants: ${S.cont[k].entrants.map(id => id === S.club ? `<b class="me-name">${clubA(id, { flag: 1 })}</b>` : clubA(id, { flag: 1 })).join(", ")}</p>` : ""}<div class="rounds">${koRounds(comp)}</div>`;
   return `<section class="card"><div class="card-h"><h2>${esc(comp.name)}</h2><select id="cup-sel" data-c="cup" aria-label="Competition">${keys.map(x => `<option value="${x}" ${x === k ? "selected" : ""}>${esc(S.ko[x].name)}</option>`).join("")}</select></div>
-    <p class="small muted" style="margin-bottom:12px">${about}</p>${body}${comp.w != null ? `<p style="margin-top:12px">Winner: <b>${clubA(comp.w, { flag: 1 })}</b></p>` : ""}</section>`;
+    <p class="small muted" style="margin-bottom:12px">${about}</p>${body}${comp.w != null ? `<p style="margin-top:12px">Winner: <b class="${comp.w === S.club ? "me-name" : ""}">${clubA(comp.w, { flag: 1 })}</b></p>` : ""}</section>`;
 }
 
 /* ---------- transfers ---------- */
