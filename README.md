@@ -280,7 +280,8 @@ The season review shows your division's awards, and the History page browses eve
 
 **Rules modelled on the English game:** 25 registered senior players, at most 17 not homegrown, changeable only in preseason and the January window,
 unlimited under-21s; homegrown means three seasons at an English club before turning 21; nine named
-substitutes and five changes; yellow-card bans at 5, 10 and 15 bookings; three games for a straight red;
+substitutes and five changes; yellow-card bans at 5, 10 and 15 bookings; three games for a straight red
+(about 3.8 yellows, 0.06 second yellows and 0.09 straight reds a match: a booked player eases off, 5.63.1);
 ties split on goal difference, goals scored, then head-to-head. Finances use a Squad Cost Ratio:
 wages, amortised fees and agent fees against revenue plus player-sale profit, with a levy above 85%
 and points deductions above 115%. AI clubs heading for a charge sell players before the accounts close, as real

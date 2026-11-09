@@ -260,7 +260,10 @@ function step(M) {
   for (let i = 0; i < 2; i++) {
     const s = sd[i], outf = s.on.filter(o => o.slot !== "GK");
     if (outf.length && R() < .021 * (1 + .15 * M.riv)) {  // derbies are feistier
-      const o = pick(outf);
+      // A booked player eases off: he is about a seventh as likely to be the one carded. Picking anyone at random sent off
+      // 0.29 a match on a second yellow, four times the real rate, while the yellows themselves (3.6) were right.
+      const wt = o => s.yel[o.p.id] ? .15 : 1; let x = R() * sum(outf, wt), o = outf[outf.length - 1];
+      for (const c of outf) if ((x -= wt(c)) < 0) { o = c; break; }
       if (s.yel[o.p.id]) sendOff(M, i, o, "Second yellow", RULES.secondYellow);
       else { s.yel[o.p.id] = 1; M.cards.push(o.p.id); (M.bk = M.bk || []).push({ side: i, pid: o.p.id, min: M.min, n: sur(o.p) }); lg(M, "card", i, `Yellow card for ${o.p.name}.`); }
     } else if (outf.length && R() < .0005) sendOff(M, i, pick(outf), "Straight red", RULES.straightRed);
