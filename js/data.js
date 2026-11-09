@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.63.1";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.64.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -81,6 +81,14 @@ const FNORM = (() => {
    Between two equal sides every step toward attack adds goals at both ends, and slightly more against
    than for, so it pays when you are the better side or need a goal, and costs when you are not.
    ag orders them from most to least attacking, for the AI's adjustments. */
+/* Tackling: a team instruction alongside the style. card multiplies the side's bookings and straight reds;
+   def multiplies its defence where the opponent's chances are made (chance quality goes with (att/def)^2, so .96
+   gives the other side about 8% better chances and 1.04 about 7.5% worse). */
+const TACKLE = {
+  soft: { l: "Stay on feet", card: .6, def: .96, d: "Fewer cards, but opponents find it easier to get through." },
+  normal: { l: "Normal", card: 1, def: 1, d: "The usual balance." },
+  hard: { l: "Mark aggressively", card: 1.5, def: 1.04, d: "Harder to play through, but more bookings and red cards." },
+};
 const MENT = {
   vatt: { l: "Very attacking", ag: 3, m: [1.08, 1, .84], sh: 1.16, open: 1, expose: .25, tire: 1.12, d: "Everyone forward. Far more chances at both ends; players tire faster. For chasing a game." },
   att: { l: "Attacking", ag: 2, m: [1.04, 1, .92], sh: 1.08, open: .7, expose: .2, tire: 1.06, d: "Push on. More chances for and against. Suits the stronger side." },

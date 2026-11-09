@@ -86,11 +86,12 @@ function makeSide(c, opp, home, auto) {
   let xi, f, ment;
   if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = S.mentality; }
   else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
+  const tk = isUser(c) && TACKLE[S.tackling] ? S.tackling : "normal";  // AI sides tackle normally
   const sl = slotsOf(f);
   // si is the formation slot a player stands in; the on list itself shrinks with red cards, so it can't be the index.
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], si: i, fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));
-  return { club: c.id, form: f, ment, base: ment, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
+  return { club: c.id, form: f, ment, base: ment, tk, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
 }
 /* fx: { comp, neutral, ko: {aggH, aggA} | null, needWinner } */
@@ -225,7 +226,7 @@ function step(M) {
     A.shots++;
     // .12 rather than .125 since sides started chasing games late, which added goals.
     // A counter-attacking side gets better chances the more the other side has committed forward.
-    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def), 2) * (stA.ctr ? 1 + stA.ctr * (rA.F || [1])[0] * stD.open : 1) * (1 + (stD.expose || 0) * clamp(-(rD.fit || 0), 0, .8)), .03, .45);
+    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def * TACKLE[D.tk || "normal"].def), 2) * (stA.ctr ? 1 + stA.ctr * (rA.F || [1])[0] * stD.open : 1) * (1 + (stD.expose || 0) * clamp(-(rD.fit || 0), 0, .8)), .03, .45);
     // About a fifth of chances are headers, from crosses and set pieces: centre-backs come up for those,
     // and the best in the air get them. The rest go to whoever is in position, weighted by role.
     const header = R() < .2;
@@ -259,14 +260,15 @@ function step(M) {
   } else if (D.on.length && R() < .5) defAct(M, 1 - k, D, "tk");  // an attack broken up: a tackle or interception
   for (let i = 0; i < 2; i++) {
     const s = sd[i], outf = s.on.filter(o => o.slot !== "GK");
-    if (outf.length && R() < .021 * (1 + .15 * M.riv)) {  // derbies are feistier
+    const tkc = TACKLE[s.tk || "normal"].card;
+    if (outf.length && R() < .021 * (1 + .15 * M.riv) * tkc) {  // derbies are feistier
       // A booked player eases off: he is about a seventh as likely to be the one carded. Picking anyone at random sent off
       // 0.29 a match on a second yellow, four times the real rate, while the yellows themselves (3.6) were right.
       const wt = o => s.yel[o.p.id] ? .15 : 1; let x = R() * sum(outf, wt), o = outf[outf.length - 1];
       for (const c of outf) if ((x -= wt(c)) < 0) { o = c; break; }
       if (s.yel[o.p.id]) sendOff(M, i, o, "Second yellow", RULES.secondYellow);
       else { s.yel[o.p.id] = 1; M.cards.push(o.p.id); (M.bk = M.bk || []).push({ side: i, pid: o.p.id, min: M.min, n: sur(o.p) }); lg(M, "card", i, `Yellow card for ${o.p.name}.`); }
-    } else if (outf.length && R() < .0005) sendOff(M, i, pick(outf), "Straight red", RULES.straightRed);
+    } else if (outf.length && R() < .0005 * tkc) sendOff(M, i, pick(outf), "Straight red", RULES.straightRed);
     for (const o of s.on.slice()) {
       const risk = .00011 * (o.fit < 75 ? 1 + (75 - o.fit) / 12 : 1) * injMult(o.p);
       if (R() < risk) {

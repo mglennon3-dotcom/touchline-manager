@@ -68,6 +68,13 @@ worst choice on the board. The Tactics page and the match card show each style's
 squads: those without a strong leaning pick possession or counter-attacking when it suits, and none of them
 switch, before or during a match, to a style their players plainly can't play.
 
+**Tackling** (5.64), a team instruction set beside the style (Tactics > Style, the match card, or live):
+*Stay on feet* takes 40% off your cards but weakens your defending (opponents' chances about 8% better);
+*Mark aggressively* adds 50% to your cards, and strengthens your defending (their chances about 7.5% worse).
+With only the home sides changing over 3,376 matches: Normal took 1.55 points a game, 1.9 yellows and 0.08
+reds; Mark aggressively 1.59 points but 2.8 yellows and 0.16 reds (so more bans to come); Stay on feet 1.47
+points, 1.15 yellows and 0.04 reds. AI sides tackle normally.
+
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
 there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
 everyone outside the matchday squad and swap him in), Selection (the squad list with bench picks), Style and Training.

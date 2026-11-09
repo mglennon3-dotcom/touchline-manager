@@ -186,6 +186,7 @@ const ACT = {
   decide: v => { const [id, ch] = v.split("|"); const m = S.inbox.find(x => x.id === +id); if (!m || m.done) return; const msg = resolveDecision(m, ch); save(); render(); if (msg) toast(msg); },
   seenreview: () => { S.seasonOverSeen = true; save(); render(); },
   ment: v => { S.mentality = v; save(); render(); },
+  tackle: v => { S.tackling = v; save(); render(); },
 
   train: v => { S.training = v; save(); render(); },
   // Your bench: tap to add or remove; spots you don't fill are filled automatically.
@@ -308,6 +309,7 @@ const ACT = {
     else UI.lsel = sel.bench === id ? null : { bench: id };
     render();
   },
+  livetk: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.tk = v; S.tackling = v; render(); },
   liveme: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.ment = v; s.rt = null; S.mentality = v; render(); },
   livesub: () => { const off = +document.getElementById("sub-off").value, on = +document.getElementById("sub-on").value; doSub(LIVE.M, LIVE.k, off, on); render(); },
   liveskip: () => { clearTimeout(LIVE.t); const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.auto = true; LIVE.M.redWait = null;
@@ -324,6 +326,7 @@ const CHG = {
   liveform: v => { livePause(); changeForm(LIVE.M, LIVE.k, v); if (LIVE.M.min === 0) savePreMatch(LIVE.k ? LIVE.M.a : LIVE.M.h); UI.lsel = null; render(); },
   startsort: v => { const cur = UI.sort.start; UI.sort.start = { k: v, d: cur && cur.k === v ? cur.d : (v === "n" || v === "reg" || v === "co" ? 1 : -1) }; render(); },
   style: v => { S.mentality = v; save(); render(); },
+  tackle: v => { S.tackling = v; save(); render(); },
   autostyle: (v, el) => { S.set.autoStyle = el.checked; save(); },
   awy: v => { UI.awY = +v; render(); },
   awl: v => { UI.awL = v; render(); },
