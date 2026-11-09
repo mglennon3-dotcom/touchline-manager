@@ -1116,7 +1116,7 @@ function modalPlayer(p) {
       <button class="btn sm" data-a="ask-sell" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>Sell abroad (${money(Math.round(value(p) * .8 / 1e4) * 1e4)})</button>
       <button class="btn sm danger" data-a="ask-release" data-v="${p.id}">Release</button></div>${!r.happy && p.yrs <= 2 ? `<p class="small warn">${esc(r.reason)}</p>` : ""}`;
   } else if (onLoanFromMe) actions = `<p class="small">On loan at ${clubA(p.club)} until the end of the season.</p>`;
-  else if (loanedIn) actions = `<p class="small">On loan from ${clubA(p.loan.from)} until the end of the season.</p>`;
+  else if (loanedIn) actions = `<div class="row"><span class="small">On loan from ${clubA(p.loan.from)} until the end of the season.</span><button class="btn sm danger" data-a="ask-endloan" data-v="${p.id}">Send back to ${esc(C(p.loan.from).short)}</button></div>`;
   else if (S.club != null && p.age >= 17 && !p.loan) {
     const [l, k] = willingLabel(willingness(p, me()));
     actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"} title="On loan you pay his wage">Ask to loan (you pay ${perWeek(p.wage)})</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;

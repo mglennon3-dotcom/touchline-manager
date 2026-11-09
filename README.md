@@ -349,7 +349,9 @@ commit. Choose the fee, your wage offer and the contract length. His club has a 
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed
 while you settle his wage. He accepts less than his request the keener he is (a fully keen player takes 80%),
 wants 10% more for a one-year deal from 31, and names his price when he says no. Three refusals from either
-side end the talks until next week. Loan buttons show his wage, which you pay while he's with you.
+side end the talks until next week. Loan buttons show his wage, which you pay while he's with you. You can cut a loan short at any time with
+*Send back* on his card: he returns to his parent club and his wage comes off your books from that week (the
+confirmation shows how much that saves to the end of the season); what you've already paid stays paid (5.63).
 **Transfers page** is laid out like the Youth page, in tabs with counts: Offers (players you bid for who
 turned you down, with your offer, today's asking price, the answer and how keen they are now, plus a New
 offer button; players you sign drop off), Scouted, Search (all players, free agents, transfer listed, loan

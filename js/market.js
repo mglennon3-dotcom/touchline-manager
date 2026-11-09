@@ -418,7 +418,20 @@ function userLoanIn(p) {
   if (rank >= slots * 2) return { ok: false, msg: `${parent.name} want him playing regularly, and he'd be behind ${rank} players at your club.` };
   if (clubLevel(c) < p.ovr - 10) return { ok: false, msg: `${parent.name} want him tested at a higher level than the ${leagueName(c.lg)}.` };
   startLoan(p, c); fixUserLineup();
-  return { ok: true, msg: `${p.name} joins on loan for the season. You pay his wage, ${perWeek(p.wage)}${S.phase === "season" ? ` (about ${money(p.wage * Math.max(0, (S.days.length ? S.days[S.days.length - 1].w + 11 : 52) - S.week) / 52)} to the end of the season)` : ""}.` };
+  return { ok: true, msg: `${p.name} joins on loan for the season. You pay his wage, ${perWeek(p.wage)}${S.phase === "season" ? ` (about ${money(loanWageLeft(p))} to the end of the season)` : ""}.` };
+}
+/* What a loanee's wage still costs you this season. Wages are paid each week by whichever club's squad he's in,
+   so this is also what sending him back saves. In preseason it is the whole season ahead. */
+function loanWageLeft(p) { return Math.round(p.wage * (S.phase === "season" ? Math.max(0, (S.days.length ? S.days[S.days.length - 1].w + 11 : 52) - S.week) / 52 : 1)); }
+/* Cutting a loan short: he goes back to his parent club, and his wage leaves your books from this week. What
+   you've already paid stays paid. Allowed any time, not just in the window: the parent club always takes him back. */
+function cancelLoanIn(p) {
+  const c = me(), from = C(p.loan.from), saved = loanWageLeft(p);
+  endLoan(p); refreshRegistration(c); if (p.club === from.id) refreshRegistration(from);
+  if (p.club >= 0) p.pt = expectedShare(p, C(p.club));
+  fixUserLineup();
+  news(`${p.name}'s loan is cut short and he returns to ${from.name}.`, true, "transfer");
+  return saved;
 }
 function aiLoans() {
   for (const c of activeClubs()) {
