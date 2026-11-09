@@ -17,13 +17,30 @@ function styleFit(on, ment) {
    a bad passing side playing possession lost only its bonus and finished level with playing neutral. */
 const fitScale = fit => [clamp(1 + fit * .75, -.5, 1.6), clamp(1 - fit * .6, .5, 1.8)];  // [benefit, cost]
 const bend = (m, F) => m >= 1 ? 1 + (m - 1) * F[0] : 1 + (m - 1) * F[1];
-function sideRatings(on, ment, form, co, fitIn) {
+/* Fit for a passing or width instruction: as styleFit, but each player is judged on the keys for the role he's
+   filling ("*" for anyone outfield), and a wing game with no wingers in the formation counts against it. */
+function instrFit(on, ins) {
+  if (!ins || !ins.keys) return 0;
+  let t = 0, n = 0;
+  for (const o of on) { const p = o.p; if (p.pos === "GK") continue; const keys = ins.keys[o.slot] || ins.keys["*"]; if (!keys) continue;
+    const base = r20(p.ovr) + DOFF[p.pos]; for (const k of keys) { t += p.at[k] - base - (AOFF[p.pos][k] || 0); n++; } }
+  let f = n ? t / n : 0;
+  if (ins.noW && !on.some(o => o.slot === "W")) f -= ins.noW;
+  return f;
+}
+// Teams differ less in these than in a single style's keys (their fits spread about ±0.25 between the 10th and
+// 90th percentile of clubs), so fit counts three times over: a side that suits an instruction gets its upside.
+const IFIT_K = 3;
+const instrOf = (pass, wid) => [PASS[pass] || PASS.normal, WIDTH[wid] || WIDTH.normal];
+function sideRatings(on, ment, form, co, fitIn, pass, wid, ifit) {
   const N = FNORM[form];
   let a = 0, m = 0, d = 0;
   for (const o of on) { const e = eff(o.p, o.slot, o.fit), w = WT[o.slot]; a += e * w[0]; m += e * w[1]; d += e * w[2]; }
   const fit = fitIn ?? styleFit(on, ment), F = fitScale(fit);
-  const k = MENT[ment].m.map(x => bend(x, F)), ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
-  return { att: a / N[0] * k[0] * ca * pf, mid: m / N[1] * k[1] * pf, def: d / N[2] * k[2] * cd * pf, fit, F };
+  const [IP, IW] = instrOf(pass, wid), [fp, fw] = ifit || [instrFit(on, IP), instrFit(on, IW)], FP = fitScale(fp * IFIT_K), FW = fitScale(fw * IFIT_K);
+  const k = MENT[ment].m.map((x, i) => bend(x, F) * bend(IP.m[i], FP) * bend(IW.m[i], FW)), ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
+  return { att: a / N[0] * k[0] * ca * pf, mid: m / N[1] * k[1] * pf, def: d / N[2] * k[2] * cd * pf, fit, F,
+    ish: bend(IP.sh, FP) * bend(IW.sh, FW), hdr: IW.hdr ?? 1, pfit: fp, wfit: fw };
 }
 /* Every club has a usual style, set by its coach: attacking coaches attack, organisers sit deeper, and the
    rest lean toward possession, neutral or counter-attacking football. */
@@ -87,11 +104,12 @@ function makeSide(c, opp, home, auto) {
   if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = S.mentality; }
   else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
   const tk = isUser(c) && TACKLE[S.tackling] ? S.tackling : "normal";  // AI sides tackle normally
+  const pass = isUser(c) && PASS[S.passing] ? S.passing : "normal", wid = isUser(c) && WIDTH[S.width] ? S.width : "normal";
   const sl = slotsOf(f);
   // si is the formation slot a player stands in; the on list itself shrinks with red cards, so it can't be the index.
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], si: i, fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));
-  return { club: c.id, form: f, ment, base: ment, tk, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
+  return { club: c.id, form: f, ment, base: ment, tk, pass, wid, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
 }
 /* fx: { comp, neutral, ko: {aggH, aggA} | null, needWinner } */
@@ -214,22 +232,22 @@ function step(M) {
   for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .4 * (1.35 - (o.p.at.sta ?? 8) / 25) * MENT[s.ment].tire));  // a full match: stamina 5 costs ~41, 10 ~34, 15 ~27, 20 ~20. Half this (5.30) left a starting XI barely out of the green at full time, so fatigue and substitutions hardly mattered
   if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); }
   // Fit only changes with the players or the style, so it isn't recomputed with every fitness update.
-  for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length; if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV); }
+  for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length + "|" + s.pass + "|" + s.wid; if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); const [IP, IW] = instrOf(s.pass, s.wid); s.ifit = [instrFit(s.on, IP), instrFit(s.on, IW)]; } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV, s.pass, s.wid, s.ifit); }
   const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
-  const rh = { att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb, F: M.h.rt.F, fit: M.h.rt.fit }, ra = M.a.rt;
+  const rh = { ...M.h.rt, att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
   const ph = rh.mid ** 2 / (rh.mid ** 2 + ra.mid ** 2), k = R() < ph ? 0 : 1, A = sd[k], D = sd[1 - k], rA = k ? ra : rh, rD = k ? rh : ra;
   A.poss++;
   // Measured against real football (about 25 shots, 8-9 on target and 2.7 goals a game): at one shot in
   // five minutes the game managed 18 shots and 2.2 goals, with 0-0s and clean sheets far too common.
   const stA = MENT[A.ment], stD = MENT[D.ment];
-  if (A.on.length && R() < .26 * bend(stA.sh, rA.F || [1, 1])) {
+  if (A.on.length && R() < .26 * bend(stA.sh, rA.F || [1, 1]) * (rA.ish || 1)) {
     A.shots++;
     // .12 rather than .125 since sides started chasing games late, which added goals.
     // A counter-attacking side gets better chances the more the other side has committed forward.
     const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def * TACKLE[D.tk || "normal"].def), 2) * (stA.ctr ? 1 + stA.ctr * (rA.F || [1])[0] * stD.open : 1) * (1 + (stD.expose || 0) * clamp(-(rD.fit || 0), 0, .8)), .03, .45);
     // About a fifth of chances are headers, from crosses and set pieces: centre-backs come up for those,
     // and the best in the air get them. The rest go to whoever is in position, weighted by role.
-    const header = R() < .2;
+    const header = R() < .2 * (rA.hdr || 1);
     const sh = header ? wpick(A.on, o => ({ GK: 0, CB: 1.3, FB: .4, DM: .8, CM: .8, AM: .8, W: 1.2, ST: 5 })[o.slot] * (o.p.pos === "GK" ? 0 : o.p.at.hea ** 2))
       : wpick(A.on, o => ({ GK: 0, CB: .5, FB: .5, DM: .8, CM: 1.6, AM: 3, W: 4, ST: 6 })[o.slot] * eff(o.p, o.slot, o.fit));
     const gk = D.on.find(o => o.slot === "GK") || D.on[0], r0 = R();

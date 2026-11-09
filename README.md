@@ -75,6 +75,18 @@ With only the home sides changing over 3,376 matches: Normal took 1.55 points a 
 reds; Mark aggressively 1.59 points but 2.8 yellows and 0.16 reds (so more bans to come); Stay on feet 1.47
 points, 1.15 yellows and 0.04 reds. AI sides tackle normally.
 
+**Passing and width** (5.65) work like styles, with a fit judged on the players who carry them out:
+- *Keep it on the ground*: more of the ball, fewer shots; needs Passing, Technique, Vision and Composure.
+- *Play it long*: less of the ball, more direct chances and less risk at the back; needs Pace, Heading, Strength.
+- *Through the middle*: fewer crosses and headers; needs passing, vision and technique in central midfield and
+  dribbling and finishing up front.
+- *Down the wings*: more shots and headers; needs quick wide players, strikers good in the air, and wingers in
+  the formation (without them the full-backs supply the width and the fit suffers).
+Teams differ less in these than in a style's keys, so fit counts three times as much. Played over 300 matches
+per club against its own division, each option was roughly neutral for an average side; the best-fitting third
+of clubs gained 0.07-0.08 points a game (about 3 a season) and the worst-fitting third lost 0.04-0.11 (0.17 for
+wing play with no wingers). AI sides play Normal for both.
+
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
 there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
 everyone outside the matchday squad and swap him in), Selection (the squad list with bench picks), Style and Training.

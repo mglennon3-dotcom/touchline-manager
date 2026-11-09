@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.64.0";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.65.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -88,6 +88,20 @@ const TACKLE = {
   soft: { l: "Stay on feet", card: .6, def: .96, d: "Fewer cards, but opponents find it easier to get through." },
   normal: { l: "Normal", card: 1, def: 1, d: "The usual balance." },
   hard: { l: "Mark aggressively", card: 1.5, def: 1.04, d: "Harder to play through, but more bookings and red cards." },
+};
+/* Passing and width: team instructions that work like styles of play. m multiplies [attack, midfield, defence]
+   and sh the shot rate; keys are the attributes (by the role a player is filling, "*" for every outfield
+   player) whose fit decides whether the upside arrives (see styleFit/fitScale). hdr scales the share of chances
+   that are headers. A wing game without wingers leans on full-backs for width: noW is taken off its fit. */
+const PASS = {
+  ground: { l: "Keep it on the ground", m: [1, 1.06, 1], sh: .9, keys: { "*": ["pas", "tec", "vis", "cmp"] }, d: "Short passing and patience: more of the ball, fewer shots. Needs good passers; a side that can't pass gives it away." },
+  normal: { l: "Normal", m: [1, 1, 1], sh: 1, d: "A mix." },
+  long: { l: "Play it long", m: [1.035, .95, 1.02], sh: 1, keys: { "*": ["pac", "hea", "str"] }, d: "Skip midfield: less of the ball, but quick, direct chances and less risk at the back. Suits fast, strong sides." },
+};
+const WIDTH = {
+  middle: { l: "Through the middle", m: [1.015, 1.015, 1], sh: .96, hdr: .6, keys: { DM: ["pas", "vis"], CM: ["pas", "vis", "tec"], AM: ["pas", "vis", "dri", "tec"], ST: ["dri", "cmp", "fin"] }, d: "Combine centrally: fewer crosses and headers. Needs creative central midfielders." },
+  normal: { l: "Normal", m: [1, 1, 1], sh: 1, hdr: 1, d: "A mix." },
+  wings: { l: "Down the wings", m: [1.015, .965, 1], sh: 1.04, hdr: 1.5, noW: 1, keys: { W: ["pac", "dri", "sta"], FB: ["pac", "sta"], ST: ["hea", "str"] }, d: "Get wide and cross: more shots and headers. Needs quick wide players and strikers good in the air." },
 };
 const MENT = {
   vatt: { l: "Very attacking", ag: 3, m: [1.08, 1, .84], sh: 1.16, open: 1, expose: .25, tire: 1.12, d: "Everyone forward. Far more chances at both ends; players tire faster. For chasing a game." },
