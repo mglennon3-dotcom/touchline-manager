@@ -31,21 +31,26 @@ function instrFit(on, ins) {
 // Teams differ less in these than in a single style's keys (their fits spread about ±0.25 between the 10th and
 // 90th percentile of clubs), so fit counts three times over: a side that suits an instruction gets its upside.
 const IFIT_K = 3;
-const instrOf = (pass, wid) => [PASS[pass] || PASS.normal, WIDTH[wid] || WIDTH.normal];
-function sideRatings(on, ment, form, co, fitIn, pass, wid, ifit) {
+const instrOf = side => INSTR.map(I => I.set[side && side[I.k]] || I.set.normal);
+const instrFits = (on, side) => instrOf(side).map(ins => instrFit(on, ins));
+function sideRatings(on, ment, form, co, fitIn, side, ifit) {
   const N = FNORM[form];
   let a = 0, m = 0, d = 0;
   for (const o of on) { const e = eff(o.p, o.slot, o.fit), w = WT[o.slot]; a += e * w[0]; m += e * w[1]; d += e * w[2]; }
   const fit = fitIn ?? styleFit(on, ment), F = fitScale(fit);
-  const [IP, IW] = instrOf(pass, wid), [fp, fw] = ifit || [instrFit(on, IP), instrFit(on, IW)], FP = fitScale(fp * IFIT_K), FW = fitScale(fw * IFIT_K);
-  const k = MENT[ment].m.map((x, i) => bend(x, F) * bend(IP.m[i], FP) * bend(IW.m[i], FW)), ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
+  const IS = instrOf(side), fs = ifit || IS.map(ins => instrFit(on, ins)), FS = fs.map(f => fitScale(f * IFIT_K));
+  let ish = 1, tire = 1, ctrX = 0, openX = 0, exposeX = 0;
+  const k = MENT[ment].m.map((x, i) => IS.reduce((v, ins, j) => v * bend(ins.m[i], FS[j]), bend(x, F)));
+  IS.forEach((ins, j) => { ish *= bend(ins.sh, FS[j]); if (ins.tire) tire *= bend(ins.tire, [FS[j][1], FS[j][1]]);
+    ctrX += (ins.ctr || 0) * FS[j][0]; openX += ins.open || 0; exposeX += (ins.expose || 0) * clamp(-fs[j] * IFIT_K, 0, .8); });
+  const ca = co ? 1 + (co.off - 10) * .008 : 1, cd = co ? 1 + (co.def - 10) * .008 : 1, pf = co && co.form === form ? FORM_PREF_BONUS : 1;
   return { att: a / N[0] * k[0] * ca * pf, mid: m / N[1] * k[1] * pf, def: d / N[2] * k[2] * cd * pf, fit, F,
-    ish: bend(IP.sh, FP) * bend(IW.sh, FW), hdr: IW.hdr ?? 1, pfit: fp, wfit: fw };
+    ish, hdr: IS[4].hdr ?? 1, tire, ctrX, openX, exposeX, ifit: fs };
 }
 /* Every club has a usual style, set by its coach: attacking coaches attack, organisers sit deeper, and the
    rest lean toward possession, neutral or counter-attacking football. */
 function baseStyle(c) {
-  if (isUser(c)) return S.mentality;
+  if (isUser(c)) return "bal";  // your side plays Neutral, shaped by your instructions (INSTR)
   return clubStyles(c).base;
 }
 /* A club's usual style and how well each style suits its squad, worked out once a week (the XI doesn't
@@ -88,7 +93,18 @@ function adaptStyle(M, k) {
   const own = s.goals + (ko ? (k ? ko.aggA : ko.aggH) : 0), opp = o.goals + (ko ? (k ? ko.aggH : ko.aggA) : 0), diff = own - opp, mn = M.min, b = MENT[base].ag;
   // A side behind only gets bolder and a side ahead only gets more careful, so a second goal doesn't
   // send a team that had dug in back out to play.
-  const cur = MENT[s.ment].ag;
+  // Your side has no style to change: the assistant pushes players forward or keeps them back instead.
+  const user = isUser(C(s.club)), FAG = { push: 2, normal: 0, back: -2 };
+  const cur = user ? FAG[s.fwd] : MENT[s.ment].ag;
+  if (user) {
+    let want = s.fwd0;
+    if (diff < 0 && (diff <= -2 || mn >= 70)) want = "push";
+    else if (diff === 0 && (ko || M.fx.needWinner) && mn >= 80) want = "push";
+    else if (diff > 0 && mn >= 70) want = "back";
+    if (want === "push" && cur > FAG[want]) want = s.fwd; if (want === "back" && cur < FAG[want]) want = s.fwd;  // never step back the wrong way
+    if (want !== s.fwd) { s.fwd = want; s.rt = null; s.changes = (s.changes || 0) + 1; lg(M, "tac", k, `${C(s.club).name}: ${FWD[want].l.toLowerCase()}.`); }
+    return;
+  }
   let ag = b;
   if (diff <= -2) ag = 3;
   else if (diff === -1) ag = Math.max(cur, b, mn >= 75 ? 3 : 2);
@@ -101,15 +117,15 @@ function adaptStyle(M, k) {
 
 function makeSide(c, opp, home, auto) {
   let xi, f, ment;
-  if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = S.mentality; }
+  if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = "bal"; }
   else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
   const tk = isUser(c) && TACKLE[S.tackling] ? S.tackling : "normal";  // AI sides tackle normally
-  const pass = isUser(c) && PASS[S.passing] ? S.passing : "normal", wid = isUser(c) && WIDTH[S.width] ? S.width : "normal";
+  const ins = Object.fromEntries(INSTR.map(I => [I.k, isUser(c) && I.set[S[I.s]] ? S[I.s] : "normal"]));
   const sl = slotsOf(f);
   // si is the formation slot a player stands in; the on list itself shrinks with red cards, so it can't be the index.
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], si: i, fit: P(id).fit, from: 0 }).filter(Boolean);
   const bench = benchFor(c, xi.filter(x => x != null));
-  return { club: c.id, form: f, ment, base: ment, tk, pass, wid, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
+  return { club: c.id, form: f, ment, base: ment, tk, ...ins, fwd0: ins.fwd, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
 }
 /* fx: { comp, neutral, ko: {aggH, aggA} | null, needWinner } */
@@ -229,10 +245,10 @@ function step(M) {
   // Keepers have no Stamina attribute: a keeper sent on outfield (an injury with only a keeper on the bench)
   // used to get NaN fitness, which made his side's ratings NaN in every later match: they never had the ball,
   // and their opponents had it every minute and could never score. He tires like a stamina-8 player.
-  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .4 * (1.35 - (o.p.at.sta ?? 8) / 25) * MENT[s.ment].tire));  // a full match: stamina 5 costs ~41, 10 ~34, 15 ~27, 20 ~20. Half this (5.30) left a starting XI barely out of the green at full time, so fatigue and substitutions hardly mattered
+  for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .4 * (1.35 - (o.p.at.sta ?? 8) / 25) * MENT[s.ment].tire * ((s.rt && s.rt.tire) || 1)));  // a full match: stamina 5 costs ~41, 10 ~34, 15 ~27, 20 ~20. Half this (5.30) left a starting XI barely out of the green at full time, so fatigue and substitutions hardly mattered
   if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); }
   // Fit only changes with the players or the style, so it isn't recomputed with every fitness update.
-  for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length + "|" + s.pass + "|" + s.wid; if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); const [IP, IW] = instrOf(s.pass, s.wid); s.ifit = [instrFit(s.on, IP), instrFit(s.on, IW)]; } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV, s.pass, s.wid, s.ifit); }
+  for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length + "|" + INSTR.map(I => s[I.k]).join("|"); if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); s.ifit = instrFits(s.on, s); } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV, s, s.ifit); }
   const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
   const rh = { ...M.h.rt, att: M.h.rt.att * hb, mid: M.h.rt.mid * hb, def: M.h.rt.def * hb }, ra = M.a.rt;
   const ph = rh.mid ** 2 / (rh.mid ** 2 + ra.mid ** 2), k = R() < ph ? 0 : 1, A = sd[k], D = sd[1 - k], rA = k ? ra : rh, rD = k ? rh : ra;
@@ -244,7 +260,7 @@ function step(M) {
     A.shots++;
     // .12 rather than .125 since sides started chasing games late, which added goals.
     // A counter-attacking side gets better chances the more the other side has committed forward.
-    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def * TACKLE[D.tk || "normal"].def), 2) * (stA.ctr ? 1 + stA.ctr * (rA.F || [1])[0] * stD.open : 1) * (1 + (stD.expose || 0) * clamp(-(rD.fit || 0), 0, .8)), .03, .45);
+    const pg = clamp(.12 * Math.pow(rA.att / Math.max(1, rD.def * TACKLE[D.tk || "normal"].def), 2) * (1 + ((stA.ctr || 0) * (rA.F || [1])[0] + (rA.ctrX || 0)) * Math.max(0, stD.open + (rD.openX || 0))) * (1 + (stD.expose || 0) * clamp(-(rD.fit || 0), 0, .8) + (rD.exposeX || 0)), .03, .45);
     // About a fifth of chances are headers, from crosses and set pieces: centre-backs come up for those,
     // and the best in the air get them. The rest go to whoever is in position, weighted by role.
     const header = R() < .2 * (rA.hdr || 1);

@@ -187,8 +187,7 @@ const ACT = {
   seenreview: () => { S.seasonOverSeen = true; save(); render(); },
   ment: v => { S.mentality = v; save(); render(); },
   tackle: v => { S.tackling = v; save(); render(); },
-  pass: v => { S.passing = v; save(); render(); },
-  width: v => { S.width = v; save(); render(); },
+  instr: (v, el) => { if (v.includes("|")) { const [key, o] = v.split("|"); S[key] = o; } else S[el.dataset.k] = v; save(); render(); },
 
   train: v => { S.training = v; save(); render(); },
   // Your bench: tap to add or remove; spots you don't fill are filled automatically.
@@ -311,8 +310,7 @@ const ACT = {
     else UI.lsel = sel.bench === id ? null : { bench: id };
     render();
   },
-  liveps: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.pass = v; s.rt = null; S.passing = v; render(); },
-  livewd: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.wid = v; s.rt = null; S.width = v; render(); },
+  liveins: v => { const [k, key, o] = v.split("|"), s = LIVE.k ? LIVE.M.a : LIVE.M.h; s[k] = o; if (k === "fwd") s.fwd0 = o; s.rt = null; S[key] = o; render(); },
   livetk: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.tk = v; S.tackling = v; render(); },
   liveme: v => { const s = LIVE.k ? LIVE.M.a : LIVE.M.h; s.ment = v; s.rt = null; S.mentality = v; render(); },
   livesub: () => { const off = +document.getElementById("sub-off").value, on = +document.getElementById("sub-on").value; doSub(LIVE.M, LIVE.k, off, on); render(); },
@@ -331,8 +329,7 @@ const CHG = {
   startsort: v => { const cur = UI.sort.start; UI.sort.start = { k: v, d: cur && cur.k === v ? cur.d : (v === "n" || v === "reg" || v === "co" ? 1 : -1) }; render(); },
   style: v => { S.mentality = v; save(); render(); },
   tackle: v => { S.tackling = v; save(); render(); },
-  pass: v => { S.passing = v; save(); render(); },
-  width: v => { S.width = v; save(); render(); },
+  instr: (v, el) => { if (v.includes("|")) { const [key, o] = v.split("|"); S[key] = o; } else S[el.dataset.k] = v; save(); render(); },
   autostyle: (v, el) => { S.set.autoStyle = el.checked; save(); },
   awy: v => { UI.awY = +v; render(); },
   awl: v => { UI.awL = v; render(); },
@@ -577,6 +574,13 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   if (!S.wageHalf && S.amnesty && S.club != null && !S.sacked && S.amnesty.club === S.club) { const c = me(), before = sum(c.squad, id => P(id).wage); for (const id of c.squad) { const p = P(id); p.wage = Math.round(p.wage / 2 / 100) * 100; } S.wageHalf = 1; news(`Wage bill halved, a one-off correction for the preseason figures: from ${perWeek(before)} to ${perWeek(sum(c.squad, id => P(id).wage))}. New contracts are priced normally.`, true, "finance"); }
   // 5.62.5: results from before match days were stored get one from the calendar: league on Saturday (the first of a
   // week's two league games on Tuesday), cup ties Wednesday, European games Tuesday.
+  // 5.66: your side's style of play became five instructions; carry the old style across as its nearest mix.
+  if (!S.ins5 && S.clubs) { S.ins5 = 1;
+    const MAP = { vatt: { forward: "push", tempo: "fast" }, att: { forward: "push" }, pos: { tempo: "slow", passing: S.passing || "ground" }, bal: {},
+      ctr: { forward: "back", tempo: "fast" }, def: { forward: "back", line: "low" }, vdef: { forward: "back", line: "low", tempo: "slow" } };
+    const m = MAP[S.mentality] || {}; for (const [k, v] of Object.entries(m)) if (!S[k] || S[k] === "normal") S[k] = v;
+    if (S.club != null && S.mentality && S.mentality !== "bal") news(`Styles of play are now team instructions you set one by one (Tactics > Instructions). Your ${MENT[S.mentality].l.toLowerCase()} style has been carried over as: ${INSTR.map(I => S[I.s] && S[I.s] !== "normal" ? I.set[S[I.s]].l.toLowerCase() : "").filter(Boolean).join(", ")}.`);
+    S.mentality = "bal"; }
   if (!S.ordFill) { const lgSeen = {}, lgN = {}; for (const r of S.myRes || []) if (r.comp === "L") lgN[r.w] = (lgN[r.w] || 0) + 1;
     for (const r of S.myRes || []) { if (r.ord != null || r.comp === "F") continue;
     if (r.comp === "L") { const n = lgSeen[r.w] = (lgSeen[r.w] || 0) + 1; r.ord = lgN[r.w] > 1 && n === 1 ? 2 : 3; }  // two league games that week: the first was midweek

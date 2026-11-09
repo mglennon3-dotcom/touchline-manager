@@ -51,7 +51,7 @@ a coach who develops players; young players who don't play lose some of it. Rati
 players and your division; everyone else shows a range until scouted (2 hours of your weekly scouting time
 for a first look, again for a full report).
 
-**Style of play:** Very attacking, Attacking, Control possession, Neutral, Counter attack, Defensive or
+**Style of play** (AI clubs; yours uses team instructions, below): Very attacking, Attacking, Control possession, Neutral, Counter attack, Defensive or
 Very defensive. Attacking styles create more chances at both ends, slightly more against than for, so they
 pay when you're the stronger side or chasing a goal; deeper styles keep games against better teams close.
 Possession keeps the ball (fewer chances against, less created, exposed to counters); counter-attacking
@@ -75,21 +75,28 @@ With only the home sides changing over 3,376 matches: Normal took 1.55 points a 
 reds; Mark aggressively 1.59 points but 2.8 yellows and 0.16 reds (so more bans to come); Stay on feet 1.47
 points, 1.15 yellows and 0.04 reds. AI sides tackle normally.
 
-**Passing and width** (5.65) work like styles, with a fit judged on the players who carry them out:
-- *Keep it on the ground*: more of the ball, fewer shots; needs Passing, Technique, Vision and Composure.
-- *Play it long*: less of the ball, more direct chances and less risk at the back; needs Pace, Heading, Strength.
-- *Through the middle*: fewer crosses and headers; needs passing, vision and technique in central midfield and
-  dribbling and finishing up front.
-- *Down the wings*: more shots and headers; needs quick wide players, strikers good in the air, and wingers in
-  the formation (without them the full-backs supply the width and the fit suffers).
-Teams differ less in these than in a style's keys, so fit counts three times as much. Played over 300 matches
-per club against its own division, each option was roughly neutral for an average side; the best-fitting third
-of clubs gained 0.07-0.08 points a game (about 3 a season) and the worst-fitting third lost 0.04-0.11 (0.17 for
-wing play with no wingers). AI sides play Normal for both.
+**Team instructions** (5.66): your own side has no style of play. It plays Neutral, shaped by five
+instructions, each with three settings and a fit judged on the players who carry it out:
+- *Players*: push forward (more chances at both ends, and open to counter-attacks; needs Stamina, Finishing,
+  Dribbling) or stay back (fewer goals against and for; needs Tackling, Marking, Strength).
+- *Tempo*: fast (more shots and sharper breaks against open sides, the ball lost more, legs tire; needs Pace,
+  Dribbling, Stamina) or slow (more of the ball, fewer shots, fresher legs; needs Passing, Composure, Technique, Vision).
+- *Defensive line*: high (win it back higher; defenders without Pace get caught behind) or low block (hard to
+  break down, little going forward; needs defenders strong in the air).
+- *Passing*: on the ground (Passing, Technique, Vision, Composure) or long (Pace, Heading, Strength).
+- *Width*: through the middle (creative central midfielders) or down the wings (quick wide players, strikers
+  good in the air, and wingers in the formation).
+Teams differ less in these than in a style's keys, so fit counts three times as much, and every effect is scaled
+to 0.45 of its solo strength because they stack. Over 300 matches per club against its own division, each
+option was within 0.03 points a game of Neutral for an average side; good fits gained up to 0.07 and poor ones
+lost up to 0.09. Setting all five to suit the XI was worth 0.11 points a game (about five a season), against
+0.02-0.04 for picking the best of the old styles. Your old style was carried over as its nearest mix (counter
+attack became stay back and fast pace, and so on). In simulated matches your assistant pushes players forward to
+chase a game and keeps them back to protect a lead. AI sides keep their styles and play Neutral instructions.
 
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
 there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
-everyone outside the matchday squad and swap him in), Selection (the squad list with bench picks), Style and Training.
+everyone outside the matchday squad and swap him in), Selection (the squad list with bench picks), Instructions and Training.
 Picking a side: "Pick best XI" (Tactics page) asks your assistant for the strongest side, and it will move a
 player out of his usual position when his attributes make him better there than the specialist, say a
 tough-tackling midfielder at centre-back. AI clubs pick the same way. "Pick fresh XI" (Tactics page and the

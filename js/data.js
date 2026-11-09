@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.65.0";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.66.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -103,6 +103,27 @@ const WIDTH = {
   normal: { l: "Normal", m: [1, 1, 1], sh: 1, hdr: 1, d: "A mix." },
   wings: { l: "Down the wings", m: [1.015, .965, 1], sh: 1.04, hdr: 1.5, noW: 1, keys: { W: ["pac", "dri", "sta"], FB: ["pac", "sta"], ST: ["hea", "str"] }, d: "Get wide and cross: more shots and headers. Needs quick wide players and strikers good in the air." },
 };
+/* Your own side has no style of play (AI clubs keep MENT): it plays Neutral shaped by these three instructions
+   plus passing and width. Same fields as PASS/WIDTH, and: tire scales fatigue; open is how much more an opponent's
+   counter-attacks get through; ctr is your own counter-attacking edge against an open side; expose adds to the
+   chances you concede when the instruction is a poor fit (slow defenders holding a high line). */
+const FWD = {
+  push: { l: "Push players forward", m: [1.03, 1, .945], sh: 1.05, tire: 1.03, open: .2, keys: { "*": ["sta", "fin", "dri"] }, d: "More bodies in the box: more chances at both ends. Needs runners who can finish." },
+  normal: { l: "Neutral", m: [1, 1, 1], sh: 1, d: "Keep the shape." },
+  back: { l: "Players stay back", m: [.975, .99, 1.055], sh: .95, tire: .98, open: -.12, keys: { "*": ["tac", "mar", "str"] }, d: "Numbers behind the ball: fewer goals against, fewer for. Needs players who defend." },
+};
+const TEMPO = {
+  fast: { l: "Fast pace", m: [1.01, .965, 1], sh: 1.045, tire: 1.06, ctr: .1, keys: { "*": ["pac", "dri", "sta"] }, d: "Move it quickly: more shots and deadly breaks against open sides, but the ball is lost more and legs tire." },
+  normal: { l: "Neutral", m: [1, 1, 1], sh: 1, d: "No particular tempo." },
+  slow: { l: "Slow pace", m: [.98, 1.05, 1.01], sh: .93, tire: .97, keys: { "*": ["pas", "cmp", "tec", "vis"] }, d: "Patient build-up: more of the ball, fewer shots, fresher legs. Needs composed passers." },
+};
+const DLINE = {
+  high: { l: "High defensive line", m: [1.015, 1.035, .985], sh: 1, open: .15, expose: .28, keys: { CB: ["pac", "mar"], FB: ["pac", "sta"], DM: ["pac", "tac"] }, d: "Squeeze the pitch and win it back high. Quick defenders are a must: slow ones get caught behind." },
+  normal: { l: "Neutral", m: [1, 1, 1], sh: 1, d: "A standard line." },
+  low: { l: "Low block", m: [.97, .975, 1.065], sh: .96, open: -.15, keys: { CB: ["hea", "str", "mar"], FB: ["mar", "tac"], DM: ["tac", "mar"] }, d: "Defend deep and narrow: hard to break down, little going the other way. Needs defenders strong in the air." },
+};
+// Every instruction your side has: k is the field on a match side, s the field in your save.
+const INSTR = [{ k: "fwd", s: "forward", h: "Players" }, { k: "tempo", s: "tempo", h: "Tempo" }, { k: "line", s: "line", h: "Defensive line" }, { k: "pass", s: "passing", h: "Passing" }, { k: "wid", s: "width", h: "Width" }];
 const MENT = {
   vatt: { l: "Very attacking", ag: 3, m: [1.08, 1, .84], sh: 1.16, open: 1, expose: .25, tire: 1.12, d: "Everyone forward. Far more chances at both ends; players tire faster. For chasing a game." },
   att: { l: "Attacking", ag: 2, m: [1.04, 1, .92], sh: 1.08, open: .7, expose: .2, tire: 1.06, d: "Push on. More chances for and against. Suits the stronger side." },
@@ -329,3 +350,14 @@ const INJURIES = [
 ];
 // Chance a player decides this is his last season, by age.
 const RETIRE_AGE = { 30: .03, 31: .05, 32: .08, 33: .14, 34: .22, 35: .32, 36: .45, 37: .6, 38: .75, 39: .9 };
+
+for (const I of INSTR) I.set = { fwd: FWD, tempo: TEMPO, line: DLINE, pass: PASS, wid: WIDTH }[I.k];
+/* The values above are each instruction's effect on its own. Set together they stack: picking the best fit on all
+   five axes was worth 0.25 points a game at full strength, six times what choosing the best old style gave (0.04),
+   so every effect is scaled toward neutral by INSTR_SCALE. Each option stays balanced for an average side. */
+const INSTR_SCALE = .45;
+for (const I of INSTR) for (const ins of Object.values(I.set)) {
+  if (ins.m) ins.m = ins.m.map(x => 1 + (x - 1) * INSTR_SCALE);
+  for (const f of ["sh", "tire", "hdr"]) if (ins[f] != null) ins[f] = 1 + (ins[f] - 1) * INSTR_SCALE;
+  for (const f of ["ctr", "open", "expose"]) if (ins[f] != null) ins[f] *= INSTR_SCALE;
+}
