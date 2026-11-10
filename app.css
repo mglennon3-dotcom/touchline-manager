@@ -508,3 +508,6 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .board .t.away .tn{align-items:flex-end}
 .seg button.fit-g,.seg button.fit-b{color:var(--ink)}
 .seg button.fit-g[aria-pressed="true"],.seg button.fit-b[aria-pressed="true"]{color:var(--surface)}
+/* Next-match card: instruction dropdowns shaded by the chosen option's fit (iOS can't colour individual options) */
+select.fit-g{background-color:color-mix(in srgb,var(--win) 20%,var(--surface));border-color:var(--win)}
+select.fit-b{background-color:color-mix(in srgb,var(--loss) 22%,var(--surface));border-color:var(--loss)}

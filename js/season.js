@@ -854,11 +854,13 @@ function cupProgress(key) {
 /* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
    as playing time for development (an academy player's weekly minutes are measured against one match, not
    the first team's fixtures), and keeps its own appearances, goals and ratings (p.as). */
+const ACAD_SUB_MINS = 20;
 function academyWeek(c) {
   if (S.phase !== "season") return;
-  // Anyone who played for the first team this week (p.wm holds his senior minutes so far) misses the academy
-  // match: he can't play both. An unused substitute still plays for the academy.
-  const kids = c.squad.map(P).filter(p => p.acad && avail(p) && !p.loan && !(p.wm > 0));
+  // Anyone who played more than 20 minutes for the first team this week (p.wm holds his senior minutes so far)
+  // misses the academy match. A late substitute (20 minutes or less in all) still plays for the academy, as
+  // does an unused one: before 5.68 a single minute off the bench ruled him out.
+  const kids = c.squad.map(P).filter(p => p.acad && avail(p) && !p.loan && !(p.wm > ACAD_SUB_MINS));
   if (!kids.length) return;
   const xi = autoPick(kids.map(p => p.id), "4-3-3").filter(x => x != null).map(P), inXI = new Set(xi.map(p => p.id));
   const st = p => p.as || (p.as = { app: 0, g: 0, a: 0, rt: 0 });

@@ -107,6 +107,7 @@ opponent will line up in, and a club's page shows its coach's preference and how
 In a live match both formations show under the team names (and change when either side changes shape), and on
 the Tactics tab each instruction option is shaded green if it suits the players on the pitch and red if it
 doesn't (5.67.1), so you can see a substitution turn a good fit into a poor one.
+The next-match card shades each instruction dropdown the same way, by the fit of the option chosen (5.68).
 
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
 there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
@@ -179,7 +180,9 @@ the side when it's short), which counts as playing time: over a season academy p
 internal scale against +3.4 for unused teenagers in the first-team squad. Each player shows whether he's ready
 for the first team against your senior players at his position (Ready to start, Ready for the matchday squad,
 Close, Not yet), with a Promote button. Academy players aren't picked for senior matches unless you tick
-"Include academy players in selection" (Tactics or the Academy page); they're marked ACA in the pickers.
+"Include academy players in selection" (Tactics or the Academy page); they're marked ACA in the pickers. One who
+plays for the first team still plays that week's academy match if he was on for 20 minutes or less in all
+(5.68; before, any first-team minutes ruled him out).
 
 **Scouting assistant:** an on/off toggle on both Scouted lists (Youth and Transfers), off unless you
 switch it on. When on, at the end of each week it spends the scouting hours you left unused (your own
