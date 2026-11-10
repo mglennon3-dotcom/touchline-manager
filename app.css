@@ -495,3 +495,16 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 .ct-lg{--ctc:#2f7d32} .ct-fa{--ctc:#1f4fc4} .ct-lc{--ctc:#7c3aed} .ct-eu{--ctc:#d4a017} .ct-po{--ctc:#c2410c} .ct-fr{--ctc:#64748b}
 .ct-key{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .ct-key .ct{font-size:12px;padding:3px 8px;border-radius:6px}
+
+/* Live match: formations under the team names, and instruction options shaded by how well they fit the XI */
+.board .tn{display:flex;flex-direction:column;min-width:0}
+.board .tf{font-family:var(--f-mono, monospace);font-size:13px;opacity:.75;margin-top:4px}
+.seg button.fit-g{background:color-mix(in srgb,var(--win) 22%,transparent)}
+.seg button.fit-b{background:color-mix(in srgb,var(--loss) 30%,transparent)}
+.seg button.fit-g[aria-pressed="true"]{background:var(--ink);box-shadow:inset 0 -4px 0 var(--win)}
+.seg button.fit-b[aria-pressed="true"]{background:var(--ink);box-shadow:inset 0 -4px 0 var(--loss)}
+.fit-key{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-1px;margin-left:4px}
+.fit-key.fit-g{background:color-mix(in srgb,var(--win) 40%,transparent)}.fit-key.fit-b{background:color-mix(in srgb,var(--loss) 40%,transparent)}
+.board .t.away .tn{align-items:flex-end}
+.seg button.fit-g,.seg button.fit-b{color:var(--ink)}
+.seg button.fit-g[aria-pressed="true"],.seg button.fit-b[aria-pressed="true"]{color:var(--surface)}

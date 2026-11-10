@@ -104,6 +104,9 @@ it), and change shape once in a match: to more attackers when behind from 70 min
 unless set in their ways, to more defenders when ahead from 80. About one shape change a match between the two
 sides; goals, home wins and draws were unchanged over 3,400 matches. The next-match card says what shape your
 opponent will line up in, and a club's page shows its coach's preference and how flexible he is.
+In a live match both formations show under the team names (and change when either side changes shape), and on
+the Tactics tab each instruction option is shaded green if it suits the players on the pitch and red if it
+doesn't (5.67.1), so you can see a substitution turn a good fit into a poor one.
 
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
 there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
