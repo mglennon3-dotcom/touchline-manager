@@ -94,6 +94,17 @@ lost up to 0.09. Setting all five to suit the XI was worth 0.11 points a game (a
 attack became stay back and fast pace, and so on). In simulated matches your assistant pushes players forward to
 chase a game and keeps them back to protect a lead. AI sides keep their styles and play Neutral instructions.
 
+**AI formations** (5.67): each AI coach prefers a system (attacking coaches lean to 4-3-3 and 3-4-3, defensive
+ones to a back five) and is set in his ways, pragmatic or flexible (about a quarter, a half and a quarter). The
+rigid ones always play their system. The others play another shape when it suits the squad clearly better (by
+1.2% for pragmatic coaches, 0.5% for flexible, on top of the 2% a coach gets for his own system: about 5% of
+clubs, mostly back-three coaches with squads built for a back four), switch to their best defensive shape
+against a much stronger side and their best attacking one against a much weaker side (if the squad can play
+it), and change shape once in a match: to more attackers when behind from 70 minutes (or two down from 60) and,
+unless set in their ways, to more defenders when ahead from 80. About one shape change a match between the two
+sides; goals, home wins and draws were unchanged over 3,400 matches. The next-match card says what shape your
+opponent will line up in, and a club's page shows its coach's preference and how flexible he is.
+
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
 there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
 everyone outside the matchday squad and swap him in), Selection (the squad list with bench picks), Instructions and Training.

@@ -61,7 +61,7 @@ function clubStyles(c) {
   const key = S.year * 100 + S.week;
   if (c._sty && c._sty[0] === key && typeof c._sty[1] === "object") return c._sty[1];  // 5.12.1 cached a bare string here
   const co = coachOf(c), t = co.off - co.def + (co.arch === "off" ? 2 : co.arch === "def" ? -2 : 0);
-  const f = c.formation, sl = slotsOf(f), on = autoPick(eligibleIds(c), f).map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean);
+  const f = isUser(c) ? c.formation : clubForms(c).usual, sl = slotsOf(f), on = autoPick(eligibleIds(c), f).map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean);
   const fits = Object.fromEntries(Object.keys(MENT).map(st => [st, styleFit(on, st)]));
   let base;
   if (t >= 5) base = fits.att > -.25 ? "att" : "bal";
@@ -79,6 +79,54 @@ function playable(fitOf, ag, toAg) {
 function userOn() { fixUserLineup(); const sl = slotsOf(S.formation); return S.lineup.map((id, i) => id == null ? null : { p: P(id), slot: sl[i] }).filter(Boolean); }
 const FIT_WORDS = [[.35, "Great fit", "good"], [.12, "Good fit", "good"], [-.12, "Average fit", "muted"], [-.35, "Poor fit", "warn"], [-99, "Very poor fit", "bad"]];
 const fitWord = f => FIT_WORDS.find(([t]) => f >= t);
+/* ---------- AI formations ----------
+   A coach has a preferred system, but how wedded he is to it varies: rigid coaches always play it; the rest drop
+   it when the squad is clearly better suited to another shape, change shape for a big mismatch, and change in
+   matches to chase or protect a result. Before 5.67 every AI club played its coach's shape every minute of every
+   match, whatever the squad or the score. Flexibility comes from the coach's name, so saves need nothing new. */
+const ATT_SHAPES = ["4-3-3", "4-2-3-1", "3-4-3", "4-1-2-1-2", "4-4-2", "3-4-2-1"], DEF_SHAPES = ["5-4-1", "5-3-2", "4-1-4-1", "4-4-1-1"];
+const FLEX_WORD = ["set in his ways", "pragmatic", "flexible"];
+function coachFlex(co) { let h = 7; for (const ch of co.name || "") h = (h * 31 + ch.charCodeAt(0)) >>> 0; const r = h % 4; return r === 0 ? 0 : r === 3 ? 2 : 1; }
+const fwdCount = f => slotsOf(f).filter(r => r === "ST" || r === "W" || r === "AM").length;
+const backCount = f => slotsOf(f).filter(r => r === "CB" || r === "FB").length;
+/* How well each shape suits the club's best XI for it (attack + midfield + defence, with the coach's 2% for his
+   own system), and the shape it plays as a rule. Rating all twelve shapes for every club every week doubled the
+   time a week took (0.54s to 1.1s), so it's redone only when the squad or the coach changes (and each season, as
+   players develop); injuries and suspensions are left to each match's own XI. */
+function clubForms(c) {
+  const key = S.year + "|" + c.coach.name + "|" + c.squad.length + "|" + c.squad.reduce((a, b) => a + b, 0);
+  if (c._frm && c._frm[0] === key) return c._frm[1];
+  const co = coachOf(c), ids = eligibleIds(c), flex = coachFlex(co), pref = FORMATIONS[co.form] ? co.form : c.formation, scores = {};
+  for (const f of FORM_KEYS) { const sl = slotsOf(f), on = autoPick(ids, f).map((id, i) => id == null ? null : { p: P(id), slot: sl[i], fit: P(id).fit }).filter(Boolean);
+    const r = sideRatings(on, "bal", f, co, 0); scores[f] = on.length < 11 ? 0 : r.att + r.mid + r.def; }
+  let usual = pref;
+  if (flex) { const best = FORM_KEYS.reduce((a, b) => scores[b] > scores[a] ? b : a); if (scores[best] > scores[pref] * (flex === 2 ? 1.005 : 1.012)) usual = best; }  // pref's score already carries his 2% bonus
+  if (usual !== c.formation) c.formation = usual;
+  const r = { scores, usual, flex, pref }; c._frm = [key, r]; return r;
+}
+// The shape for one match: rigid coaches play their usual one; others change it for a big mismatch, if the squad can play the alternative.
+function aiForm(c, opp, home) {
+  const { scores, usual, flex } = clubForms(c); if (!flex) return usual;
+  const d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5), gap = flex === 2 ? 4 : 6;
+  const list = d <= -gap ? DEF_SHAPES : d >= gap ? ATT_SHAPES : null; if (!list) return usual;
+  const best = list.reduce((a, b) => scores[b] > scores[a] ? b : a);
+  return best !== usual && scores[best] >= scores[usual] * .97 ? best : usual;
+}
+/* In a match, once: a side behind from 70 minutes (or two down from 60) goes to a shape with more attackers; one
+   ahead from 80 goes to one with more defenders, unless its coach is set in his ways. */
+function adaptForm(M, k) {
+  const s = k ? M.a : M.h, o = k ? M.h : M.a, c = C(s.club);
+  if (s.fchg || isUser(c) || s.on.length < 10) return;
+  const ko = M.fx.ko, own = s.goals + (ko ? (k ? ko.aggA : ko.aggH) : 0), opp = o.goals + (ko ? (k ? ko.aggH : ko.aggA) : 0), diff = own - opp, mn = M.min;
+  const { scores, flex } = clubForms(c), cur = s.form;
+  let pick = null;
+  if ((diff < 0 && mn >= 70) || (diff <= -2 && mn >= 60) || (diff === 0 && (ko || M.fx.needWinner) && mn >= 80)) pick = ATT_SHAPES.filter(f => fwdCount(f) > fwdCount(cur));
+  else if (diff > 0 && mn >= 80 && flex) pick = DEF_SHAPES.filter(f => backCount(f) > backCount(cur) || (backCount(f) === backCount(cur) && fwdCount(f) < fwdCount(cur)));
+  if (!pick || !pick.length) return;
+  const best = pick.reduce((a, b) => scores[b] > scores[a] ? b : a);
+  if (scores[best] < scores[cur] * .93) return;  // a shape this squad can't play isn't worth the gamble
+  s.fchg = 1; changeForm(M, k, best);
+}
 // For one match the AI shifts its usual style: further forward against weaker sides, deeper against stronger.
 function aiStyle(c, opp, home) {
   const { base, fits } = clubStyles(c), d = clubLevel(c) - clubLevel(opp) + (home ? 1.5 : -1.5);
@@ -118,7 +166,7 @@ function adaptStyle(M, k) {
 function makeSide(c, opp, home, auto) {
   let xi, f, ment;
   if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = "bal"; }
-  else { f = c.formation; xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
+  else { f = aiForm(c, opp, home); xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
   const tk = isUser(c) && TACKLE[S.tackling] ? S.tackling : "normal";  // AI sides tackle normally
   const ins = Object.fromEntries(INSTR.map(I => [I.k, isUser(c) && I.set[S[I.s]] ? S[I.s] : "normal"]));
   const sl = slotsOf(f);
@@ -246,7 +294,7 @@ function step(M) {
   // used to get NaN fitness, which made his side's ratings NaN in every later match: they never had the ball,
   // and their opponents had it every minute and could never score. He tires like a stamina-8 player.
   for (const s of sd) for (const o of s.on) o.fit = Math.max(0, o.fit - (o.slot === "GK" ? .06 : .4 * (1.35 - (o.p.at.sta ?? 8) / 25) * MENT[s.ment].tire * ((s.rt && s.rt.tire) || 1)));  // a full match: stamina 5 costs ~41, 10 ~34, 15 ~27, 20 ~20. Half this (5.30) left a starting XI barely out of the green at full time, so fatigue and substitutions hardly mattered
-  if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); }
+  if (M.min >= 60 && M.min % 5 === 0) { adaptStyle(M, 0); adaptStyle(M, 1); adaptForm(M, 0); adaptForm(M, 1); }
   // Fit only changes with the players or the style, so it isn't recomputed with every fitness update.
   for (const s of sd) if (!s.rt || M.min % 5 === 0) { const key = s.ment + "|" + s.subs + "|" + s.on.length + "|" + INSTR.map(I => s[I.k]).join("|"); if (s.fitK !== key) { s.fitK = key; s.fitV = styleFit(s.on, s.ment); s.ifit = instrFits(s.on, s); } s.rt = sideRatings(s.on, s.ment, s.form, s.co, s.fitV, s, s.ifit); }
   const hb = M.fx.neutral ? 1 : 1.035 + .01 * M.riv;  // a derby crowd lifts the home side a little more
