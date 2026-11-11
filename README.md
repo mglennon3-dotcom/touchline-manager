@@ -275,9 +275,12 @@ excellent academy. It sets how fast under-21s improve and how many
 places you can offer prospects. It is one of six factors prospects weigh (with distance, playing time, formation
 fit, squad dynamics and prestige), each prospect weighting them differently.
 
-**Your club** (5.71): when you choose a club, the same form that creates your manager lets you rename it, give it
-a new three-letter short name and pick its colour (the crest follows); a name or short name another club uses is
-refused.
+**Your club** (5.71, 5.72): when you choose a club, the same form that creates your manager lets you edit
+everything about it: name, three-letter short name and colour (the crest follows; a name or short name another
+club uses is refused), region, owner, prestige, youth development, support, fan engagement, ground capacity (the
+ticket price is re-set to fit), cash, income other than tickets (50-300%, revenue and sponsorship together) and
+squad strength (-3 to +3: every player's attributes and potential move by the same amount, so each keeps his
+profile). The board sets its target from the club as you leave it.
 
 **Unsackable mode** (chosen when you create your manager, or on the Manager page) keeps the board's reactions but
 stops it firing you. The test script uses it.

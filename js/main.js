@@ -157,7 +157,26 @@ function assignSlot(i, id) {
 // Every country can be switched off (Unselect all, then pick the few you want); the lists then say none are selected.
 function ctyToggle(key, v) { const off = new Set(S.set[key] || []); off.has(v) ? off.delete(v) : off.add(v); S.set[key] = [...off]; save(); render(); }
 // The club fields in the new-career form, kept on the modal so a re-render (picking a colour) doesn't lose them.
-function keepClubForm(m) { const n = document.getElementById("club-name"), s = document.getElementById("club-short"); if (n) m.cname = n.value; if (s) m.cshort = s.value.toUpperCase(); }
+function keepClubForm(m) { const n = document.getElementById("club-name"), s = document.getElementById("club-short"); if (n) m.cname = n.value; if (s) m.cshort = s.value.toUpperCase();
+  for (const [k, id] of [["cregion", "club-region"], ["cowner", "club-owner"], ["crep", "club-rep"], ["cacad", "club-acad"], ["csup", "club-sup"], ["cfans", "club-fans"], ["ccap", "club-cap"], ["ccash", "club-cash"], ["cinc", "club-inc"], ["csq", "club-sq"]]) { const el = document.getElementById(id); if (el) m[k] = el.value; } }
+/* Apply the new-career form's club edits to the chosen club before the career starts (5.72). Numbers are kept in range. */
+function applyClubEdits(c, m) {
+  const n = (k, lo, hi) => m[k] == null || m[k] === "" || isNaN(+m[k]) ? null : clamp(+m[k], lo, hi);
+  const reg = clubRegions(c).find(r => r[0] === m.cregion);
+  if (reg && reg[0] !== c.region) { c.region = reg[0]; c.lat = reg[1] + rf(-.3, .3); c.lon = reg[2] + rf(-.4, .4); }
+  if (OWNER[m.cowner]) c.owner = m.cowner;
+  const rep = n("crep", 1, 96); if (rep != null) { c.rep = c.rep0 = Math.round(rep); }
+  const ac = n("cacad", 1, 20); if (ac != null) c.academy = Math.round(ac);
+  const su = n("csup", 1, 20); if (su != null) c.support = Math.round(su);
+  const fa = n("cfans", 20, 90); if (fa != null) c.fans = c.fans0 = Math.round(fa);
+  const cap = n("ccap", 500, 100000); if (cap != null && Math.round(cap) !== c.cap) { c.cap = Math.round(cap); setTicketPrice(c); }
+  const cash = n("ccash", 0, 2000); if (cash != null) c.cash = Math.round(cash * 1e6);
+  const inc = n("cinc", 50, 300); if (inc != null && inc !== 100) { c.revBase = Math.round(c.revBase * inc / 100); scaleDeals(c, inc / 100); }
+  // Squad strength: every attribute and potential moves by the same amount, so each player keeps his profile.
+  const d = Math.round(n("csq", -3, 3) || 0);
+  if (d) for (const id of c.squad) { const p = P(id); for (const k in p.at) p.at[k] = clamp(p.at[k] + d, 1, 20); setOvr(p); p.pot = clamp(p.pot + 3 * d, p.ovr, 95); p.peak = Math.max(p.peak || 0, p.ovr); }
+  bumpTick();
+}
 const ACT = {
   regbest: () => { autoRegister(me(), false); fixUserLineup(); save(); render(); toast("Your best 25 seniors are registered."); },
   regtoggle: v => {
@@ -182,6 +201,7 @@ const ACT = {
     m.cerr = name.length < 3 ? "The club name needs at least three letters." : !/^[A-Z0-9]{2,3}$/.test(short) ? "The short name is two or three letters." : DRAFT.clubs.some(o => o.id !== c.id && o.name.toLowerCase() === name.toLowerCase()) ? `There is already a ${name}: choose another name.` : DRAFT.clubs.some(o => o.id !== c.id && o.short === short) ? `${short} is already another club's short name.` : null;
     if (m.cerr) { m.name = el ? el.value : m.name; renderModal(); return; }
     c.name = name; c.short = short; if (m.ccolor) c.color = m.ccolor;
+    { const keep = S; S = DRAFT; applyClubEdits(c, m); S = keep; }
     UI.modal = null; takeClub(m.club, (el && el.value.trim()) || "The Manager", m.arch, fe ? fe.value : "4-3-3"); S.set.unsackable = !!(us && us.checked); save(); render(); },
   coachpt: v => { if (S.me.pts <= 0 || S.me[v] >= 20) return; S.me[v]++; S.me.pts--; save(); render(); },
   knowpt: v => { if (S.me.pts <= 0 || knowOf(v) >= 20) return; S.me.know[v] = Math.min(20, Math.floor(knowOf(v)) + 1); S.me.pts--; save(); render(); },

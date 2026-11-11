@@ -511,3 +511,4 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 /* Next-match card: instruction dropdowns shaded by the chosen option's fit (iOS can't colour individual options) */
 select.fit-g{background-color:color-mix(in srgb,var(--win) 20%,var(--surface));border-color:var(--win)}
 select.fit-b{background-color:color-mix(in srgb,var(--loss) 22%,var(--surface));border-color:var(--loss)}
+.edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px}.edit-grid .f{min-width:0}.edit-grid input,.edit-grid select{width:100%}

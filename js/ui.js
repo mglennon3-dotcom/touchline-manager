@@ -1197,7 +1197,13 @@ function modalProspect(y) {
     <div><h3 style="margin-bottom:4px">Clubs in the running</h3>${cs.length ? cs.map(x => `<div class="row between" style="padding:4px 0;border-top:1px solid var(--line)"><span>${clubA(x.c.id, { flag: 1 })} ${x.offer ? `<span class="chip hg">${y.offers[0] === x.c.id ? "first offer" : "offer made"}</span>` : ""}${y.commit === x.c.id ? ' <span class="chip xi">committed</span>' : ""}</span><span class="bar"><i style="width:${clamp(x.s / best, 0, 1) * 100}%"></i></span></div>`).join("") : '<p class="muted small">Nobody has approached him yet.</p>'}</div>
     ${y.commit !== c.id && !y.signed ? `<div class="row"><button class="btn sm" data-a="rec" data-v="${y.id}|scout" ${y.sc >= 3 ? "disabled" : ""}>Scout (${scoutHours(3, prospectCountry(y))}h${travelCost(prospectCountry(y)) ? ", " + money(travelCost(prospectCountry(y))) : ""})</button><button class="btn sm" data-a="rec" data-v="${y.id}|call">Call family (1h)</button><button class="btn sm" data-a="rec" data-v="${y.id}|visit" ${y.visit ? "disabled" : ""}>Host a visit (${scoutHours(5, prospectCountry(y))}h${travelCost(prospectCountry(y)) ? ", " + money(travelCost(prospectCountry(y))) : ""})</button><button class="btn sm" data-a="rec" data-v="${y.id}|coach" ${y.coach ? "disabled" : ""}>${y.coach ? "Coaches spoken to" : `Speak to his youth coaches (${scoutHours(2, prospectCountry(y))}h)`}</button><button class="btn sm" data-a="rec" data-v="${y.id}|home" ${y.home || y.sc < 1 ? "disabled" : ""}>${y.home ? "Family visited" : `Visit his family (${scoutHours(4, prospectCountry(y))}h${travelCost(prospectCountry(y)) ? ", " + money(travelCost(prospectCountry(y))) : ""})`}</button><button class="btn sm" data-a="rec" data-v="${y.id}|offer">${y.offers.includes(c.id) ? "Withdraw offer" : "Offer a place"}</button><span class="small muted">${S.rec.hours}h left this week · your knowledge of ${KNOW_NAME(prospectCountry(y))}: ${Math.floor(knowOf(prospectCountry(y)))}/20</span></div>` : ""}</div>`;
 }
-function modalCoach(m) {
+/* Everything you can change about a club when you take it over (5.72), and where each starts. */
+const CLUB_EDIT_DEF = { cregion: c => c.region, cowner: c => c.owner, crep: c => c.rep, cacad: c => c.academy, csup: c => c.support, cfans: c => c.fans,
+  ccap: c => c.cap, ccash: c => +(c.cash / 1e6).toFixed(1), cinc: () => 100, csq: () => 0 };
+const clubRegions = c => { const L = LG[c.lg], K = COUNTRY[c.country]; return L.half ? K.regions.filter(r => r[3] === L.half) : K.regions; };
+// Drawn on the start screen, before any game is loaded: club level and income are read from the world being drafted.
+function modalCoach(m) { const keep = S; S = DRAFT; try { return modalCoachIn(m); } finally { S = keep; } }
+function modalCoachIn(m) {
   const c = DRAFT.clubs[m.club], arch = m.arch || "bal", co = newManager("", arch), form = m.form || "4-3-3";
   // Your club as you'd like it (5.71): name, short name and colour, applied when the career starts (startcareer).
   const look = { ...c, name: m.cname ?? c.name, short: m.cshort ?? c.short, color: m.ccolor ?? c.color };
@@ -1206,7 +1212,22 @@ function modalCoach(m) {
       <label class="f">Club name<input type="text" id="club-name" maxlength="28" value="${esc(look.name)}"></label>
       <div class="row" style="gap:12px;align-items:flex-end"><label class="f" style="flex:1">Short name<input type="text" id="club-short" maxlength="3" value="${esc(look.short)}" style="text-transform:uppercase" autocapitalize="characters"></label>
         <label class="f">Colour<input type="color" id="club-color" data-c="ccolor" value="${/^#[0-9a-f]{6}$/i.test(look.color) ? look.color : "#1f4fd1"}" style="width:64px;height:40px;padding:2px"></label></div>
-      ${m.cerr ? `<p class="small bad">${esc(m.cerr)}</p>` : `<p class="tiny muted">The short name shows in tight spaces such as fixtures and the live scoreboard.</p>`}</div>
+      ${m.cerr ? `<p class="small bad">${esc(m.cerr)}</p>` : `<p class="tiny muted">The short name shows in tight spaces such as fixtures and the live scoreboard.</p>`}
+      ${(() => { const regs = clubRegions(c), v = k => m[k] ?? CLUB_EDIT_DEF[k](c), sel = (id, k, opts) => `<select id="${id}">${opts.map(([val, l]) => `<option value="${val}" ${String(v(k)) === String(val) ? "selected" : ""}>${l}</option>`).join("")}</select>`;
+        const num = (id, k, min, max, step = 1) => `<input type="number" inputmode="decimal" id="${id}" min="${min}" max="${max}" step="${step}" value="${v(k)}">`;
+        const lvl = r20(clubLevel(c)), d = +v("csq") || 0;
+        return `<div class="edit-grid">
+        <label class="f">Region${sel("club-region", "cregion", regs.map(r => [r[0], r[0]]))}</label>
+        <label class="f">Owner${sel("club-owner", "cowner", Object.entries(OWNER).map(([k, o]) => [k, o.l]))}</label>
+        <label class="f">Prestige <span class="tiny muted">1-96</span>${num("club-rep", "crep", 1, 96)}</label>
+        <label class="f">Youth development <span class="tiny muted">1-20</span>${num("club-acad", "cacad", 1, 20)}</label>
+        <label class="f">Support <span class="tiny muted">1-20</span>${num("club-sup", "csup", 1, 20)}</label>
+        <label class="f">Fan engagement <span class="tiny muted">20-90</span>${num("club-fans", "cfans", 20, 90)}</label>
+        <label class="f">Ground capacity${num("club-cap", "ccap", 500, 100000, 500)}</label>
+        <label class="f">Cash, millions${num("club-cash", "ccash", 0, 2000, .1)}</label>
+        <label class="f">Income except tickets <span class="tiny muted">% of today's (${money(c.revBase + sponsorTotal(c))} a year)</span>${num("club-inc", "cinc", 50, 300, 5)}</label>
+        <label class="f">Squad strength <span class="tiny muted">now ${lvl.toFixed(1)}</span>${sel("club-sq", "csq", [-3, -2, -1, 0, 1, 2, 3].map(x => [x, x ? `${x > 0 ? "+" : ""}${x} (about ${(lvl + x).toFixed(1)})` : "As it is"]))}</label>
+      </div><p class="tiny muted">Prestige moves crowds, sponsorship and who will join; support and fan engagement fill the ground; income scales the club's revenue and sponsorship together (ticket money follows the crowds); squad strength shifts every player's attributes and potential by the same amount. The board sets its target from the club as you leave it.</p>`; })()}</div>
     <label class="f">Your name (the manager)<input type="text" id="coach-name" maxlength="28" value="${esc(m.name || "")}" placeholder="Your name"></label>
     <div><h3 style="margin-bottom:6px">Style</h3><div class="train arch">${Object.entries(ARCH).map(([k, a]) => `<button data-a="arch" data-v="${k}" aria-pressed="${arch === k}"><b>${a.l}</b><span class="tiny muted">${a.d}</span></button>`).join("")}</div></div>
     <div class="attrs">${COACH_KEYS.map(([k, l]) => `<div class="attr"><span>${l}</span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b></div>`).join("")}</div>
