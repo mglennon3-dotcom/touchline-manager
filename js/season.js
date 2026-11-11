@@ -384,7 +384,7 @@ function weekly() {
     if (isUser(c)) { const sc = S.rec.scoutLvl * scoutCost(); c.cash -= sc * wk; c.fin.scouting += sc * wk; }
     const t = TRAIN[isUser(c) ? S.training : "bal"], acad = 1 + c.academy * .015, co = coachOf(c), coachDev = .6 + .04 * (co ? co.dev : 10);
     if (isUser(c)) academyWeek(c);
-    const possible = Math.max(1, c.wkMatches) * 90;
+    const possible = Math.max(1, c.wkMatches) * 90, clv = S.spread2 ? clubLevel(c) : 0;
     for (const id of c.squad) {
       const p = P(id);
       if (isUser(c)) p.seen = (p.seen || 0) + 1;  // weeks your coaches have watched him (gsHint)
@@ -396,7 +396,12 @@ function weekly() {
         // averaging 5 or less x0.85, 6 x1.0, 7 x1.15, 8+ x1.25. Fewer than 3 appearances counts as average.
         const avgR = p.s.app >= 3 ? p.s.rt / p.s.app : 6, formMult = avgR <= 7 ? clamp(1 + .15 * (avgR - 6), .85, 1.15) : 1.15 + .1 * Math.min(1, avgR - 7);
         const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * 1.12 * t.grow * (p.age <= 21 ? acad : 1)
-          * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * formMult * gsMult(p);
+          * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * formMult * gsMult(p)
+          // The standard of football (worlds with the wider spread, 5.70): more than a point (out of 20) above his club
+          // he learns less each week, down to 40% at about 2.3 points above. Graduates' potential is drawn from the whole
+          // game wherever they start, and growing into it at any level pulled the bottom divisions back to the old
+          // pyramid within eight seasons (the sixth tier 6.2 to 7.3, the fifth 8.1 to 9.3); now the way up is a move up.
+          * (S.spread2 ? clamp(1 - Math.max(0, p.ovr - clv - 3) * .06, .4, 1) : 1);
         if (R() < ch) growAttrs(p, 1);
       }
       if (isUser(c) && S.training === "int" && !p.inj && R() < .006 * injMult(p)) injure(p, true);

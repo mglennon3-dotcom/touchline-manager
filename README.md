@@ -414,6 +414,17 @@ income goes to at least 90% of its new division's lower quartile, and the yearly
 below that; its sponsorship rises at least as far. A relegated club is capped at 110% of its new division's upper
 quartile. (Before, promotion scaled income by about 1.4x and closed 20% of the remaining gap a season, leaving a
 promoted club on its old division's money for years.)
+**The spread of ability** (5.70, new games): starters' medians step down about two points (out of 20) a division,
+15, 13, 11, 9, 7 and 5 from the Premier Division to the sixth tier, where a straight line from club reputation used
+to give 15 to 8 with a point or less between the lower divisions. Foreign leagues sit on the same line by reputation.
+Money is unchanged: values and wages read a rating by its level in the pyramid, so turnover, wages and fees follow
+the division template as before. Graduates' potential is still drawn from the whole game at any club, so talent has
+to move up for the shape to hold: good players at small clubs outgrow them sooner (from about 1.3 points above the
+club, and more sharply the further above), AI clubs scout youngsters a little below their level and buy those whose
+report shows the potential, players learn more slowly more than a point above their club, and in each window a
+player more than two points above an AI club, 27 or under, draws a club from a higher division at his level. Over
+eight seasons the English medians went 16.0/13.4/11.4/9.3/7.6/6.1 to 15.7/13.7/11.1/9.8/8.5/6.5 (an older world:
+15.4/13.6/11.4/10.5/9.5/8.5). Saves from before 5.70 keep the old spread and rules.
 **Money and ticket prices.** The game uses real-world money, with turnover stepping down between divisions as real
 turnover does (5.62): a typical Premier Division club earns about 160-240M a year and the biggest 450-600M (the
 poorest at least half the division median, as shared TV money keeps them close), the First Division about 30M

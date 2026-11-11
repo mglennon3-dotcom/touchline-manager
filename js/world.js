@@ -70,7 +70,7 @@ function makePlayer(o) {
 /* Market value ignores contract length; value() applies it. */
 /* What a player is worth by ability, age and potential, before the steeper fall below top-flight level (VALUE_KNEE). */
 function rawValue(p) {
-  let v = 50000 * MONEY * Math.pow(1.19, p.ovr - 50);
+  let v = 50000 * MONEY * Math.pow(1.19, econOvr(p.ovr) - 50);  // econOvr: priced by level in the pyramid (5.70)
   if (p.age < 24) v *= 1 + (p.pot - p.ovr) * .045;
   if (p.age > 28) v *= Math.max(.12, 1 - (p.age - 28) * .14);
   return v;
@@ -81,7 +81,7 @@ function rawValue(p) {
    Real football tops out around 200M, so above 100M values rise more slowly. */
 const VALUE_KNEE = 73;
 function baseValue(p) {
-  let v = rawValue(p) * (p.ovr < VALUE_KNEE ? Math.exp(-.125 * (VALUE_KNEE - p.ovr)) : 1);
+  const e = econOvr(p.ovr); let v = rawValue(p) * (e < VALUE_KNEE ? Math.exp(-.125 * (VALUE_KNEE - e)) : 1);
   return v > 1e8 ? 1e8 * Math.pow(v / 1e8, .6) : v;
 }
 /* How much a club of this standing can pay, relative to the top: the money gulf between divisions (5.62). Calibrated
@@ -534,7 +534,7 @@ function setupFinances(c) {
 }
 function newWorld() {
   S = { v: 5, year: 2026, phase: "season", week: 0, di: 0, days: [], summerDay: 0, club: null, nextPid: 1, players: {}, clubs: [], fa: [], towns: {},
-    leagues: {}, ko: {}, cont: {}, money10: 1, econ2: 1, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
+    leagues: {}, ko: {}, cont: {}, money10: 1, econ2: 1, spread2: 1, prospects: [], rec: { hours: 0, scoutLvl: 2, offers: 0 }, inbox: [], news: [], nextMsg: 1,
     history: [], career: [], hof: [], scout: {}, me: null, acad20: true, stadiums: true, sponsors: true, dem2: true, reg2: true, board: 60, training: "bal", formation: "4-4-2", mentality: "bal", lineup: [], cases: [], tlog: [],
     set: { live: true }, qual: null, lastPos: {}, sacked: false, _tick: 1 };
   for (const key of Object.keys(LG)) {

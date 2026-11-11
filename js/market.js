@@ -130,10 +130,15 @@ function aiTransferDay(intensity) {
       if (!p || seen.has(p.id) || p.club === c.id || p.age < 18 || FAM[p.pos][role] < .9 || p.age > 31 || hasNamesake(c, p.name)) continue;
       seen.add(p.id);
       const est = aiRating(p, c);  // what this club can see of him, not his true rating
-      if (est == null || est < lvl - 1 || est > lvl + 8) continue;
+      // Development signings (worlds with the wider spread, 5.70): a club also looks at players of 21 and under a
+      // little below its level, and bids only once a full report shows the potential to reach it (below). Without
+      // them, graduates far better than their league (potential is drawn from the whole game) stayed and the
+      // bottom divisions drifted back up within five seasons: the sixth tier from 6.2 to 7.4.
+      const dev = S.spread2 && p.age <= 21;
+      if (est == null || est < lvl - (dev ? 4 : 1) || est > lvl + 8) continue;
       if (p.club >= 0 && C(p.club).rep > c.rep + 8 && !p.req) continue;
       const fee = askingPrice(p, c); if (fee > budget * .6) continue;
-      cands.push([est - fee / (4e6 * MONEY) + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1, p]);
+      cands.push([est + (dev && est < lvl - 1 ? 3 : 0) - fee / (4e6 * MONEY) + (p.req || p.listed ? 3 : 0) + (p.club < 0 ? 2 : 0) + (30 - p.age) * .1, p]);
     }
     cands.sort((a, b) => b[0] - a[0]);
     const bid = window && R() <= intensity * (rich ? 1.5 : 1);
@@ -142,6 +147,7 @@ function aiTransferDay(intensity) {
       const known = (p.club >= 0 && C(p.club).lg === c.lg) || (c.sc[p.id] || 0) >= 2;
       if (!known) { aiScout(c, p); continue; }  // no hours left: it waits for next week's
       if (!bid) continue;
+      if (p.ovr < lvl - 3 && p.pot < lvl + 3) continue;  // a youngster below the level is only worth it with the potential to pass it
       const fee = askingPrice(p, c), w = willingness(p, c);
       if (w < .3) continue;
       // A listed player draws a bid every time a club settles on him at up to his value; dearer, fewer clubs follow
@@ -154,6 +160,30 @@ function aiTransferDay(intensity) {
     }
   }
   listedMarket(intensity);
+  if (S.spread2 && intensity > 0) sellUp(intensity);
+}
+/* Talent moves up the pyramid (worlds with the wider spread, 5.70). A player at an AI club more than two points (out
+   of 20) above its level, 27 or under, draws a club from a higher division at about his level that can pay and that
+   he'll join. Graduates' potential is drawn from the whole game whatever the club, and with nothing taking the best
+   of them up, the bottom divisions converged back to the old pyramid within five seasons (fifth tier 7 to 9.4, sixth
+   5 to 7.5). Your own players are left to the offers you accept or refuse. */
+function sellUp(intensity) {
+  const buyers = activeClubs().filter(b => !isUser(b) && b.tier <= 6).map(b => [b, clubLevel(b)]);
+  for (const c of activeClubs()) {
+    if (isUser(c) || c.tier === 1) continue;
+    const lvl = clubLevel(c);
+    for (const p of c.squad.map(P)) {
+      if (!p || p.loan || p.age > 27 || p.ovr <= lvl + 6 || R() > .12 * intensity) continue;
+      const fits = buyers.filter(([b, bl]) => b.tier < c.tier && b.id !== c.id && Math.abs(bl - p.ovr) <= 4 && regInfo(b).seniors < RULES.aiSeniorCap && !hasNamesake(b, p.name));
+      for (let k = 0; k < 4 && fits.length; k++) {
+        const [b] = fits.splice(Math.floor(R() * fits.length), 1)[0], fee = askingPrice(p, b), w = willingness(p, b);
+        if (w < .3 || fee > bidBudget(b)) continue;
+        transfer(p, b, fee, contractDemand(p, b, w), ri(3, 5)); delete (b.sc || {})[p.id];
+        if (isUser(c) || isUser(b) || c.lg === me().lg) news(`${b.name} sign ${p.name} from ${c.name} for ${money(fee)}.`, false, "transfer");
+        break;
+      }
+    }
+  }
 }
 /* A bidding war for one of your listed players. The club that settled on him opens; other clubs that could bid
    (keenOn) join, about one or two on average, up to four bidders in all. Each has a private top price: what it

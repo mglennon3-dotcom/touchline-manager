@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.69.0";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.70.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -190,7 +190,28 @@ const LG_ABOVE = { E2: "E1", E3: "E2", E4: "E3", E5: "E4", E6N: "E5", E6S: "E5" 
 const LG_BELOW = { E1: "E2", E2: "E3", E3: "E4", E4: "E5" };
 for (const c of Object.keys(FOREIGN_DEF)) { LG_ABOVE[c + "2"] = c + "1"; LG_ABOVE[c + "3"] = c + "2"; LG_BELOW[c + "1"] = c + "2"; LG_BELOW[c + "2"] = c + "3"; }
 // Squad strength follows reputation: Premier Division stars reach 17–19 out of 20; the bottom of the pyramid sits around 5.
-const lvlForRep = rep => 45.5 + rep * .42;  // calibrated so the average professional rates about 10
+/* A club's playing level from its reputation (internal 100-scale). Until 5.70 it was a straight line,
+   45.5 + .42 rep, which left the pyramid only 15 to 8 out of 20 from the Premier Division's starters to the sixth
+   tier's, with a point or less between the lower divisions. Worlds made since (S.spread2) follow even steps of
+   about two points a division: starters' medians 15, 13, 11, 9, 7 and 5. Points are [rep, rating out of 20] at each
+   English division's average reputation; foreign leagues sit on the same line by their reputations. */
+const LVL_PTS = [[0, .6], [13.5, 4.2], [20.5, 6.2], [27.5, 8.2], [36, 10.4], [50, 12.4], [69, 14.7], [100, 19.6]];
+function lvlStep(rep) {
+  for (let i = 1; i < LVL_PTS.length; i++) { const [r1, v1] = LVL_PTS[i - 1], [r2, v2] = LVL_PTS[i]; if (rep <= r2 || i === LVL_PTS.length - 1) return o100(v1 + (v2 - v1) * (rep - r1) / (r2 - r1)); }
+}
+/* Money follows a player's place in the pyramid, not his raw number. With the wider spread a sixth-tier regular rates
+   5 rather than 8, and pricing that on the old curve cut lower-division wages, and with them turnover, by up to 70%
+   (turnover is set from the wage bill), breaking the division template. In a spread2 world values and wages read a
+   rating as the old-scale rating of a player at the same level (the same reputation); near the top they agree. */
+let ECON_PTS = null;
+function econOvr(o) {
+  if (typeof S === "undefined" || !S || !S.spread2) return o;
+  const E = ECON_PTS || (ECON_PTS = LVL_PTS.map(([r, v]) => [o100(v), 45.5 + r * .42]));
+  if (o <= E[0][0]) return o - E[0][0] + E[0][1];
+  for (let i = 1; i < E.length; i++) if (o <= E[i][0]) { const [a1, b1] = E[i - 1], [a2, b2] = E[i]; return b1 + (b2 - b1) * (o - a1) / (a2 - a1); }
+  const L = E[E.length - 1]; return o - L[0] + L[1];
+}
+const lvlForRep = rep => typeof S !== "undefined" && S && S.spread2 ? lvlStep(rep) : 45.5 + rep * .42;  // older saves keep the line
 const roundsOf = k => (LG[k].size - 1) * 2;
 
 const COUNTRIES = [
