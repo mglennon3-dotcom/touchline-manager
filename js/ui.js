@@ -1199,8 +1199,15 @@ function modalProspect(y) {
 }
 function modalCoach(m) {
   const c = DRAFT.clubs[m.club], arch = m.arch || "bal", co = newManager("", arch), form = m.form || "4-3-3";
-  return mHead("Your manager", `Taking over ${esc(c.name)} · ${leagueName(c.lg)}`, c.color, crest(c, 36)) + `<div class="modal-b">
-    <label class="f">Name<input type="text" id="coach-name" maxlength="28" value="${esc(m.name || "")}" placeholder="Your name"></label>
+  // Your club as you'd like it (5.71): name, short name and colour, applied when the career starts (startcareer).
+  const look = { ...c, name: m.cname ?? c.name, short: m.cshort ?? c.short, color: m.ccolor ?? c.color };
+  return mHead("Your club and manager", `Taking over ${esc(look.name)} · ${leagueName(c.lg)}`, look.color, crest(look, 36)) + `<div class="modal-b">
+    <div><h3 style="margin-bottom:6px">Club</h3>
+      <label class="f">Club name<input type="text" id="club-name" maxlength="28" value="${esc(look.name)}"></label>
+      <div class="row" style="gap:12px;align-items:flex-end"><label class="f" style="flex:1">Short name<input type="text" id="club-short" maxlength="3" value="${esc(look.short)}" style="text-transform:uppercase" autocapitalize="characters"></label>
+        <label class="f">Colour<input type="color" id="club-color" data-c="ccolor" value="${/^#[0-9a-f]{6}$/i.test(look.color) ? look.color : "#1f4fd1"}" style="width:64px;height:40px;padding:2px"></label></div>
+      ${m.cerr ? `<p class="small bad">${esc(m.cerr)}</p>` : `<p class="tiny muted">The short name shows in tight spaces such as fixtures and the live scoreboard.</p>`}</div>
+    <label class="f">Your name (the manager)<input type="text" id="coach-name" maxlength="28" value="${esc(m.name || "")}" placeholder="Your name"></label>
     <div><h3 style="margin-bottom:6px">Style</h3><div class="train arch">${Object.entries(ARCH).map(([k, a]) => `<button data-a="arch" data-v="${k}" aria-pressed="${arch === k}"><b>${a.l}</b><span class="tiny muted">${a.d}</span></button>`).join("")}</div></div>
     <div class="attrs">${COACH_KEYS.map(([k, l]) => `<div class="attr"><span>${l}</span><span class="abar"><i style="left:0;width:${co[k] / 20 * 100}%" class="${aCls(co[k])}"></i></span><b class="num">${co[k]}</b></div>`).join("")}</div>
     <label class="f">Preferred formation<select id="coach-form" data-c="cform">${FORM_KEYS.map(f => `<option ${f === form ? "selected" : ""}>${f}</option>`).join("")}</select><span class="tiny muted" style="font-weight:400">Your teams play about 2% better in it. ${esc(c.name)} currently play ${c.formation}.</span></label>

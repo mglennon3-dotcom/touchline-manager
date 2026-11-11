@@ -156,6 +156,8 @@ function assignSlot(i, id) {
 }
 // Every country can be switched off (Unselect all, then pick the few you want); the lists then say none are selected.
 function ctyToggle(key, v) { const off = new Set(S.set[key] || []); off.has(v) ? off.delete(v) : off.add(v); S.set[key] = [...off]; save(); render(); }
+// The club fields in the new-career form, kept on the modal so a re-render (picking a colour) doesn't lose them.
+function keepClubForm(m) { const n = document.getElementById("club-name"), s = document.getElementById("club-short"); if (n) m.cname = n.value; if (s) m.cshort = s.value.toUpperCase(); }
 const ACT = {
   regbest: () => { autoRegister(me(), false); fixUserLineup(); save(); render(); toast("Your best 25 seniors are registered."); },
   regtoggle: v => {
@@ -173,8 +175,14 @@ const ACT = {
   play: v => v === "newseason" ? playNewSeason() : play(v),
   pick: v => takeClub(+v),
   choose: v => { UI.modal = { t: "coach", club: +v, arch: "bal", name: "" }; renderModal(); setTimeout(() => { const el = document.getElementById("coach-name"); if (el) el.focus(); }, 0); },
-  arch: v => { const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; UI.modal.arch = v; renderModal(); },
-  startcareer: () => { const el = document.getElementById("coach-name"), fe = document.getElementById("coach-form"), us = document.getElementById("coach-unsack"); const m = UI.modal; UI.modal = null; takeClub(m.club, (el && el.value.trim()) || "The Manager", m.arch, fe ? fe.value : "4-3-3"); S.set.unsackable = !!(us && us.checked); save(); render(); },
+  arch: v => { keepClubForm(UI.modal); const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; UI.modal.arch = v; renderModal(); },
+  startcareer: () => { const el = document.getElementById("coach-name"), fe = document.getElementById("coach-form"), us = document.getElementById("coach-unsack"); const m = UI.modal;
+    // Your club's name, short name and colour, as edited in the form; a name or short name another club uses is refused.
+    keepClubForm(m); const c = DRAFT.clubs[m.club], name = (m.cname ?? c.name).trim().replace(/\s+/g, " "), short = (m.cshort ?? c.short).trim().toUpperCase();
+    m.cerr = name.length < 3 ? "The club name needs at least three letters." : !/^[A-Z0-9]{2,3}$/.test(short) ? "The short name is two or three letters." : DRAFT.clubs.some(o => o.id !== c.id && o.name.toLowerCase() === name.toLowerCase()) ? `There is already a ${name}: choose another name.` : DRAFT.clubs.some(o => o.id !== c.id && o.short === short) ? `${short} is already another club's short name.` : null;
+    if (m.cerr) { m.name = el ? el.value : m.name; renderModal(); return; }
+    c.name = name; c.short = short; if (m.ccolor) c.color = m.ccolor;
+    UI.modal = null; takeClub(m.club, (el && el.value.trim()) || "The Manager", m.arch, fe ? fe.value : "4-3-3"); S.set.unsackable = !!(us && us.checked); save(); render(); },
   coachpt: v => { if (S.me.pts <= 0 || S.me[v] >= 20) return; S.me[v]++; S.me.pts--; save(); render(); },
   knowpt: v => { if (S.me.pts <= 0 || knowOf(v) >= 20) return; S.me.know[v] = Math.min(20, Math.floor(knowOf(v)) + 1); S.me.pts--; save(); render(); },
   scoutp: v => { const p = P(+v), code = playerCountry(p), h = scoutHours(2, code); if (S.rec.hours < h) return toast(`Not enough scouting hours left this week (${S.rec.hours}); scouting in ${KNOW_NAME(code)} takes ${h}.`); scoutPlayer(p); save(); renderModal(); render(); toast(S.scout[p.id] >= 2 ? `Full report on ${p.name} filed.` : `First look at ${p.name}: one more visit for a full report.`); },
@@ -337,6 +345,7 @@ const CHG = {
   live: (v, el) => { S.set.live = el.checked; save(); },
   lg: v => { UI.lg = v; render(); },
   startl: v => { UI.startL = v; render(); },
+  ccolor: v => { keepClubForm(UI.modal); UI.modal.ccolor = v; const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; renderModal(); },
   cform: v => { UI.modal.form = v; const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; },
   unsack: (v, el) => { S.set.unsackable = el.checked; save(); render(); toast(el.checked ? "Unsackable mode on." : "Unsackable mode off: the board can fire you again."); },
   ticket: v => { me().tkt = +v; save(); render(); },

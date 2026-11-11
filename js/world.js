@@ -82,7 +82,8 @@ function rawValue(p) {
 const VALUE_KNEE = 73;
 function baseValue(p) {
   const e = econOvr(p.ovr); let v = rawValue(p) * (e < VALUE_KNEE ? Math.exp(-.125 * (VALUE_KNEE - e)) : 1);
-  return v > 1e8 ? 1e8 * Math.pow(v / 1e8, .6) : v;
+  // Above 100M the curve flattens: .6 put the best player at 240M; .43 gives the most expensive 185-200M (5.71).
+  return v > 1e8 ? 1e8 * Math.pow(v / 1e8, .43) : v;
 }
 /* How much a club of this standing can pay, relative to the top: the money gulf between divisions (5.62). Calibrated
    to real turnover by division: about 190M for a Premier League club (450-600M for the biggest), 25-30M in the
@@ -102,7 +103,13 @@ function value(p) {
 // an under-24's transfer value (the full premium priced teenagers' wages like established stars').
 // Wages follow ability (rawValue: the steeper value fall below top level doesn't apply) and the paying club's means
 // (wageRich). Potential counts half as much as it does in transfer value. Floor 150 a week.
-function wageDemand(p, rep) { const prem = p.age < 24 ? (1 + (p.pot - p.ovr) * .0225) / (1 + (p.pot - p.ovr) * .045) : 1; return Math.max(750 * MONEY, Math.round(rawValue(p) * prem * .16 * (.75 + rep / 200) * wageRich(rep) / 1000) * 1000); }
+function wageDemandRaw(p, rep) { const prem = p.age < 24 ? (1 + (p.pot - p.ovr) * .0225) / (1 + (p.pot - p.ovr) * .045) : 1; return Math.max(750 * MONEY, Math.round(rawValue(p) * prem * .16 * (.75 + rep / 200) * wageRich(rep) / 1000) * 1000); }
+/* The top of the wage scale (5.71): weekly demands above 150k are compressed so the best-paid player in the game earns
+   about 500k a week. The plain curve put the top earner on 1.38M and the next few on 700k-1M. Below 150k nothing changes. */
+const WAGE_KNEE = 150000 * 52, WAGE_TOP_EXP = .55;
+const wageTop = a => a > WAGE_KNEE ? Math.round(WAGE_KNEE * Math.pow(a / WAGE_KNEE, WAGE_TOP_EXP) / 1000) * 1000 : a;
+const wageUntop = a => a > WAGE_KNEE ? WAGE_KNEE * Math.pow(a / WAGE_KNEE, 1 / WAGE_TOP_EXP) : a;
+function wageDemand(p, rep) { return wageTop(wageDemandRaw(p, rep)); }
 /* A new deal at his own club: his market wage, but a player content enough to stay doesn't ask for more than
    double what he earns now or 20% over the club's top earner, whichever is higher (never less than he's on);
    a loyal one asks less again (below).
@@ -528,7 +535,7 @@ function repFor(lgKey, i) { const [top, step] = LG[lgKey].rep; return clamp(Math
    against about 9M). The Premier League runs closer to its wage bill. */
 const TURNOVER_ADJ = [1, .85, .95, 1.6, 1.67, 1.57, 1.29];
 function setupFinances(c) {
-  const cost = squadCost(c), t = OWNER[c.owner].target;
+  const cost = squadCostRaw(c), t = OWNER[c.owner].target;
   c.revBase = Math.round(cost / rf(t[0], t[1]) * (isForeign(c) ? 1 : TURNOVER_ADJ[c.tier] || 1));
   c.cash = Math.round(c.revBase * rf(.12, .4) + (c.owner === "reckless" ? c.revBase * .35 : 0));
 }
@@ -559,6 +566,9 @@ function newWorld() {
   for (const L of Object.values(S.leagues)) [...L.clubs].sort((a, b) => C(b).rep - C(a).rep).forEach((id, i) => S.lastPos[id] = i + 1);
   return S;
 }
+// Turnover is set from the wage bill (setupFinances), and it was calibrated on the uncompressed curve: read star
+// wages back through wageUntop so the top clubs keep the turnover template.
+function squadCostRaw(c) { return sum(c.squad, id => { const p = P(id); return wageUntop(p.wage) + (p.am ? p.am.per : 0); }); }
 function squadCost(c) { return sum(c.squad, id => { const p = P(id); return p.wage + (p.am ? p.am.per : 0); }); }
 
 /* Expected league finish = rank of club strength within its league. */

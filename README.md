@@ -275,6 +275,10 @@ excellent academy. It sets how fast under-21s improve and how many
 places you can offer prospects. It is one of six factors prospects weigh (with distance, playing time, formation
 fit, squad dynamics and prestige), each prospect weighting them differently.
 
+**Your club** (5.71): when you choose a club, the same form that creates your manager lets you rename it, give it
+a new three-letter short name and pick its colour (the crest follows); a name or short name another club uses is
+refused.
+
 **Unsackable mode** (chosen when you create your manager, or on the Manager page) keeps the board's reactions but
 stops it firing you. The test script uses it.
 
@@ -430,9 +434,10 @@ turnover does (5.62): a typical Premier Division club earns about 160-240M a yea
 poorest at least half the division median, as shared TV money keeps them close), the First Division about 30M
 (100M+ for a few big clubs), the Second about 10M, the Third 5M, the fifth tier about 2M and the sixth under 1M.
 Wages follow ability and what the paying club can afford: median weekly wages run from about 55-65k in the top
-flight to 9k, 2.5k, 1.2k, 600 and 250-290 down the divisions. Transfer values fall away much faster below
-top-flight level (a median Premier player about 20M, First Division 2M, Second 300k, fifth tier 50k; the best about
-180M). Scouting, travel and academy costs scale with each division's money. Older saves were converted on loading,
+flight to 9k, 2.5k, 1.2k, 600 and 250-290 down the divisions; above 150k a week demands are compressed, so the
+best-paid player earns about 500k a week (5.71). Transfer values fall away much faster below top-flight level (a
+median Premier player about 20M, First Division 2M, Second 300k, fifth tier 50k), and flatten above 100M: the most
+expensive player is worth 150-200M (5.71). Scouting, travel and academy costs scale with each division's money. Older saves were converted on loading,
 each club's money and wages together, so its finances keep their proportions. Ticket prices follow the division,
 60 in the Premier Division, 35 in the First, 20 in the Second, 15 in the Third, 7 in the fifth tier and 5 in the
 sixth (45/22/12 abroad), and the interest in the club: one that could sell its ground out well over charges up to
