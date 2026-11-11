@@ -273,7 +273,9 @@ AI clubs get one or two graduates and keep each unless he's well below the club'
 **Youth development** is a club rating out of 20, only loosely tied to division, so a small club can run an
 excellent academy. It sets how fast under-21s improve and how many
 places you can offer prospects. It is one of six factors prospects weigh (with distance, playing time, formation
-fit, squad dynamics and prestige), each prospect weighting them differently.
+fit, squad dynamics and prestige), each prospect weighting them differently. You raise it a point at a time from cash, on the
+Academy page or Finances (each point dearer than the last, scaled to your division's money; it takes effect at once).
+It doesn't affect graduates' potential, which is chance, the same at every club.
 
 **Your club** (5.71, 5.72): when you choose a club, the same form that creates your manager lets you edit
 everything about it: name, three-letter short name and colour (the crest follows; a name or short name another
