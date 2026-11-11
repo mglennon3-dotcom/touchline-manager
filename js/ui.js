@@ -690,7 +690,13 @@ function upcomingFixtures(n) {
   if (S.phase === "season") for (let i = S.di; i < S.days.length && up.length < n; i++) {
     const d = S.days[i];
     if (d.k === "lg") { const r = d.rounds[me().lg]; if (r == null) continue; const pr = S.leagues[me().lg].fixtures[r].find(([h, a]) => h === S.club || a === S.club); if (pr) up.push({ d, h: pr[0], a: pr[1], label: leagueName(me().lg) + (d.mid ? " · midweek" : "") }); }
-    else if (d.k === "grp" || (d.k === "ko" && S.ko[d.comp].rounds[d.r].ties)) { const fx = userFixture(dayFixtures(d)); if (fx) up.push({ d, h: fx.h, a: fx.a, label: compLabel(fx) }); }
+    else if (d.k === "grp") { const fx = userFixture(dayFixtures(d)); if (fx) up.push({ d, h: fx.h, a: fx.a, label: compLabel(fx) }); }
+    else if (d.k === "ko" && S.ko[d.comp].rounds[d.r].ties) {
+      // Read the tie itself: dayFixtures only makes a second leg once the first has a score, so a two-legged tie
+      // showed one leg until the first was played.
+      const t = S.ko[d.comp].rounds[d.r].ties.find(t => !t.bye && (t.h === S.club || t.a === S.club)); if (!t || t.w != null) continue;
+      const [h, a] = t.legs === 2 && d.leg === 1 ? [t.a, t.h] : [t.h, t.a], fx = { comp: "K", key: d.comp, r: d.r, leg: d.leg, h, a, neutral: t.neutral };
+      up.push({ d, h, a, label: compLabel(fx) + (t.neutral ? " · neutral" : "") }); }
   }
   return up;
 }

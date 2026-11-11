@@ -313,6 +313,9 @@ start of the season that it will be their last, others surprise you at the end.
 - On the Cups page your own ties are boxed and shaded in the accent colour, with your club's name in bold,
   so you can find them in a full draw; your row in a Champions Cup group, the entrants list and a winner's
   line are picked out the same way (5.62.7).
+- Each round is drawn as soon as the round before it is complete (5.68.1; before, a round wasn't drawn until
+  its matchday, so a tie only showed in Coming up once it was your next match). A tie now appears four to six
+  weeks ahead, both legs of a two-legged tie together. Play-offs still wait for the final table.
 
 **End-of-season awards:** every English division names a Player of the Season, Young Player of the
 Season (21 or under), Golden Boot, Golden Glove (most clean sheets), Playmaker (most assists), Manager of

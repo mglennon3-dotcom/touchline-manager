@@ -354,11 +354,22 @@ function recoverDays(days) {
   if (days <= 0) return;
   for (const c of activeClubs()) { const k = TRAIN[isUser(c) ? S.training : "bal"].rk; for (const id of c.squad) { const p = P(id); if (p && p.fit < 100) p.fit = Math.min(100, Math.round((100 - (100 - p.fit) * Math.pow(1 - recoverRate(p, k), days)) * 10) / 10); } }
 }
+/* Draw each cup round as soon as the one before it is complete, as real draws are made, rather than when its
+   matchday comes round. Draws used to wait for the matchday (drawKO from dayFixtures), so a tie only appeared in
+   Coming up once it was already your next match, never weeks ahead. Play-offs still wait for the final table. */
+function drawAhead() {
+  if (S.phase !== "season") return;
+  for (const comp of Object.values(S.ko)) {
+    if (comp.kind === "po") continue;
+    for (let r = 1; r < comp.rounds.length; r++) { if (comp.rounds[r].ties) continue; if (winnersOf(comp.rounds[r - 1])) drawKO(comp, r); break; }
+  }
+}
 function finishDay() {
   const cur = S.days[S.di], nxt = S.days[S.di + 1];
   recoverDays(nxt ? dayNo(nxt) - dayNo(cur) : 7);
   S.di++;
   if (S.di >= S.days.length) { weekly(); endSeason(); return; }
+  drawAhead();
   if (S.days[S.di].w > S.week) { weekly(); S.week = S.days[S.di].w; }
 }
 

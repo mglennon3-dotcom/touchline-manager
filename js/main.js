@@ -33,7 +33,7 @@ function adoptSave(d) {
   if (!d) return false;
   if (d.v === 4) migrate4(d);
   if (d.v !== 5 || d.club == null) return false;
-  S = d; upgradeSave(); LIVE = null; UI.page = "home"; UI.modal = null; UI.screen = null; UI.delAsk = null;
+  S = d; upgradeSave(); if (S.club != null) drawAhead(); LIVE = null; UI.page = "home"; UI.modal = null; UI.screen = null; UI.delAsk = null;
   return true;
 }
 
