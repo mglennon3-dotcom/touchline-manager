@@ -397,7 +397,10 @@ function freshPick(ids, f) {
 /* The nine substitutes. Yours are the ones you picked on the Tactics page (S.bench), still eligible,
    available and not in the XI; any spots left are filled as for AI clubs: a keeper, then the best and
    fittest. */
-function benchFor(c, xi) {
+function benchFor(c, xi, friendly) {
+  // A friendly has no matchday squad rules: everyone available who isn't starting is on the bench, academy
+  // players and unregistered seniors included (5.69).
+  if (friendly) { const used = new Set(xi); return c.squad.map(P).filter(p => p && avail(p) && !used.has(p.id) && !(p.loan && p.loan.from === c.id)).sort((a, b) => b.ovr - a.ovr).map(p => p.id); }
   const used = new Set(xi), elig = new Set(eligibleIds(c));
   const mine = isUser(c) && S.bench ? S.bench.filter(id => elig.has(id) && !used.has(id) && S.players[id] && avail(P(id))).slice(0, RULES.benchSize) : [];
   mine.forEach(id => used.add(id));

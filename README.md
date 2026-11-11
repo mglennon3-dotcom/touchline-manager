@@ -201,7 +201,9 @@ bigger ones may refuse to visit but will usually host you. A home friendly draws
 crowd (more for a big-name visitor) at 60% of your ticket price, less a 30% appearance fee if the visitors
 are much bigger; away at a bigger club, they pay you 15% of their gate. Sort the opponent list "Most money first" to see each club's expected take for the chosen venue, highest first. Friendlies are played live or
 simulated like any match, with real fitness and injuries, but don't count: no table, appearances, goals,
-cards, bans or ratings.
+cards, bans or ratings. In a friendly everyone available who isn't starting is on the bench, academy players and
+unregistered seniors included, and there is no limit on substitutions (5.69); a side run automatically, yours
+on the assistant or the AI's, still makes at most eight changes, swapping tired players for fresher ones.
 
 **Live matches** show your team on a pitch in its formation: each player's rating in his position right now
 (fitness included), fitness as a percentage (green 85+, amber 70+, red below) and bookings, with the bench below. Tap a player and then a substitute to

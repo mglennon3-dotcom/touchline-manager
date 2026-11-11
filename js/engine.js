@@ -163,7 +163,11 @@ function adaptStyle(M, k) {
   if (st !== s.ment) { s.ment = st; s.rt = null; s.changes = (s.changes || 0) + 1; lg(M, "tac", k, `${C(s.club).name} switch to ${MENT[st].l.toLowerCase()}.`); }
 }
 
-function makeSide(c, opp, home, auto) {
+/* Substitutions left: five in a competitive match, no limit in a friendly. When a side is run automatically (the AI,
+   or your assistant) it still stops at eight in a friendly, rather than emptying a bench of twenty. */
+const subsLeft = s => s.friendly ? Infinity : RULES.subs - s.subs;
+const autoSubsLeft = s => (s.friendly ? 8 : RULES.subs) - s.subs;
+function makeSide(c, opp, home, auto, friendly) {
   let xi, f, ment;
   if (isUser(c)) { fixUserLineup(); xi = S.lineup; f = S.formation; ment = "bal"; }
   else { f = aiForm(c, opp, home); xi = autoPick(eligibleIds(c), f); ment = aiStyle(c, opp, home); auto = true; }
@@ -172,14 +176,14 @@ function makeSide(c, opp, home, auto) {
   const sl = slotsOf(f);
   // si is the formation slot a player stands in; the on list itself shrinks with red cards, so it can't be the index.
   const on = xi.map((id, i) => id == null ? null : { p: P(id), slot: sl[i], si: i, fit: P(id).fit, from: 0 }).filter(Boolean);
-  const bench = benchFor(c, xi.filter(x => x != null));
-  return { club: c.id, form: f, ment, base: ment, tk, ...ins, fwd0: ins.fwd, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
+  const bench = benchFor(c, xi.filter(x => x != null), friendly);
+  return { club: c.id, form: f, ment, base: ment, tk, friendly: !!friendly, ...ins, fwd0: ins.fwd, auto, on, co: coachOf(c), bench, used: on.map(o => o.p.id), subs: 0, goals: 0, shots: 0, sot: 0, poss: 0, xg: 0, big: 0, hdr: 0, sav: 0, yel: {}, mins: {}, rt: null,
     susSnap: c.squad.filter(id => P(id).sus > 0) };
 }
 /* fx: { comp, neutral, ko: {aggH, aggA} | null, needWinner } */
 function makeMatch(fx, userAuto) {
   const H = C(fx.h), A = C(fx.a);
-  const M = { fx, h: makeSide(H, A, !fx.neutral, userAuto), a: makeSide(A, H, false, userAuto), min: 0, end: 90, et: false, pens: null,
+  const M = { fx, h: makeSide(H, A, !fx.neutral, userAuto, fx.comp === "F"), a: makeSide(A, H, false, userAuto, fx.comp === "F"), min: 0, end: 90, et: false, pens: null,
     log: [], goals: [], inj: [], reds: [], cards: [], bk: [], ps: {}, fit: {}, done: false, riv: rivalry(fx.h, fx.a) };
   if (isUser(H) || isUser(A)) { const u = isUser(H) ? M.h : M.a; u.auto = !!userAuto; }
   return M;
@@ -195,7 +199,7 @@ function benchAvail(M, i) { const s = i ? M.a : M.h; return s.bench.map(P).filte
 // A substitute into a position nobody is in: after an injury you chose to cover later, or a gap you made.
 function subIntoSlot(M, i, si, newId, why) {
   const s = i ? M.a : M.h, p = P(newId), sl = slotsOf(s.form);
-  if (s.subs >= RULES.subs || sl[si] == null || s.on.some(o => o.si === si) || !p) return false;
+  if (subsLeft(s) <= 0 || sl[si] == null || s.on.some(o => o.si === si) || !p) return false;
   s.on.push({ p, slot: sl[si], si, fit: p.fit, from: M.min }); s.used.push(newId); s.subs++; s.rt = null; s.fitK = null;
   if (M.injWait && M.injWait.side === i && M.injWait.si === si) M.injWait = null;
   lg(M, "sub", i, `${why || "Change"}: ${p.name} comes on at ${ROLE_NAME[sl[si]].toLowerCase()}.`);
@@ -356,7 +360,7 @@ function step(M) {
       if (R() < risk) {
         M.inj.push(o.p.id); const idx = s.on.indexOf(o);
         lg(M, "inj", i, `${o.p.name} goes down injured.`);
-        const b = s.subs < RULES.subs ? bestBench(M, i, o.slot) : null;
+        const b = (s.auto ? autoSubsLeft(s) : subsLeft(s)) > 0 ? bestBench(M, i, o.slot) : null;
         // Your side in a match you're watching (not auto): he goes off and the match waits for you to choose
         // who comes on (M.injWait), instead of the assistant sending on the best fit.
         if (b && !s.auto) { M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from; s.on.splice(idx, 1); s.rt = null; s.fitK = null; M.injWait = { side: i, si: o.si, slot: o.slot, pid: o.p.id }; lg(M, "inj", i, `${o.p.name} can't continue.`); }
@@ -364,7 +368,7 @@ function step(M) {
         else { M.fit[o.p.id] = o.fit; s.mins[o.p.id] = M.min - o.from; s.on.splice(idx, 1); s.rt = null; lg(M, "inj", i, `${C(s.club).short} are down to ${s.on.length}.`); }
       }
     }
-    if (s.auto && M.min >= 56 && s.subs < RULES.subs && R() < .28) {
+    if (s.auto && M.min >= 56 && autoSubsLeft(s) > 0 && R() < .28) {
       const tired = s.on.filter(o => o.fit < 66 && o.slot !== "GK").sort((a, b) => a.fit - b.fit)[0];
       if (tired) { const b = bestBench(M, i, tired.slot); if (b && eff(b, tired.slot) > eff(tired.p, tired.slot, tired.fit)) doSub(M, i, s.on.indexOf(tired), b.id); }
     }

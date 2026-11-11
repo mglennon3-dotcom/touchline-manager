@@ -291,7 +291,7 @@ const ACT = {
     const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, idx = +v, sel = UI.lsel || {}; livePause();
     if (M.min === 0) return livePre({ on: idx });
     if (sel.empty != null) { moveToSlot(M, k, idx, sel.empty); UI.lsel = null; return render(); }
-    if (sel.bench != null && s.subs < RULES.subs) { doSub(M, k, idx, sel.bench); UI.lsel = null; }
+    if (sel.bench != null && subsLeft(s) > 0) { doSub(M, k, idx, sel.bench); UI.lsel = null; }
     else if (sel.on != null && sel.on !== idx) { swapSlots(M, k, sel.on, idx); UI.lsel = null; }
     else UI.lsel = sel.on === idx ? null : { on: idx };
     render();
@@ -305,8 +305,8 @@ const ACT = {
   livebench: v => {
     const M = LIVE.M, k = LIVE.k, s = k ? M.a : M.h, id = +v, sel = UI.lsel || {}; livePause();
     if (M.min === 0) return livePre({ bench: id });
-    if (sel.empty != null && s.subs < RULES.subs) { subIntoSlot(M, k, sel.empty, id); UI.lsel = null; }
-    else if (sel.on != null && s.subs < RULES.subs) { doSub(M, k, sel.on, id); UI.lsel = null; }
+    if (sel.empty != null && subsLeft(s) > 0) { subIntoSlot(M, k, sel.empty, id); UI.lsel = null; }
+    else if (sel.on != null && subsLeft(s) > 0) { doSub(M, k, sel.on, id); UI.lsel = null; }
     else UI.lsel = sel.bench === id ? null : { bench: id };
     render();
   },
