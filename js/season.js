@@ -377,7 +377,7 @@ function finishDay() {
 function weekly() {
   const wk = 1 / 52; bumpTick();
   for (const c of activeClubs()) {
-    const wages = sum(c.squad, id => P(id).wage) * wk, amort = sum(c.squad, id => P(id).am ? P(id).am.per : 0) * wk, rev = c.revSeason * wk;
+    const wages = wageBill(c) * wk, amort = sum(c.squad, id => P(id).am ? P(id).am.per : 0) * wk, rev = c.revSeason * wk;
     // Staff, stadium and running costs sit outside the cost ratio but still come out of the bank.
     const ops = rev * .2; c.fin.ops += ops;
     c.fin.rev += rev; c.fin.wages += wages; c.fin.amort += amort; c.cash += rev - wages - ops;
@@ -573,7 +573,7 @@ function endSeason() {
 
   // finances close: the summer share of income and costs, then the cost-ratio check
   for (const c of activeClubs()) {
-    const k = 10 / 52, wages = sum(c.squad, id => P(id).wage) * k, amort = sum(c.squad, id => P(id).am ? P(id).am.per : 0) * k, rev = c.revSeason * k;
+    const k = 10 / 52, wages = wageBill(c) * k, amort = sum(c.squad, id => P(id).am ? P(id).am.per : 0) * k, rev = c.revSeason * k;
     c.fin.rev += rev; c.fin.wages += wages; c.fin.amort += amort; c.fin.ops += rev * .2; c.cash += rev - wages - rev * .2;
     sponsorPay(c, k);
   }

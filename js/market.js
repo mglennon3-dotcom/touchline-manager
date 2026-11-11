@@ -35,7 +35,7 @@ function contractDemand(p, b, w) { return Math.round(wageDemand(p, b.rep) * (1.2
 function scr(c, extraCost = 0, extraRev = 0) {
   // Season-to-date ratio, projected to a full year where the season is still running.
   const f = c.fin; if (!f) return 0;
-  const cost = sum(c.squad, id => P(id).wage + (P(id).am ? P(id).am.per : 0)) + extraCost;
+  const cost = squadCost(c) + extraCost;
   return cost / Math.max(1, annualIncome(c) + oneOffs(c) + extraRev);
 }
 /* One-off income the ratio counts on top of a year's regular income. In preseason it's the coming season's: profit
@@ -409,8 +409,9 @@ function assessSCR() {
 
 /* ---------- loans ---------- */
 // A loanee sits in the borrowing club's squad and counts towards its registration; the parent keeps the contract.
-function startLoan(p, to) {
+function startLoan(p, to, share) {
   const from = C(p.club);
+  if (share != null && share < 1) (S.loanSplits ||= {})[p.id] = share;
   from.squad = from.squad.filter(id => id !== p.id); to.squad.push(p.id);
   p.loan = { from: from.id, y: S.year }; p.club = to.id; p.pt = expectedShare(p, to); p.listed = false;  // a fresh start, as for a transfer
   refreshRegistration(to); refreshRegistration(from);
@@ -422,7 +423,7 @@ function endLoan(p) {
   const from = C(p.loan.from), cur = p.club >= 0 ? C(p.club) : null;
   if (cur) cur.squad = cur.squad.filter(id => id !== p.id);
   if (isUser(cur)) S.lineup = S.lineup.map(id => id === p.id ? null : id);
-  p.loan = null;
+  p.loan = null; if (S.loanSplits) delete S.loanSplits[p.id];
   if (from && !from.gone) { from.squad.push(p.id); p.club = from.id; } else toFreeAgent(p);
   bumpTick();
 }
@@ -437,7 +438,28 @@ function loanDestinations(p, opts = {}) {
   // For you: a choice at home and abroad.
   return [...ok.filter(c => !isForeign(c)).slice(0, 4), ...ok.filter(c => isForeign(c)).slice(0, 4)];
 }
-function userLoanIn(p) {
+/* Negotiating who pays a loanee's wage (5.73). The share is what the borrowing club pays, in quarters.
+   The parent club wants you to pay at least parentMinShare: less if he'd be a regular for you (the point of a loan)
+   or it's comfortably off, more if its own cost ratio is stretched, less again if his wage is far above what your
+   club would pay him. A borrowing club pays at most borrowerMaxShare: what it would pay a player like him, against
+   what he earns, a little less if it's short of cash. */
+const SHARES = [1, .75, .5, .25];
+function parentMinShare(p, c) {
+  const parent = C(p.club), rank = c.squad.map(P).filter(x => FAM[x.pos][p.pos] >= .9 && x.ovr >= p.ovr).length, slots = Math.max(1, roleSlots(c.formation, p.pos));
+  let m = .8;
+  if (rank < slots) m -= .25;
+  if (parent.cash > parent.revBase * .6) m -= .15;
+  if (scr(parent) > .9) m += .25;
+  if (p.wage > wageDemand(p, c.rep) * 1.3) m -= .15;
+  return clamp(m, .25, 1);
+}
+function borrowerMaxShare(p, b) {
+  let m = wageDemand(p, b.rep) / Math.max(1, p.wage);
+  if (b.cash < b.revBase * .2) m -= .15;
+  return clamp(m, .25, 1);
+}
+const upToQuarter = x => Math.min(1, Math.ceil(x * 4 - 1e-9) / 4), downToQuarter = x => Math.max(.25, Math.floor(x * 4 + 1e-9) / 4);
+function userLoanIn(p, share = 1) {
   const c = me();
   if (!windowOpen()) return { ok: false, msg: "Loans can only be agreed while the transfer window is open." };
   if (!loanable(p) || p.club < 0) return { ok: false, msg: "He isn't available for loan." };
@@ -447,12 +469,14 @@ function userLoanIn(p) {
   const rank = c.squad.map(P).filter(x => FAM[x.pos][p.pos] >= .9 && x.ovr >= p.ovr).length, slots = Math.max(1, roleSlots(c.formation, p.pos));
   if (rank >= slots * 2) return { ok: false, msg: `${parent.name} want him playing regularly, and he'd be behind ${rank} players at your club.` };
   if (clubLevel(c) < p.ovr - 10) return { ok: false, msg: `${parent.name} want him tested at a higher level than the ${leagueName(c.lg)}.` };
-  startLoan(p, c); fixUserLineup();
-  return { ok: true, msg: `${p.name} joins on loan for the season. You pay his wage, ${perWeek(p.wage)}${S.phase === "season" ? ` (about ${money(loanWageLeft(p))} to the end of the season)` : ""}.` };
+  const need = parentMinShare(p, c);
+  if (share < need - 1e-9) return { ok: false, msg: `${parent.name} won't cover that much of his wage: they want you to pay at least ${Math.round(upToQuarter(need) * 100)}%.` };
+  startLoan(p, c, share); fixUserLineup();
+  return { ok: true, msg: `${p.name} joins on loan for the season. You pay ${share < 1 ? `${Math.round(share * 100)}% of his wage, ${perWeek(p.wage * share)} (${parent.name} pay the rest)` : `his wage, ${perWeek(p.wage)}`}${S.phase === "season" ? `, about ${money(loanWageLeft(p))} to the end of the season` : ""}.` };
 }
 /* What a loanee's wage still costs you this season. Wages are paid each week by whichever club's squad he's in,
    so this is also what sending him back saves. In preseason it is the whole season ahead. */
-function loanWageLeft(p) { return Math.round(p.wage * (S.phase === "season" ? Math.max(0, (S.days.length ? S.days[S.days.length - 1].w + 11 : 52) - S.week) / 52 : 1)); }
+function loanWageLeft(p) { return Math.round(p.wage * loanShare(p) * (S.phase === "season" ? Math.max(0, (S.days.length ? S.days[S.days.length - 1].w + 11 : 52) - S.week) / 52 : 1)); }
 /* Cutting a loan short: he goes back to his parent club, and his wage leaves your books from this week. What
    you've already paid stays paid. Allowed any time, not just in the window: the parent club always takes him back. */
 function cancelLoanIn(p) {

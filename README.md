@@ -407,7 +407,12 @@ commit. Choose the fee, your wage offer and the contract length. His club has a 
 asking price, and answers a lower bid with a counter it would accept; once the fee is agreed it stays agreed
 while you settle his wage. He accepts less than his request the keener he is (a fully keen player takes 80%),
 wants 10% more for a one-year deal from 31, and names his price when he says no. Three refusals from either
-side end the talks until next week. Loan buttons show his wage, which you pay while he's with you. You can cut a loan short at any time with
+side end the talks until next week. Loans split the wage by agreement (5.73): taking a player on loan you offer to pay 100, 75, 50 or 25% of it, and
+his club pays the rest; it wants more from you if its own cost ratio is stretched and less if he'd play regularly
+for you, it's well off or his wage is far above what your club pays, and offer too little and it names its
+minimum. Loaning a player out, you ask the borrowing club for a share in the same steps; it pays at most what it
+would pay a player like him, a little less if it's short of cash, and refuses with its maximum if you ask for more.
+Each side's share counts in its weekly wages and cost ratio. Loans between AI clubs leave the borrower paying it all. You can cut a loan short at any time with
 *Send back* on his card: he returns to his parent club and his wage comes off your books from that week (the
 confirmation shows how much that saves to the end of the season); what you've already paid stays paid (5.63).
 **Transfers page** is laid out like the Youth page, in tabs with counts: Offers (players you bid for who

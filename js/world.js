@@ -569,7 +569,14 @@ function newWorld() {
 // Turnover is set from the wage bill (setupFinances), and it was calibrated on the uncompressed curve: read star
 // wages back through wageUntop so the top clubs keep the turnover template.
 function squadCostRaw(c) { return sum(c.squad, id => { const p = P(id); return wageUntop(p.wage) + (p.am ? p.am.per : 0); }); }
-function squadCost(c) { return sum(c.squad, id => { const p = P(id); return p.wage + (p.am ? p.am.per : 0); }); }
+/* Loan wage splits (5.73): S.loanSplits[pid] is the share of a loanee's wage the borrowing club pays, for your loans
+   in and out; the parent pays the rest, though he's out of its squad. AI-to-AI loans have no entry: the borrower pays
+   it all, as every loan did before. */
+const loanShare = p => p.loan && S.loanSplits && S.loanSplits[p.id] != null ? S.loanSplits[p.id] : 1;
+const wagePaid = (p, c) => p.loan && p.club === c.id ? p.wage * loanShare(p) : p.wage;
+function loanOutWages(c) { let t = 0; for (const [pid, sh] of Object.entries(S.loanSplits || {})) { const p = S.players[pid]; if (p && p.loan && p.loan.from === c.id) t += p.wage * (1 - sh); } return t; }
+function wageBill(c) { return sum(c.squad, id => wagePaid(P(id), c)) + loanOutWages(c); }
+function squadCost(c) { return wageBill(c) + sum(c.squad, id => { const p = P(id); return p.am ? p.am.per : 0; }); }
 
 /* Expected league finish = rank of club strength within its league. */
 function expectedPos(c) {

@@ -853,7 +853,7 @@ function viewTransfers() {
         { k: "club", l: "Club", v: p => p.club >= 0 ? C(p.club).name : "", f: p => p.club >= 0 ? clubA(p.club, { short: true, flag: 1 }) : '<span class="muted">Free</span>' },
         loans ? { k: "wage", l: "Wage", r: 1, v: p => p.wage, f: p => perWeek(p.wage) } : { k: "ask", l: "Asking", r: 1, v: p => askingPrice(p), f: p => p.club >= 0 ? money(askingPrice(p)) : "Free" },
         { k: "w", l: "Interest", v: p => willingness(p, c), f: p => { const [l, k] = willingLabel(willingness(p, c)); return `<span class="${k === "ok" ? "" : k}">${l}</span>`; } },
-        { k: "b", l: "", f: p => (loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"} title="You pay his wage while he's with you">Loan · ${perWeek(p.wage)}</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>`)
+        { k: "b", l: "", f: p => (loans ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${open ? "" : "disabled"} title="Agree how much of his wage you pay">Loan · ${perWeek(p.wage)}</button>` : `<button class="btn sm" data-a="bid" data-v="${p.id}" ${open ? "" : "disabled"}>${p.club >= 0 ? "Bid" : "Sign"}</button>`)
           + (UI.tab === "fav" ? ` ${starBtn(p.id, "fav", true)}` : "")
           + (UI.tab === "scouted" ? (UI.showRemoved ? ` <button class="btn sm" data-a="unhide" data-v="${p.id}">Restore</button>` : ` <button class="btn sm" data-a="unscout" data-v="${p.id}" title="Not good enough: take him off your scouted list (his report is kept)" aria-label="Remove ${esc(p.name)} from the scouted list">✕</button>`) : "") },
       ], pool, { limit: 200,  empty: UI.tab === "fav" && !favs.length ? "No favourites yet. Open a player and tap the ☆ by his name to add him here." : UI.tab === "scouted" && !scouted.length ? (UI.showRemoved ? "Nobody removed." : removedN ? "Everyone you've scouted has been removed from this list." : "You haven't scouted anyone yet. Open a player from another division (or abroad) and tap Scout him: his report will be kept here.") : (S.set.ctyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No players match these filters." })}
@@ -971,7 +971,7 @@ function finProjection(c) {
   const summer = S.phase !== "season", f = summer ? c.pre || {} : c.fin, g = k => f[k] || 0;  // preseason: this summer's transfers
   const lastW = S.days.length ? S.days[S.days.length - 1].w : 41, remWk = summer ? lastW + 1 : Math.max(0, lastW + 1 - S.week);
   const share = (remWk + 10) / 52;  // weekly flows for the rest of the season, plus the ten-week summer share
-  const rs = summer ? c.revBase : c.revSeason, wageBill = sum(c.squad, id => P(id).wage);
+  const rs = summer ? c.revBase : c.revSeason, wageBill = window.wageBill(c);
   const L = S.leagues[c.lg], rounds = summer ? [] : L.fixtures.slice((L.results || []).length);
   const homeLeft = summer ? homeGames(c) : sum(rounds, rd => rd.filter(([h]) => h === c.id).length);
   const perGate = c.cap ? ticketForecast(c, c.tkt || 1).income : 0;
@@ -1024,7 +1024,7 @@ function projectionCard(c) {
    Squad Cost Ratio has room for before the levy line (fees count in the ratio as fee ÷ contract years). */
 function transferBudget(c) {
   const pj = finProjection(c), f = (S.phase === "summer" ? c.pre : c.fin) || {}, rev = annualIncome(c) + oneOffs(c);
-  const cost = sum(c.squad, id => P(id).wage + (P(id).am ? P(id).am.per : 0)), room = RULES.scrLimit * rev - cost;
+  const cost = squadCost(c), room = RULES.scrLimit * rev - cost;
   const xi = (S.lineup || []).filter(x => x != null).map(P), wage = xi.length ? sum(xi, p => p.wage) / xi.length : c.squad.length ? sum(c.squad, id => P(id).wage) / c.squad.length : 0;
   const yrs = 4, wkLeft = (pj.remWk + 10) / 52;
   // Cash: a signing costs fee × 1.05 now plus his wages for the rest of this season.
@@ -1121,8 +1121,13 @@ function modalPlayer(p) {
   const cf = UI.confirm;
   if (UI.loanPick === p.id && mine) {
     const ds = loanDestinations(p, { mix: true });
-    actions = `<div><h3 style="margin-bottom:6px">Where should ${esc(sur(p))} go on loan?</h3>${ds.length ? ds.map(d => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span>${clubA(d.id, { flag: 1 })} <span class="tiny muted">${isForeign(d) ? COUNTRY[d.country].name + " · " : ""}${leagueName(d.lg)} · squad ${r20(clubLevel(d)).toFixed(1)} · would start</span></span><button class="btn sm" data-a="loan-to" data-v="${p.id}|${d.id}">Loan here</button></div>`).join("") : '<p class="small muted">No club with room for him would play him regularly right now.</p>'}
-      <p class="tiny muted" style="margin-top:6px">A season-long loan; the borrowing club pays his wages. Abroad he gains experience but not English homegrown time${p.age <= 20 ? `: he has ${p.yt.ENG || 0} of the 3 seasons he needs` : ""}.</p><button class="btn sm" data-a="loan-cancel" style="margin-top:6px">Cancel</button></div>`;
+    const osh = UI.loanOutShare || 1;
+    actions = `<div><h3 style="margin-bottom:6px">Where should ${esc(sur(p))} go on loan?</h3>
+      <div class="row small" style="gap:8px;margin-bottom:6px"><span>They pay</span><span class="seg" role="group" aria-label="Share of his wage the borrowing club pays">${SHARES.map(x => `<button data-a="loanshare" data-v="${x}" aria-pressed="${osh === x}">${x * 100}%</button>`).join("")}</span><span class="tiny muted">of ${perWeek(p.wage)}; you pay the rest</span></div>${ds.length ? ds.map(d => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span>${clubA(d.id, { flag: 1 })} <span class="tiny muted">${isForeign(d) ? COUNTRY[d.country].name + " · " : ""}${leagueName(d.lg)} · squad ${r20(clubLevel(d)).toFixed(1)} · would start</span></span><button class="btn sm" data-a="loan-to" data-v="${p.id}|${d.id}">Loan here</button></div>`).join("") : '<p class="small muted">No club with room for him would play him regularly right now.</p>'}
+      <p class="tiny muted" style="margin-top:6px">A season-long loan. Ask a club to pay less of his wage than it would and it says no, with the most it will pay; the poorer the club and the higher his wage, the less it covers. Abroad he gains experience but not English homegrown time${p.age <= 20 ? `: he has ${p.yt.ENG || 0} of the 3 seasons he needs` : ""}.</p><button class="btn sm" data-a="loan-cancel" style="margin-top:6px">Cancel</button></div>`;
+  } else if (UI.loanIn === p.id && c && !mine && !p.loan) {
+    actions = `<div><h3 style="margin-bottom:6px">Loan ${esc(sur(p))} from ${esc(c.short)}: how much of his wage will you pay?</h3><div class="row" style="gap:6px">${SHARES.map(x => `<button class="btn sm ${x === 1 ? "" : ""}" data-a="loanin-go" data-v="${p.id}|${x}">${x * 100}% · ${perWeek(p.wage * x)}</button>`).join("")}</div>
+      <p class="tiny muted" style="margin-top:6px">${esc(c.name)} pay the rest. They cover more if he'd play regularly for you or they're well off, and less if their own finances are stretched; offer too little and they say how much they want.</p><button class="btn sm" data-a="loanin-no" style="margin-top:6px">Cancel</button></div>`;
   } else if (cf && cf.id === p.id) actions = `<div class="row"><span class="small">${esc(cf.msg)}</span><button class="btn sm danger" data-a="confirm-yes">${cf.yes}</button><button class="btn sm" data-a="confirm-no">Cancel</button></div>`;
   else if (mine) {
     const r = renewTerms(p);
@@ -1133,11 +1138,11 @@ function modalPlayer(p) {
       ${p.listed ? `<label class="row small" style="gap:6px">Asking <select data-c="list-pct">${[.8, .9, 1, 1.1, 1.2, 1.3, 1.4, 1.5, 1.75, 2].map(k => `<option value="${k}" ${Math.abs(k - (p.listPct || 1)) < .01 ? "selected" : ""}>${money(Math.round(value(p) * k / 1e4) * 1e4)} (${Math.round(k * 100)}%)</option>`).join("")}</select></label>` : ""}
       <button class="btn sm" data-a="ask-sell" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>Sell abroad (${money(Math.round(value(p) * .8 / 1e4) * 1e4)})</button>
       <button class="btn sm danger" data-a="ask-release" data-v="${p.id}">Release</button></div>${!r.happy && p.yrs <= 2 ? `<p class="small warn">${esc(r.reason)}</p>` : ""}`;
-  } else if (onLoanFromMe) actions = `<p class="small">On loan at ${clubA(p.club)} until the end of the season.</p>`;
-  else if (loanedIn) actions = `<div class="row"><span class="small">On loan from ${clubA(p.loan.from)} until the end of the season.</span><button class="btn sm danger" data-a="ask-endloan" data-v="${p.id}">Send back to ${esc(C(p.loan.from).short)}</button></div>`;
+  } else if (onLoanFromMe) actions = `<p class="small">On loan at ${clubA(p.club)} until the end of the season${loanShare(p) < 1 ? `; they pay ${Math.round(loanShare(p) * 100)}% of his wage and you pay ${perWeek(p.wage * (1 - loanShare(p)))}` : "; they pay his wage"}.</p>`;
+  else if (loanedIn) actions = `<div class="row"><span class="small">On loan from ${clubA(p.loan.from)} until the end of the season; you pay ${loanShare(p) < 1 ? `${Math.round(loanShare(p) * 100)}% of his wage, ${perWeek(p.wage * loanShare(p))}` : `his wage, ${perWeek(p.wage)}`}.</span><button class="btn sm danger" data-a="ask-endloan" data-v="${p.id}">Send back to ${esc(C(p.loan.from).short)}</button></div>`;
   else if (S.club != null && p.age >= 17 && !p.loan) {
     const [l, k] = willingLabel(willingness(p, me()));
-    actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"} title="On loan you pay his wage">Ask to loan (you pay ${perWeek(p.wage)})</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;
+    actions = `<div class="row"><button class="btn sm" data-a="bid" data-v="${p.id}" ${windowOpen() ? "" : "disabled"}>${c ? `Make an offer (asking ${money(askingPrice(p))})` : "Offer a contract"}</button>${c && loanable(p) && !wouldStart(p, c) ? `<button class="btn sm" data-a="loanin" data-v="${p.id}" ${windowOpen() ? "" : "disabled"} title="Agree how much of his wage you pay">Ask to loan (${perWeek(p.wage)})</button>` : ""}<span class="small">Interest in joining you: <b class="${k === "ok" ? "" : k}">${l}</b></span></div>`;
   }
   return mHead(esc(p.name) + (mine ? "" : " " + starBtn(p.id, "fav", !!(S.fav || {})[p.id])), `${ROLE_NAME[p.pos]} · ${NAT_NAME[p.nat] || p.nat} · ${p.age}`, c ? c.color : "var(--muted)", c ? crest(c, 36) : "") + `<div class="modal-b">
     <dl class="facts"><div><dt>Rating</dt><dd class="num">${ratingHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Potential</dt><dd>${potHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Injury proneness</dt><dd>${injHtml(p)} <span class="muted tiny">/ 20</span></dd></div><div><dt>Club</dt><dd>${c ? clubA(c.id, { flag: 1 }) : "Free agent"}</dd></div>
