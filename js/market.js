@@ -438,12 +438,12 @@ function loanDestinations(p, opts = {}) {
   // For you: a choice at home and abroad.
   return [...ok.filter(c => !isForeign(c)).slice(0, 4), ...ok.filter(c => isForeign(c)).slice(0, 4)];
 }
-/* Negotiating who pays a loanee's wage (5.73). The share is what the borrowing club pays, in quarters.
+/* Negotiating who pays a loanee's wage (5.73; any share from 0 to 100% in 5% steps since 5.73.1). The share is what
+   the borrowing club pays.
    The parent club wants you to pay at least parentMinShare: less if he'd be a regular for you (the point of a loan)
    or it's comfortably off, more if its own cost ratio is stretched, less again if his wage is far above what your
    club would pay him. A borrowing club pays at most borrowerMaxShare: what it would pay a player like him, against
    what he earns, a little less if it's short of cash. */
-const SHARES = [1, .75, .5, .25];
 function parentMinShare(p, c) {
   const parent = C(p.club), rank = c.squad.map(P).filter(x => FAM[x.pos][p.pos] >= .9 && x.ovr >= p.ovr).length, slots = Math.max(1, roleSlots(c.formation, p.pos));
   let m = .8;
@@ -451,14 +451,15 @@ function parentMinShare(p, c) {
   if (parent.cash > parent.revBase * .6) m -= .15;
   if (scr(parent) > .9) m += .25;
   if (p.wage > wageDemand(p, c.rep) * 1.3) m -= .15;
-  return clamp(m, .25, 1);
+  return clamp(m, 0, 1);
 }
 function borrowerMaxShare(p, b) {
   let m = wageDemand(p, b.rep) / Math.max(1, p.wage);
   if (b.cash < b.revBase * .2) m -= .15;
-  return clamp(m, .25, 1);
+  return clamp(m, 0, 1);
 }
-const upToQuarter = x => Math.min(1, Math.ceil(x * 4 - 1e-9) / 4), downToQuarter = x => Math.max(.25, Math.floor(x * 4 + 1e-9) / 4);
+// Shares are agreed in 5% steps: a refusal names the nearest step the club would accept.
+const upTo5 = x => Math.min(1, Math.ceil(x * 20 - 1e-9) / 20), downTo5 = x => Math.max(0, Math.floor(x * 20 + 1e-9) / 20);
 function userLoanIn(p, share = 1) {
   const c = me();
   if (!windowOpen()) return { ok: false, msg: "Loans can only be agreed while the transfer window is open." };
@@ -470,9 +471,9 @@ function userLoanIn(p, share = 1) {
   if (rank >= slots * 2) return { ok: false, msg: `${parent.name} want him playing regularly, and he'd be behind ${rank} players at your club.` };
   if (clubLevel(c) < p.ovr - 10) return { ok: false, msg: `${parent.name} want him tested at a higher level than the ${leagueName(c.lg)}.` };
   const need = parentMinShare(p, c);
-  if (share < need - 1e-9) return { ok: false, msg: `${parent.name} won't cover that much of his wage: they want you to pay at least ${Math.round(upToQuarter(need) * 100)}%.` };
+  if (share < need - 1e-9) return { ok: false, msg: `${parent.name} won't cover that much of his wage: they want you to pay at least ${Math.round(upTo5(need) * 100)}%.` };
   startLoan(p, c, share); fixUserLineup();
-  return { ok: true, msg: `${p.name} joins on loan for the season. You pay ${share < 1 ? `${Math.round(share * 100)}% of his wage, ${perWeek(p.wage * share)} (${parent.name} pay the rest)` : `his wage, ${perWeek(p.wage)}`}${S.phase === "season" ? `, about ${money(loanWageLeft(p))} to the end of the season` : ""}.` };
+  return { ok: true, msg: `${p.name} joins on loan for the season. You pay ${share < 1 ? (share > 0 ? `${Math.round(share * 100)}% of his wage, ${perWeek(p.wage * share)} (${parent.name} pay the rest)` : `nothing: ${parent.name} pay all of his wage`) : `his wage, ${perWeek(p.wage)}`}${S.phase === "season" ? `, about ${money(loanWageLeft(p))} to the end of the season` : ""}.` };
 }
 /* What a loanee's wage still costs you this season. Wages are paid each week by whichever club's squad he's in,
    so this is also what sending him back saves. In preseason it is the whole season ahead. */

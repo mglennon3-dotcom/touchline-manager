@@ -252,15 +252,14 @@ const ACT = {
   "pick-p": v => { const id = +v; if (UI.sel && UI.sel.slot != null) return assignSlot(UI.sel.slot, id); UI.sel = UI.sel && UI.sel.pid === id ? null : { pid: id }; render(); },
   sqf: v => { UI.sqf = v; render(); }, ttab: v => { UI.tab = v; render(); }, nf: v => { UI.nf = v; render(); },
   morehist: () => { UI.histN += 10; render(); },
-  loanin: v => { UI.modal = { t: "player", id: +v }; UI.confirm = null; UI.loanPick = null; UI.loanIn = +v; renderModal(); },
+  loanin: v => { UI.modal = { t: "player", id: +v }; UI.confirm = null; UI.loanPick = null; UI.loanIn = +v; UI.loanInShare = 1; renderModal(); },
   "loanin-no": () => { UI.loanIn = null; renderModal(); },
-  "loanin-go": v => { const [pid, sh] = v.split("|"), r = userLoanIn(P(+pid), +sh); toast(r.msg); if (r.ok) { UI.loanIn = null; UI.modal = null; save(); render(); } else renderModal(); },
-  loanshare: v => { UI.loanOutShare = +v; renderModal(); },
-  "ask-loan": v => { UI.loanPick = +v; renderModal(); },
+  "loanin-go": v => { const el = document.getElementById("loan-in"), sh = el ? +el.value / 100 : (UI.loanInShare ?? 1); UI.loanInShare = sh; const r = userLoanIn(P(+v), sh); toast(r.msg); if (r.ok) { UI.loanIn = null; UI.modal = null; save(); render(); } else renderModal(); },
+  "ask-loan": v => { UI.loanPick = +v; UI.loanOutShare = 1; renderModal(); },
   "loan-cancel": () => { UI.loanPick = null; renderModal(); },
   "loan-to": v => { const [pid, cid] = v.split("|").map(Number), p = P(pid), d = C(cid); if (!windowOpen()) return toast("Loans can only be agreed while the window is open.");
-    const share = UI.loanOutShare || 1, max = borrowerMaxShare(p, d);
-    if (share > max + 1e-9) return toast(`${d.name} won't pay ${share * 100}% of his wage: the most they'll cover is ${Math.round(downToQuarter(max) * 100)}%.`);
+    const el = document.getElementById("loan-out"), share = el ? +el.value / 100 : (UI.loanOutShare ?? 1), max = borrowerMaxShare(p, d); UI.loanOutShare = share;
+    if (share > max + 1e-9) return toast(`${d.name} won't pay ${Math.round(share * 100)}% of his wage: the most they'll cover is ${Math.round(downTo5(max) * 100)}%.`);
     startLoan(p, d, share); UI.loanPick = null; fixUserLineup(); UI.modal = null; save(); render(); toast(`${p.name} joins ${d.name} on loan.`); },
   "ask-loan-old": v => { const p = P(+v), d = loanDestinations(p)[0]; if (!d) return toast(`No club suitable for ${p.name} has room for a loan right now.`); UI.confirm = { id: p.id, act: "loan", to: d.id, msg: `Loan ${p.name} to ${d.name} (${leagueName(d.lg)}) for the season? He'd be a regular starter there.`, yes: "Agree the loan" }; renderModal(); },
   export: () => { try { const blob = new Blob([JSON.stringify(S)], { type: "application/json" }); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = `touchline-${me().short}-${S.year}.json`; document.body.appendChild(a); a.click(); a.remove(); toast("Save file exported."); } catch (e) { toast("Export isn't available here."); } },
@@ -372,6 +371,8 @@ const CHG = {
   lg: v => { UI.lg = v; render(); },
   startl: v => { UI.startL = v; render(); },
   ccolor: v => { keepClubForm(UI.modal); UI.modal.ccolor = v; const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; renderModal(); },
+  loanshare: v => { UI.loanOutShare = +v / 100; },
+  loaninshare: v => { UI.loanInShare = +v / 100; },
   cform: v => { UI.modal.form = v; const el = document.getElementById("coach-name"); UI.modal.name = el ? el.value : UI.modal.name; },
   unsack: (v, el) => { S.set.unsackable = el.checked; save(); render(); toast(el.checked ? "Unsackable mode on." : "Unsackable mode off: the board can fire you again."); },
   ticket: v => { me().tkt = +v; save(); render(); },
@@ -447,6 +448,8 @@ function fitMenu() { const m = document.querySelector(".playmenu"); if (m) m.sty
 window.addEventListener("resize", fitMenu);
 new MutationObserver(() => { floatSrc = null; floatHead(); fitMenu(); }).observe(document.getElementById("app"), { childList: true, subtree: true });
 new MutationObserver(syncMastHeight).observe(document.getElementById("app"), { childList: true });
+// Sliders that show their value as you drag (data-live: the label to update; data-wage: what the share is of).
+document.addEventListener("input", e => { const t = e.target; if (!t.dataset || !t.dataset.live) return; const l = document.getElementById(t.dataset.live), v = +t.value; if (l) l.textContent = `${v}% · ${perWeek(+t.dataset.wage * v / 100)}`; });
 document.addEventListener("change", e => { const t = e.target.closest("[data-c]"); if (t) CHG[t.dataset.c]?.(t.value, t); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) { UI.modal = null; UI.bid = null; renderModal(); render(); } });
 window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (VIEWS[h] && h !== UI.page) { UI.page = h; render(); } });

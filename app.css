@@ -512,3 +512,4 @@ table.proj tr.tot td{font-weight:700;border-top:1px solid var(--line)}
 select.fit-g{background-color:color-mix(in srgb,var(--win) 20%,var(--surface));border-color:var(--win)}
 select.fit-b{background-color:color-mix(in srgb,var(--loss) 22%,var(--surface));border-color:var(--loss)}
 .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px}.edit-grid .f{min-width:0}.edit-grid input,.edit-grid select{width:100%}
+.share-pick{display:block}.share-pick input[type=range]{display:block;width:100%;margin:6px 0 2px;accent-color:var(--accent)}
