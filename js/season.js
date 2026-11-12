@@ -376,6 +376,7 @@ function finishDay() {
 /* ---------- the weekly cycle ---------- */
 function weekly() {
   const wk = 1 / 52; bumpTick();
+  if (S.intake && S.intakeWk != null && S.week + 1 >= S.intakeWk) settleIntake(true);  // a graduate choice reopened during the season
   for (const c of activeClubs()) {
     const wages = wageBill(c) * wk, amort = sum(c.squad, id => P(id).am ? P(id).am.per : 0) * wk, rev = c.revSeason * wk;
     // Staff, stadium and running costs sit outside the cost ratio but still come out of the bank.
@@ -698,6 +699,10 @@ function settleIncome(c, dir) {
 const INTAKE_POOL = 5, INTAKE_KEEP = 3, INTAKE_DEADLINE = 2;  // decide by the end of preseason week 2
 const ACAD_CAP = 15;  // academy places: graduates and players sent down need a free one
 const acadCount = c => c.squad.filter(id => P(id).acad).length;
+/* When this year's graduate choice closes: the end of preseason week INTAKE_DEADLINE, unless it was reopened
+   (S.intakeDL: a preseason week, or S.intakeWk: a season week, for an intake reopened after kick-off). */
+const intakeDue = () => S.intakeWk != null ? { season: true, w: S.intakeWk } : { season: false, w: S.intakeDL ?? INTAKE_DEADLINE };
+const intakeDueText = () => { const d = intakeDue(), left = d.season ? d.w - S.week : d.w - S.summerDay; return `the end of ${d.season ? "season" : "preseason"} week ${d.season ? d.w : d.w} (${left <= 1 ? "this week" : `${left} weeks left`})`; };
 const intakeRoom = () => Math.max(0, Math.min(INTAKE_KEEP, ACAD_CAP - acadCount(me())));
 function graduateIntakes() {
   for (const c of activeClubs()) {
@@ -732,7 +737,7 @@ function settleIntake(auto) {
     if (keep.has(p.id)) { p.club = c.id; p.acad = true; p.joined = S.year; c.squad.push(p.id); joined.push(p); }
     else toFreeAgent(p);
   }
-  S.intake = null;
+  S.intake = null; delete S.intakeDL; delete S.intakeWk;
   const names = joined.map(p => `${p.name} (${p.pos})`).join(", ");
   news(joined.length ? `${auto ? "The graduate deadline has passed. " : ""}Joining your academy: ${names}. ${kids.length - joined.length} released as free agents.` : `${auto ? "The graduate deadline passed with nobody chosen: all" : "All"} ${kids.length} of this year's graduates were released as free agents.`, auto, "youth");
   return joined.length;
@@ -772,7 +777,7 @@ function summerStep() {
   // week for your squad only, against 18-25 for a friendly, so a side with a friendly a week started the
   // season at 72% (97, 92, 86, 80, 76 through the weeks) while the rested squad sat at 100%.
   recoverDays(7);
-  if (S.intake && S.summerDay + 1 >= INTAKE_DEADLINE) settleIntake(true);  // the graduate deadline: end of preseason week 2
+  if (S.intake && S.intakeWk == null && S.summerDay + 1 >= intakeDue().w) settleIntake(true);  // the graduate deadline: end of preseason week 2 (or as reopened)
   autoScout(); S.rec.hours = recHours();  // scouting hours are weekly in preseason too; only the season's weekly() refilled them
   S.summerDay++;
   if (S.summerDay < CAL.summerDays) return;
@@ -783,7 +788,7 @@ function summerStep() {
 }
 function newSeasonStart() {
   for (const c of activeClubs()) if (!isUser(c)) dedupeNames(c);
-  if (S.intake) settleIntake(true);  // missed the deadline somehow: only those ticked join, the rest are released
+  if (S.intake && S.intakeWk == null) settleIntake(true);  // missed the deadline somehow: only those ticked join, the rest are released
   for (const c of activeClubs()) if (!isUser(c)) trimSquad(c, false);
   S.year++;
   S.seasonOver = null;

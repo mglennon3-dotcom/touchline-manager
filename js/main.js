@@ -620,6 +620,20 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
     const m = MAP[S.mentality] || {}; for (const [k, v] of Object.entries(m)) if (!S[k] || S[k] === "normal") S[k] = v;
     if (S.club != null && S.mentality && S.mentality !== "bal") news(`Styles of play are now team instructions you set one by one (Tactics > Instructions). Your ${MENT[S.mentality].l.toLowerCase()} style has been carried over as: ${INSTR.map(I => S[I.s] && S[I.s] !== "normal" ? I.set[S[I.s]].l.toLowerCase() : "").filter(Boolean).join(", ")}.`);
     S.mentality = "bal"; }
+  // 5.74.2, asked for one save: South Kensington missed this year's graduate deadline. Reopen the choice for two more
+  // weeks with the graduates still unsigned. They're recognisable without a record of them: the user's five were made
+  // fully scouted (S.scout 2), 16, released this year, with consecutive ids; AI clubs' released graduates aren't scouted.
+  if (S.intakeRe !== S.year && S.club != null && !S.sacked && /kensington/i.test(me().name) && !S.intake && S.intakeY === S.year) {
+    S.intakeRe = S.year;
+    const grads = S.fa.map(P).filter(p => p && p.age === 16 && p.faY === S.year && S.scout[p.id] === 2).sort((a, b) => a.id - b.id);
+    const run = grads.filter(p => grads.some(q => Math.abs(q.id - p.id) <= 4 && q !== p));
+    if (run.length) {
+      S.fa = S.fa.filter(id => !run.some(p => p.id === id)); for (const p of run) p.intake = true;
+      S.intake = { ids: run.map(p => p.id), pick: [] };
+      if (S.phase === "summer") S.intakeDL = S.summerDay + 2; else S.intakeWk = S.week + 2;
+      news(`Your graduate intake is open again: ${run.length} of this year's academy graduates are still unsigned. Choose up to ${INTAKE_KEEP} on the Academy page by ${intakeDueText()}.`, true, "youth");
+    }
+  }
   if (!S.ordFill) { const lgSeen = {}, lgN = {}; for (const r of S.myRes || []) if (r.comp === "L") lgN[r.w] = (lgN[r.w] || 0) + 1;
     for (const r of S.myRes || []) { if (r.ord != null || r.comp === "F") continue;
     if (r.comp === "L") { const n = lgSeen[r.w] = (lgSeen[r.w] || 0) + 1; r.ord = lgN[r.w] > 1 && n === 1 ? 2 : 3; }  // two league games that week: the first was midweek
