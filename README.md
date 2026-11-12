@@ -274,7 +274,8 @@ outgrown your wage structure is still affordable to keep; his full market wage a
 club" on his card) asks 10% under his market wage and at most one and a half times what he earns now; his Renew
 button says "loyal".
 Wages weigh potential half as much as transfer values do.
-**Graduate intake.** At the end of each season your academy offers a pool of five local 16-year-olds. Their
+**Graduate intake.** At the end of each season, and in a new career's first preseason too (5.74.3), your academy
+offers a pool of five local 16-year-olds. Their
 potential is chance, shaped like the game: it's drawn from the ratings of established players (22-32), so most
 land around 7-14 of 20 and stars are as rare as they are among pros, whatever the club or its academy. They appear at the top of the Academy page with their rating and
 potential: keep up to three, or none, by the end of preseason week 2. Those you don't keep are released as free

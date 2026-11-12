@@ -48,6 +48,7 @@ function takeClub(id, name, arch, form) {
   startSeason(); initAcademy(); S.seenV = 1; for (const id of c.squad) P(id).seen = GS_SEEN;  // the club's coaches already know its players
   // Every career starts with five weeks of preseason, window open, before the first match.
   S.phase = "summer"; S.summerDay = 0; S.firstPre = true; S.friendlies = []; S.friNo = [];
+  graduateIntakes();  // the first preseason has a graduate intake like every other (5.74.3)
   news(`You take charge of ${c.name} in the ${leagueName(c.lg)}. The board's target: ${expText(S.expPos, c.lg).toLowerCase()}. Five weeks of preseason first, with the transfer window open.`, true, "board");
   UI.page = "home"; save(); render(); toTop();
 }
@@ -565,7 +566,8 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   if (!S.attr2) { for (const p of Object.values(S.players)) convertAttrs(p); for (const c of S.clubs) delete c._lv; S.attr2 = true; }
   // 5.50: graduates come as a pool at the end of the season. A save already in preseason missed that step, and the
   // old one-or-two at kick-off is gone, so it gets this year's pools now (every club, yours included).
-  if (S.phase === "summer" && !S.firstPre && S.club != null && !S.sacked && S.intakeY !== S.year && !S.intake) graduateIntakes();
+  // 5.74.3: a career's first preseason gets an intake too (it never had one); a save already past week 2 gets two weeks.
+  if (S.phase === "summer" && S.club != null && !S.sacked && S.intakeY !== S.year && !S.intake) graduateIntakes();
   // 5.54.3: the 5.35 step above missed players who'd been with you since the career began (joined in the current
   // year, which doesn't change until kick-off), so some showed "Too early to tell" after a full season of 44 games.
   // Anyone with a completed season for your club in his record is known to your coaches.

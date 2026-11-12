@@ -702,7 +702,7 @@ const acadCount = c => c.squad.filter(id => P(id).acad).length;
 /* When this year's graduate choice closes: the end of preseason week INTAKE_DEADLINE, unless it was reopened
    (S.intakeDL: a preseason week, or S.intakeWk: a season week, for an intake reopened after kick-off). */
 const intakeDue = () => S.intakeWk != null ? { season: true, w: S.intakeWk } : { season: false, w: S.intakeDL ?? INTAKE_DEADLINE };
-const intakeDueText = () => { const d = intakeDue(), left = d.season ? d.w - S.week : d.w - S.summerDay; return `the end of ${d.season ? "season" : "preseason"} week ${d.season ? d.w : d.w} (${left <= 1 ? "this week" : `${left} weeks left`})`; };
+const intakeDueText = () => { const d = intakeDue(), left = d.season ? (S.phase === "summer" ? CAL.summerDays - S.summerDay + d.w : d.w - S.week) : d.w - S.summerDay; return `the end of ${d.season ? "season" : "preseason"} week ${d.w} (${left <= 1 ? "this week" : `${left} weeks left`})`; };
 const intakeRoom = () => Math.max(0, Math.min(INTAKE_KEEP, ACAD_CAP - acadCount(me())));
 function graduateIntakes() {
   for (const c of activeClubs()) {
@@ -711,7 +711,10 @@ function graduateIntakes() {
       const pool = Array.from({ length: INTAKE_POOL }, make);
       for (const p of pool) { c.squad = c.squad.filter(id => id !== p.id); p.club = -1; p.intake = true; S.scout[p.id] = 2; }
       S.intake = { ids: pool.map(p => p.id), pick: [] };
-      news(`Your academy has ${INTAKE_POOL} local 16-year-olds ready to join. Choose up to ${INTAKE_KEEP} (or none) on the Academy page by the end of preseason week ${INTAKE_DEADLINE}; the rest are released as free agents. Academy places: ${acadCount(c)}/${ACAD_CAP} used.`, true, "youth");
+      // Opened after week 2 has gone (a save loaded late in preseason): two weeks from now, running into the season's
+      // opening weeks if preseason ends first.
+      if (S.summerDay + 1 >= INTAKE_DEADLINE) { const rem = CAL.summerDays - S.summerDay; if (rem >= 2) S.intakeDL = S.summerDay + 2; else S.intakeWk = 2 - rem; }
+      news(`Your academy has ${INTAKE_POOL} local 16-year-olds ready to join. Choose up to ${INTAKE_KEEP} (or none) on the Academy page by ${intakeDueText()}; the rest are released as free agents. Academy places: ${acadCount(c)}/${ACAD_CAP}.`, true, "youth");
       continue;
     }
     // The same 15 places: an AI club counts its 20-and-unders (it has no separate academy).
