@@ -639,6 +639,8 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // 5.75: your academy players under 18 move onto youth deals (50 a week until they're 18).
   if (!S.youth5 && S.club != null) { S.youth5 = 1; let n = 0; for (const id of me().squad) { const p = P(id); if (p && p.acad && p.age < YOUTH_PRO_AGE && !p.loan) { youthDeal(p); n++; } }
     if (n) news(`Academy players now sign youth deals: ${n} of yours under ${YOUTH_PRO_AGE} move onto ${perWeek(YOUTH_WAGE)}. At ${YOUTH_PRO_AGE} each can be offered a professional contract; the youth deal runs to the end of that season.`, true, "youth"); }
+  // 5.75.1: AI clubs' under-18s move onto youth deals too (their academy players; an AI club has no separate academy).
+  if (!S.youthAI && S.clubs) { S.youthAI = 1; for (const c of activeClubs()) if (!isUser(c)) for (const id of c.squad) { const p = P(id); if (p && p.age < YOUTH_PRO_AGE && !p.loan && !p.youth) youthDeal(p); } }
   if (!S.ordFill) { const lgSeen = {}, lgN = {}; for (const r of S.myRes || []) if (r.comp === "L") lgN[r.w] = (lgN[r.w] || 0) + 1;
     for (const r of S.myRes || []) { if (r.ord != null || r.comp === "F") continue;
     if (r.comp === "L") { const n = lgSeen[r.w] = (lgSeen[r.w] || 0) + 1; r.ord = lgN[r.w] > 1 && n === 1 ? 2 : 3; }  // two league games that week: the first was midweek

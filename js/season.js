@@ -658,7 +658,8 @@ function ageAndContracts() {
       if (isUser(c)) { c.squad = c.squad.filter(id => id !== p.id); toFreeAgent(p); news(`${p.name}'s contract has expired and he has left the club.`, false, "squad"); }
       // The player has a say too, on the same terms as yours (renewTerms): one who has asked to leave or is unhappy
       // (mood under 45) won't sign again and goes into free agency. Before 5.45 only a transfer request stopped it.
-      else if (p.age < 32 && p.ovr >= clubLevel(c) - 9 && R() < .8 && !p.req && p.mood >= 45) { p.yrs = ri(1, 4); p.wage = renewWage(p, c); }
+      // A youngster coming off a youth deal is judged on his potential: he's rarely near the first team's level at 18.
+      else if (p.age < 32 && (p.youth ? p.pot >= clubLevel(c) - 6 : p.ovr >= clubLevel(c) - 9) && R() < .8 && !p.req && p.mood >= 45) { p.yrs = p.youth ? ri(2, 4) : ri(1, 4); p.wage = renewWage(p, c); p.youth = false; }
       else { c.squad = c.squad.filter(id => id !== p.id); toFreeAgent(p); }
     }
   }
@@ -721,7 +722,7 @@ function graduateIntakes() {
     const lvl = clubLevel(c), grads = Array.from({ length: ri(1, 2) }, make);
     for (const p of grads) {
       const young = c.squad.filter(id => P(id).age <= ACAD_MAX_AGE && id !== p.id).length;
-      if (young < ACAD_CAP && p.pot >= lvl - 9) continue;  // kept: room for him, and he could reach about the club's level
+      if (young < ACAD_CAP && p.pot >= lvl - 9) { youthDeal(p); continue; }  // kept: room for him, and he could reach about the club's level
       c.squad = c.squad.filter(id => id !== p.id);
       if (p.pot >= o100(9)) toFreeAgent(p); else delete S.players[p.id];
     }

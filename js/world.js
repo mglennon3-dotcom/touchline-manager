@@ -486,7 +486,7 @@ function genSquad(c) {
     if (R() < (c.tier <= 2 ? .5 : .2)) { const fee = Math.round(value(p) * rf(.6, 1.3)); const yrs = p.yrs + ri(0, 2); p.am = { per: Math.round(fee / yrs), left: p.yrs }; }
     c.squad.push(p.id);
   }
-  for (let i = 0; i < 3; i++) academyPlayer(c, ri(16, 18));
+  for (let i = 0; i < 3; i++) { const p = academyPlayer(c, ri(16, 18)); if (p.age < YOUTH_PRO_AGE) youthDeal(p); }
   trimSquad(c, true);
 }
 /* Ratings of established players (22-32, at a club), refreshed once a season: the shape graduates' potential is
@@ -525,7 +525,7 @@ function trimSquad(c, atGen) {
   while (c.squad.length > 34 && guard++ < 120) { const cand = c.squad.map(P).filter(p => !isSenior(p)).sort((a, b) => a.pot - b.pot)[0]; if (!cand) break; release(cand); }
 }
 function toFreeAgent(p) {
-  p.club = -1; p.am = null; p.req = false; p.listed = false; p.promise = null; p.yrs = 0; p.loan = null; p.faY = S.year;  // when he went free (FA_YEARS)
+  p.club = -1; p.am = null; p.youth = false; p.req = false; p.listed = false; p.promise = null; p.yrs = 0; p.loan = null; p.faY = S.year;  // when he went free (FA_YEARS)
   if (!S.fa.includes(p.id)) S.fa.push(p.id);
 }
 /* Retired players leave the save; the notable ones are kept in the hall of fame. */

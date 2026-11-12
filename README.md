@@ -277,7 +277,9 @@ Wages weigh potential half as much as transfer values do.
 **Youth deals** (5.75): your academy players (graduates, signed prospects) are on 50 a week until they're 18. The
 deal runs to the end of the season in which he's 18: that season he can be offered his first professional contract
 (his senior wage demand, four years) from his card or the expiring-contracts reminder; one not offered leaves as a
-free agent, and an 18-year-old still waiting is unsettled ("Wants a professional contract").
+free agent, and an 18-year-old still waiting is unsettled ("Wants a professional contract"). AI clubs' under-18s are on youth deals
+too (5.75.1); at the end of his youth deal an AI club keeps a youngster whose potential is within two points of
+its level (out of 20) on a senior contract and releases the rest.
 
 **Graduate intake.** At the end of each season, and in a new career's first preseason too (5.74.3), your academy
 offers a pool of five local 16-year-olds. Their
