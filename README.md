@@ -274,6 +274,11 @@ outgrown your wage structure is still affordable to keep; his full market wage a
 club" on his card) asks 10% under his market wage and at most one and a half times what he earns now; his Renew
 button says "loyal".
 Wages weigh potential half as much as transfer values do.
+**Youth deals** (5.75): your academy players (graduates, signed prospects) are on 50 a week until they're 18. The
+deal runs to the end of the season in which he's 18: that season he can be offered his first professional contract
+(his senior wage demand, four years) from his card or the expiring-contracts reminder; one not offered leaves as a
+free agent, and an 18-year-old still waiting is unsettled ("Wants a professional contract").
+
 **Graduate intake.** At the end of each season, and in a new career's first preseason too (5.74.3), your academy
 offers a pool of five local 16-year-olds. Their
 potential is chance, shaped like the game: it's drawn from the ratings of established players (22-32), so most

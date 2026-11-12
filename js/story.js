@@ -14,6 +14,7 @@ function moodReasons(p) {
   const c = C(p.club), out = [], e = expectedShare(p, c);
   if (p.pt < e - .2) out.push(["Wants more playing time", -1]); else if (p.pt > e + .1) out.push(["Happy with his minutes", 1]);
   if (S.spread2 ? p.ovr > clubLevel(c) + 4 && p.amb > .45 : p.ovr > clubLevel(c) + 6 && p.amb > .6) out.push(["Feels he has outgrown the club", -1]);
+  if (p.youth && p.age >= YOUTH_PRO_AGE) out.push(["Wants a professional contract", -1]);
   if (p.promise) out.push([`Promised regular football until week ${p.promise.until + 1}`, 0]);
   if (p.req) out.push(["Has asked to leave", -1]);
   if (!isReg(p, c)) out.push(["Left out of the registered squad", -1]);
@@ -30,6 +31,7 @@ function weeklyMood() {
       // Outgrowing the club. With the wider spread (5.70) it starts sooner and bites harder the further he's above it,
       // so good players at small clubs ask to move up, as they do: without it the bottom divisions drifted back up.
       if (S.spread2 ? p.ovr > lvl + 4 && p.amb > .45 : p.ovr > lvl + 6 && p.amb > .6) d -= S.spread2 ? .8 + (p.ovr - lvl - 4) * .15 : .8;
+      if (p.youth && p.age >= YOUTH_PRO_AGE) d -= .4;  // waiting on a professional contract
       // Left out of the registered 25: it stings more for good, ambitious players.
       if (!isReg(p, c)) d -= 1.2 + Math.max(0, p.ovr - lvl + 6) * .12 + p.amb;
       if (isUser(c) && userRes && userRes.w === S.week) { const won = (userRes.h === c.id) === (userRes.hg > userRes.ag) && userRes.hg !== userRes.ag; const lost = userRes.hg !== userRes.ag && !won; d += won ? .8 : lost ? -.8 * (1 + p.amb * .5) : 0; }
@@ -172,7 +174,7 @@ function resolveDecision(m, choice) {
   }
   if (m.type === "renew") {
     if (choice !== "all") return "Open a player from the Squad page to renew him.";
-    let n = 0; for (const id of m.ids) { const q = S.players[id]; if (!q || q.club !== S.club) continue; const t = renewTerms(q); if (t.happy) { q.yrs = 4; q.wage = t.wage; n++; } }
+    let n = 0; for (const id of m.ids) { const q = S.players[id]; if (!q || q.club !== S.club) continue; const t = renewTerms(q); if (t.happy) { q.yrs = 4; q.wage = t.wage; q.youth = false; n++; } }
     return `${n} player${n === 1 ? "" : "s"} signed new contracts.`;
   }
   if (m.type === "sponsor") return takeSponsor(m, choice);

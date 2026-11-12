@@ -269,7 +269,7 @@ const ACT = {
   submitbid: v => { const p = P(+v), b = UI.bid; const r = userBid(p, p.club >= 0 ? b.fee : 0, b.yrs, b.wage, b); b.msg = r.msg; b.ok = r.ok; save(); if (r.ok) { toast(r.msg); render(); } renderModal(); },
   bidcounter: v => { const b = UI.bid; if (v === "fee" && b.counterFee) b.fee = b.counterFee; if (v === "wage" && b.counterWage) b.wage = b.counterWage; b.msg = ""; renderModal(); },
   rec: v => { const [id, act] = v.split("|"); const y = S.prospects.find(x => x.id === id); const r = recAct(y, act); toast(r); save(); render(); },
-  renew: v => { const p = P(+v), t = renewTerms(p); if (!t.happy) return toast(t.reason); p.yrs = 4; p.wage = t.wage; p.mood = Math.min(100, p.mood + 5); news(`${p.name} signs a new four-year contract on ${perWeek(t.wage)}.`, false, "squad"); save(); render(); toast(`${p.name} renewed until ${S.year + 4}.`); },
+  renew: v => { const p = P(+v), t = renewTerms(p); if (!t.happy) return toast(t.reason); const wasYouth = p.youth; p.youth = false; p.yrs = 4; p.wage = t.wage; p.mood = Math.min(100, p.mood + 5); news(wasYouth ? `${p.name} signs his first professional contract: four years on ${perWeek(t.wage)}.` : `${p.name} signs a new four-year contract on ${perWeek(t.wage)}.`, false, "squad"); save(); render(); toast(`${p.name} renewed until ${S.year + 4}.`); },
   // Listing upsets a player who wants to stay (mood -6), and taking him off gives it back. One who wants out (has
   // asked to leave, or feels he's outgrown the club) doesn't mind. Before 5.55 the -6 was never undone.
   list: v => { const p = P(+v), c = me(); p.listed = !p.listed;
@@ -636,6 +636,9 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
       news(`Your graduate intake is open again: ${run.length} of this year's academy graduates are still unsigned. Choose up to ${INTAKE_KEEP} on the Academy page by ${intakeDueText()}.`, true, "youth");
     }
   }
+  // 5.75: your academy players under 18 move onto youth deals (50 a week until they're 18).
+  if (!S.youth5 && S.club != null) { S.youth5 = 1; let n = 0; for (const id of me().squad) { const p = P(id); if (p && p.acad && p.age < YOUTH_PRO_AGE && !p.loan) { youthDeal(p); n++; } }
+    if (n) news(`Academy players now sign youth deals: ${n} of yours under ${YOUTH_PRO_AGE} move onto ${perWeek(YOUTH_WAGE)}. At ${YOUTH_PRO_AGE} each can be offered a professional contract; the youth deal runs to the end of that season.`, true, "youth"); }
   if (!S.ordFill) { const lgSeen = {}, lgN = {}; for (const r of S.myRes || []) if (r.comp === "L") lgN[r.w] = (lgN[r.w] || 0) + 1;
     for (const r of S.myRes || []) { if (r.ord != null || r.comp === "F") continue;
     if (r.comp === "L") { const n = lgSeen[r.w] = (lgSeen[r.w] || 0) + 1; r.ord = lgN[r.w] > 1 && n === 1 ? 2 : 3; }  // two league games that week: the first was midweek

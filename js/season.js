@@ -737,7 +737,7 @@ function settleIntake(auto) {
   const joined = [];
   for (const p of kids) {
     p.intake = false;
-    if (keep.has(p.id)) { p.club = c.id; p.acad = true; p.joined = S.year; c.squad.push(p.id); joined.push(p); }
+    if (keep.has(p.id)) { p.club = c.id; p.acad = true; p.joined = S.year; youthDeal(p); c.squad.push(p.id); joined.push(p); }
     else toFreeAgent(p);
   }
   S.intake = null; delete S.intakeDL; delete S.intakeWk;

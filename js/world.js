@@ -237,6 +237,12 @@ function archetypeOf(p) {
   for (const a of list) { const s = sum(a[1], k => (p.at[k] ?? 0) - base - (off[k] || 0)) / a[1].length; if (s > bs) { bs = s; best = a; } }
   return best;
 }
+/* Youth deals (5.75): your academy players are on 50 a week until they're old enough for a professional contract.
+   The deal runs to the end of the season in which he's 18 (age goes up at the end of each season), so at 18 he
+   shows in the expiring-contracts reminder and can be offered a senior contract (renewTerms) any time that season;
+   one not offered leaves as a free agent, like any expiring contract. */
+const YOUTH_WAGE = 50 * 52, YOUTH_PRO_AGE = 18;
+function youthDeal(p) { p.youth = true; p.wage = YOUTH_WAGE; p.yrs = Math.max(1, YOUTH_PRO_AGE + 1 - p.age); p.am = null; }
 function scoutLevel(p) {
   if (!S || S.club == null) return 2;
   if (p.club === S.club || (p.loan && p.loan.from === S.club)) return 2;

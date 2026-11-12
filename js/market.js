@@ -357,6 +357,7 @@ function releasePlayer(p) {
 function renewTerms(p) {
   const c = me();
   if (p.retiring === 1) return { happy: false, wage: p.wage, reason: "He has decided to retire at the end of the season." };
+  if (p.youth && p.age < YOUTH_PRO_AGE) return { happy: false, wage: p.wage, reason: `On a youth deal: he can sign a professional contract once he turns ${YOUTH_PRO_AGE}.` };
   const happy = p.mood >= 45 && !p.req;
   const wage = renewWage(p, c, p.mood < 60 ? 1.25 : 1.05);
   return { happy, wage, reason: happy ? "" : p.req ? "He has asked to leave and won't discuss a new deal." : "He is unhappy and won't commit his future right now. More minutes or better results might change that." };
