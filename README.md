@@ -122,6 +122,17 @@ substitutes, and the bench takes young prospects first. Across 15 clubs it chang
 of team strength. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
 the morning of each match day, so any change you make after that stands.
 
+**Archetypes** (5.74): every player has a type at his position, read from the attributes he leans on compared
+with what's usual for his position and rating (the comparison style fit uses), so a modest player can be a clear
+Target man and a star a clear Poacher. Goalkeepers: Shot-stopper, Ball-playing keeper. Centre-backs: Stopper, Aerial
+presence, Ball-playing defender, Covering defender. Full-backs: Overlapping, Defensive, Inverted. Defensive
+midfielders: Ball-winner, Deep-lying playmaker, Anchor. Central midfielders: Box-to-box, Playmaker, Ball carrier.
+Attacking midfielders: Creator, Shadow striker, Dribbler. Wingers: Direct winger, Inside forward, Wide playmaker,
+Workhorse winger. Strikers: Poacher, Target man, Runner in behind, Deep-lying forward. Each position's types come out
+at a fifth to two-fifths of its players. A player's card shows his type, what it means and its key attributes; the
+squad list, transfer lists and academy show it under his name. Like his attributes, it's known for your players,
+your league's and anyone fully scouted. Types describe players; they don't change how matches are played.
+
 **Team needs** has its own tab. It judges your best XI in your formation (ratings in position, ignoring fitness,
 form and who you've actually picked; injured and academy players left out). Each role is ranked by priority: your
 weakest starter there against the best at that role in your division's four strongest squads and the division average, the

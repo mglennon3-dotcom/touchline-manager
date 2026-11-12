@@ -229,6 +229,14 @@ const declineAttrs = (p, pts) => shiftAttrs(p, -pts, k => DECLINE[k] * (.6 + R()
 
 /* ---------- what you know about a player ---------- */
 // Your own players and anyone in your division are known; everyone else needs scouting.
+// His archetype at his natural position: [name, keys, description]. DOFF and AOFF are the engine's style-fit baselines.
+function archetypeOf(p) {
+  const list = ARCHETYPES[p.pos]; if (!list || !p.at) return null;
+  const base = r20(p.ovr) + (DOFF[p.pos] || 0), off = AOFF[p.pos] || {};
+  let best = null, bs = -1e9;
+  for (const a of list) { const s = sum(a[1], k => (p.at[k] ?? 0) - base - (off[k] || 0)) / a[1].length; if (s > bs) { bs = s; best = a; } }
+  return best;
+}
 function scoutLevel(p) {
   if (!S || S.club == null) return 2;
   if (p.club === S.club || (p.loan && p.loan.from === S.club)) return 2;

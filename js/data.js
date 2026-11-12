@@ -1,5 +1,5 @@
 "use strict";
-const APP_VERSION = "5.73.1";  // shown on the start screen; keep in step with VERSION in sw.js
+const APP_VERSION = "5.74.0";  // shown on the start screen; keep in step with VERSION in sw.js
 /* ---------- small helpers ---------- */
 const R = Math.random;
 const ri = (a, b) => a + Math.floor(R() * (b - a + 1));
@@ -339,6 +339,26 @@ const AOFF = {
   W: { fin: .5, dri: 2.5, pac: 3, hea: -2, cmp: 0, pas: .5, vis: 0, tec: 1, sta: 1, tac: -3, mar: -3, str: -2 },
   ST: { fin: 2.5, dri: .5, pac: 1, hea: 1, cmp: 1.5, pas: -1, vis: -1, tec: 0, sta: -.5, tac: -4, mar: -4, str: 1 },
   GK: { ss: 1, lp: -1, sp: -1 },
+};
+/* Player archetypes (5.74): what kind of player he is at his position, from the attributes he leans on. Each is
+   defined by key attributes; a player takes the one whose keys most beat what's usual for his position and rating
+   (the same comparison as style fit), so a modest player can be a clear Target man and a star a clear Poacher. */
+const ARCHETYPES = {
+  GK: [["Shot-stopper", ["ss"], "Keeps the ball out: reflexes and handling first."], ["Ball-playing keeper", ["sp", "lp"], "Starts attacks with his feet, short or long."]],
+  CB: [["Stopper", ["tac", "str"], "Steps in, wins the ball and the duel."], ["Aerial presence", ["hea", "str"], "Dominant in the air at both ends."],
+    ["Ball-playing defender", ["pas", "cmp", "vis"], "Calm on the ball, breaks lines with his passing."], ["Covering defender", ["pac", "mar"], "Reads danger and has the pace to cover."]],
+  FB: [["Overlapping full-back", ["pac", "sta", "dri"], "Gets up and down the flank all game."], ["Defensive full-back", ["tac", "mar"], "Defends first, rarely beaten one on one."],
+    ["Inverted full-back", ["pas", "tec", "cmp"], "Steps inside to help build play."]],
+  DM: [["Ball-winner", ["tac", "sta"], "Hunts the ball and breaks up play."], ["Deep-lying playmaker", ["pas", "vis", "cmp"], "Dictates from deep."],
+    ["Anchor", ["mar", "str", "hea"], "Holds the position in front of the defence."]],
+  CM: [["Box-to-box", ["sta", "tac", "fin"], "Covers every blade of grass, tackles and scores."], ["Playmaker", ["pas", "vis", "tec"], "Sets the tempo and finds the pass."],
+    ["Ball carrier", ["dri", "pac", "tec"], "Drives forward with the ball at his feet."]],
+  AM: [["Creator", ["vis", "pas"], "Unlocks defences with the final ball."], ["Shadow striker", ["fin", "cmp"], "Arrives in the box to score."],
+    ["Dribbler", ["dri", "tec"], "Beats players in tight spaces."]],
+  W: [["Direct winger", ["pac", "dri"], "Takes on the full-back with speed."], ["Inside forward", ["fin", "cmp", "dri"], "Cuts inside to shoot."],
+    ["Wide playmaker", ["pas", "vis", "tec"], "Creates from the flank."], ["Workhorse winger", ["sta", "tac"], "Tracks back and presses all game."]],
+  ST: [["Poacher", ["fin", "cmp"], "Lives in the box and finishes chances."], ["Target man", ["hea", "str"], "Holds the ball up and wins it in the air."],
+    ["Runner in behind", ["pac", "fin"], "Stretches the defence with his pace."], ["Deep-lying forward", ["pas", "vis", "tec"], "Drops in to link the play."]],
 };
 // Pace and stamina go first with age; composure and vision last.
 const DECLINE = { pac: 1.8, sta: 1.5, str: 1.2, dri: 1.2, tac: .8, hea: .7, fin: .7, mar: .5, pas: .5, tec: .5, cmp: .3, vis: .3, ss: 1, lp: .8, sp: .8 };

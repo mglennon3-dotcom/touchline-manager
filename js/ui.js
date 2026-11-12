@@ -497,7 +497,7 @@ function viewSquad() {
   if (UI.sqf === "SEN") ps = ps.filter(isSenior); if (UI.sqf === "U21") ps = ps.filter(p => !isSenior(p));
   const xi = new Set(S.lineup), out = Object.values(S.players).filter(p => p.loan && p.loan.from === c.id);
   const cols = [
-    { k: "n", l: "Name", v: p => p.name, f: p => `${playerA(p)} ${statusChips(p, c)}` },
+    { k: "n", l: "Name", v: p => p.name, f: p => `${playerA(p)} ${statusChips(p, c)}${archTag(p)}` },
     { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>${xi.has(p.id) ? ' <span class="chip xi">XI</span>' : ""}` },
     // What you judge a player on comes first, next to his name: on a phone the rest is a sideways scroll away.
     { k: "ovr", l: "Rating", r: 1, v: p => ratingSort(p), f: p => ratingHtml(p) },
@@ -798,7 +798,7 @@ function viewTransfers() {
         ${m.done ? `<div class="small">${outcome(m)}</div>` : `<div class="row" style="gap:6px;margin-top:6px">${m.opts.map(([k, l], i) => `<button class="btn sm ${i === 0 ? "primary" : ""}" data-a="decide" data-v="${m.id}|${k}">${esc(l)}</button>`).join("")}</div>`}</div>`; }).join("") : '<p class="small muted">No bids for your players yet. List a player (Selling tab) to tell clubs he is available.</p>'}
       <h3 style="margin:14px 0 6px">Your offers</h3>`;
     body = recvHtml + `<div class="small" style="margin-bottom:8px">Budget about <b class="num">${money(Math.round(t.budget / 1e5) * 1e5)}</b> for a player on ${perWeek(t.wage)} · <button class="lnk" data-a="go" data-v="finances">details</button></div>` + table("toffers", [
-      { k: "n", l: "Player", v: o => o.p.name, f: o => playerA(o.p) },
+      { k: "n", l: "Player", v: o => o.p.name, f: o => playerA(o.p) + archTag(o.p) },
       { k: "pos", l: "Pos", v: o => ROLE_ORDER[o.p.pos], f: o => `<span class="pos">${o.p.pos}</span>` },
       { k: "age", l: "Age", r: 1, v: o => o.p.age, f: o => o.p.age },
       { k: "ovr", l: "Rating", r: 1, v: o => ratingSort(o.p), f: o => ratingHtml(o.p) },
@@ -841,7 +841,7 @@ function viewTransfers() {
       ${!listTab ? ctyTogHtml(S.set.ctyOff, "cty") : ""}
       ${poolN > 200 ? `<p class="tiny muted" style="margin:0 0 6px">${poolN.toLocaleString()} players match: showing the first 200 in the order you sort by.</p>` : ""}
       ${table("t-" + UI.tab, [
-        { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) },
+        { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) + archTag(p) },
         { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>` },
         { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
         { k: "ovr", l: "Rating", r: 1, v: p => ratingSort(p), f: p => ratingHtml(p) },
@@ -1153,6 +1153,7 @@ function modalPlayer(p) {
       <div><dt>Fitness</dt><dd>${fitBar(p.fit)} ${Math.round(p.fit)}</dd></div><div><dt>Mood</dt><dd>${moodTag(p)}</dd></div><div><dt>Homegrown</dt><dd>${Object.entries(p.yt).filter(([, v]) => v >= RULES.hgYears).map(([k]) => COUNTRY[k] ? COUNTRY[k].name : k).join(", ") || "No"}</dd></div>
       ${(h => h ? `<div><dt>Coaches' view</dt><dd class="${h[1]}">${h[0]}</dd></div>` : "")(gsHint(p))}
       <div><dt>Season</dt><dd class="num">${p.s.app} apps · ${p.s.g} g · ${p.s.a} a</dd></div>${p.s.sh || p.s.kp || p.s.sv ? `<div><dt>Advanced</dt><dd class="num small">${p.pos === "GK" ? `${p.s.sv || 0} saves · ${p.s.cs} clean sheets` : `${p.s.sh || 0} shots (${p.s.sot || 0} on) · ${(p.s.xg || 0).toFixed(1)} xG · ${p.s.kp || 0} key passes · ${(p.s.xa || 0).toFixed(1)} xA`}</dd></div>` : ""}<div><dt>Avg rating</dt><dd class="num">${avg}</dd></div><div><dt>Career</dt><dd class="num">${p.tot[0] + p.s.app} apps · ${p.tot[1] + p.s.g} g</dd></div></dl>
+    ${archLine(p)}
     ${attrPanel(p)}
     ${p.inj ? `<p class="small bad">${esc(p.injT ? p.injT.charAt(0).toUpperCase() + p.injT.slice(1) : "Injured")}: out for ${injLength(p.inj)}.</p>` : ""}
     ${statusChips(p, c) ? `<div>${statusChips(p, c)}</div>` : ""}
@@ -1161,6 +1162,9 @@ function modalPlayer(p) {
     ${actions}
     <div><h3 style="margin-bottom:6px">Career</h3>${table("hist-" + p.id, [{ k: "y", l: "Season", f: h => seasonLabel(h[0]) }, { k: "c", l: "Club", f: h => (S.clubs[h[2]] ? clubA(h[2], { short: true }) : h[1]) + (h[7] ? ' <span class="tiny muted">loan</span>' : "") }, { k: "a", l: "Apps", r: 1, f: h => h[3] }, { k: "g", l: "Goals", r: 1, f: h => h[4] }, { k: "as", l: "Assists", r: 1, f: h => h[5] }, { k: "r", l: "Avg", r: 1, f: h => h[6].toFixed(2) }], p.hist.slice().reverse(), { empty: "No completed seasons yet." })}</div></div>`;
 }
+// The archetype, once you can see his attributes (your own, your league's, or fully scouted): it is read from them.
+const archTag = p => { const a = scoutLevel(p) >= 2 ? archetypeOf(p) : null; return a ? `<br><span class="tiny muted">${a[0]}</span>` : ""; };
+const archLine = p => { const a = scoutLevel(p) >= 2 ? archetypeOf(p) : null; return a ? `<p class="small" style="margin:0"><b>${a[0]}</b> <span class="muted">· ${a[2]} Strengths: ${a[1].map(k => ATTR_NAME[k]).join(", ")}.</span></p>` : `<p class="small muted" style="margin:0">Type unknown: scout him fully to learn what kind of player he is.</p>`; };
 function attrPanel(p) {
   const lvl = scoutLevel(p), main = attrKeys(p.pos), rest = allKeys(p.pos).filter(k => !main.includes(k));
   const row = k => { const l = ATTR_NAME[k]; const v = attrView(p, k); return `<div class="attr"><span>${l}</span><span class="abar">${v ? `<i style="left:${(v[0] - 1) / 19 * 100}%;width:${Math.max(2, (v[1] - v[0]) / 19 * 100)}%" class="${aCls((v[0] + v[1]) / 2)}"></i>` : ""}</span><b class="num">${v ? (v[0] === v[1] ? v[0] : v[0] + "–" + v[1]) : "?"}</b></div>`; };
@@ -1402,7 +1406,7 @@ function viewAcademy() {
   const c = me(), kids = c.squad.map(P).filter(p => p.acad), young = c.squad.map(P).filter(p => !p.acad && p.age <= ACAD_MAX_AGE && !p.loan);
   const as = p => p.as || { app: 0, g: 0, a: 0, rt: 0 };
   const cols = [
-    { k: "n", l: "Name", v: p => p.name, f: p => playerA(p) },
+    { k: "n", l: "Name", v: p => p.name, f: p => playerA(p) + archTag(p) },
     { k: "pos", l: "Pos", v: p => ROLE_ORDER[p.pos], f: p => `<span class="pos">${p.pos}</span>` },
     { k: "age", l: "Age", r: 1, v: p => p.age, f: p => p.age },
     { k: "ready", l: "First team?", v: p => { const r = acadReadiness(p, c); return ["Not yet", "Close", "Ready", "Ready to start"].indexOf(r[0]); }, f: p => { const [l, k, bar] = acadReadiness(p, c); return `<span class="${k}">${l}</span><br><span class="tiny muted">${bar ? `his ${Math.round(r20(p.ovr))} v ${Math.round(r20(bar))} at ${p.pos}` : `a place is free at ${p.pos}`}</span>`; } },
