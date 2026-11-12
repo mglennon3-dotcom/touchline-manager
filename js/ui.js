@@ -823,6 +823,8 @@ function viewTransfers() {
     if (ctyOff.size) pool = pool.filter(p => !ctyOff.has(playerCountry(p)));
     pool = pool.filter(p => (f.pos === "ALL" || p.pos === f.pos) && p.age <= f.age && (!f.min || (!ratingBlank(p) && ratingMid(p) >= f.min)) && (f.lg === "ALL" || (p.club >= 0 && (C(p.club).lg === f.lg || (f.lg === "ABROAD" && isForeign(C(p.club)))))));
     if (f.fee && UI.tab !== "loans") pool = pool.filter(p => askingPrice(p) <= f.fee);
+    // Archetype (5.74.1): only players whose type you know match, as it's read from attributes you can see.
+    if (f.arch && f.arch !== "ALL") pool = pool.filter(p => scoutLevel(p) >= 2 && (archetypeOf(p) || [])[0] === f.arch);
     // Interest, using the same bands as the Interest column: "would sign" is everyone but Not interested,
     // since a player below .3 turns any offer down.
     const INT = { keen: w => w >= .7, open: w => w >= .45, sign: w => w >= .3, no: w => w < .3 };
@@ -833,12 +835,14 @@ function viewTransfers() {
     pool.sort((a, b) => ratingSort(b) - ratingSort(a)); const poolN = pool.length;
     const loans = UI.tab === "loans";
     body = `${UI.tab === "scouted" ? scoutAssistHtml() : ""}<div class="filters"><label class="f">Position<select id="tf-pos" data-c="tf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
+      <label class="f">Type<select id="tf-arch" data-c="tf-arch"><option value="ALL">Any</option>${(f.pos === "ALL" ? ROLES : [f.pos]).filter(r => ARCHETYPES[r]).map(r => `<optgroup label="${ROLE_NAME[r]}">${ARCHETYPES[r].map(a => `<option value="${esc(a[0])}" ${f.arch === a[0] ? "selected" : ""}>${a[0]}</option>`).join("")}</optgroup>`).join("")}</select></label>
       <label class="f">Max age<select id="tf-age" data-c="tf-age">${[40, 30, 27, 24, 21].map(a => `<option value="${a}" ${f.age === a ? "selected" : ""}>${a === 40 ? "Any" : a}</option>`).join("")}</select></label>
       <label class="f">Min rating<select id="tf-min" data-c="tf-min">${[0, 6, 8, 10, 12, 14, 16].map(a => `<option value="${a}" ${f.min === a ? "selected" : ""}>${a ? a + "+" : "Any"}</option>`).join("")}</select></label>
       <label class="f">Interest<select id="tf-int" data-c="tf-int">${[["ALL", "Any"], ["keen", "Keen"], ["open", "Open or keen"], ["sign", "Would sign (not Not interested)"], ["no", "Not interested"]].map(([k, l]) => `<option value="${k}" ${(f.int || "ALL") === k ? "selected" : ""}>${l}</option>`).join("")}</select></label>
       ${loans ? "" : `<label class="f">Max fee<select id="tf-fee" data-c="tf-fee">${[0, 2e5, 1e6, 3e6, 8e6, 15e6, 30e6].map(a => a * MONEY).map(a => `<option value="${a}" ${f.fee === a ? "selected" : ""}>${a ? money(a) : "Any"}</option>`).join("")}</select></label>`}
       ${UI.tab !== "fa" ? `<label class="f">League<select id="tf-lg" data-c="tf-lg"><option value="ALL">All leagues</option><option value="ABROAD" ${f.lg === "ABROAD" ? "selected" : ""}>All foreign leagues</option>${lgOpts(f.lg)}</select></label>` : ""}</div>
       ${!listTab ? ctyTogHtml(S.set.ctyOff, "cty") : ""}
+      ${f.arch && f.arch !== "ALL" ? `<p class="tiny muted" style="margin:0 0 6px">Type only shows players whose type you know: your league's and anyone fully scouted.</p>` : ""}
       ${poolN > 200 ? `<p class="tiny muted" style="margin:0 0 6px">${poolN.toLocaleString()} players match: showing the first 200 in the order you sort by.</p>` : ""}
       ${table("t-" + UI.tab, [
         { k: "n", l: "Player", v: p => p.name, f: p => playerA(p) + " " + statusChips(p) + archTag(p) },

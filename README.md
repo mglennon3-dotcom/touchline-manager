@@ -131,7 +131,9 @@ Attacking midfielders: Creator, Shadow striker, Dribbler. Wingers: Direct winger
 Workhorse winger. Strikers: Poacher, Target man, Runner in behind, Deep-lying forward. Each position's types come out
 at a fifth to two-fifths of its players. A player's card shows his type, what it means and its key attributes; the
 squad list, transfer lists and academy show it under his name. Like his attributes, it's known for your players,
-your league's and anyone fully scouted. Types describe players; they don't change how matches are played.
+your league's and anyone fully scouted. Types describe players; they don't change how matches are played. The
+transfer search filters by type (5.74.1): with a position chosen it lists that position's types, otherwise all of
+them by position, and it finds only players whose type you know.
 
 **Team needs** has its own tab. It judges your best XI in your formation (ratings in position, ignoring fitness,
 form and who you've actually picked; injured and academy players left out). Each role is ranked by priority: your
