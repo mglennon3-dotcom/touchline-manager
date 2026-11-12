@@ -30,7 +30,7 @@ function willingness(p, b) {
   return clamp(w, 0, 1);
 }
 const willingLabel = w => w >= .7 ? ["Keen", "good"] : w >= .45 ? ["Open", "ok"] : w >= .3 ? ["Reluctant", "warn"] : ["Not interested", "bad"];
-function contractDemand(p, b, w) { return Math.round(wageDemand(p, b.rep) * (1.2 - w * .3) / 1000) * 1000; }
+function contractDemand(p, b, w) { if (p.age < YOUTH_PRO_AGE) return YOUTH_WAGE; return Math.round(wageDemand(p, b.rep) * (1.2 - w * .3) / 1000) * 1000; }  // under 18: a youth deal
 
 function scr(c, extraCost = 0, extraRev = 0) {
   // Season-to-date ratio, projected to a full year where the season is still running.
@@ -64,6 +64,7 @@ function transfer(p, to, fee, wage, yrs, plan = 1) {
   p.club = to.id; p.yrs = yrs; p.wage = wage;
  p.am = fee > 0 ? { per: Math.round(fee / yrs), left: yrs } : null;
   p.req = false; p.listed = false; p.promise = null; p.mood = 72; p.joined = S.year; p.acad = false;
+  if (p.age < YOUTH_PRO_AGE) { const am = p.am; youthDeal(p); if (am) p.am = { per: Math.round(am.per * am.left / p.yrs), left: p.yrs }; }  // a 16- or 17-year-old joins on a youth deal, wherever he's from (5.75.2); any fee is still spread over the years
   // A fresh start: playing time begins at what he expects at the new club. A flat .5 (before 5.54.1) read as
   // "wants more playing time" on day one for anyone signed to start, before he'd had a game.
   p.pt = expectedShare(p, to);
