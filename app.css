@@ -513,3 +513,8 @@ select.fit-g{background-color:color-mix(in srgb,var(--win) 20%,var(--surface));b
 select.fit-b{background-color:color-mix(in srgb,var(--loss) 22%,var(--surface));border-color:var(--loss)}
 .edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;margin-top:8px}.edit-grid .f{min-width:0}.edit-grid input,.edit-grid select{width:100%}
 .share-pick{display:block}.share-pick input[type=range]{display:block;width:100%;margin:6px 0 2px;accent-color:var(--accent)}
+.slot .ab{font-family:var(--f-mono);font-size:10px;font-weight:700;letter-spacing:.03em;background:rgba(255,255,255,.88);color:#1d2a22;padding:0 4px;border-radius:3px;line-height:1.4}
+.pitch.live .slot .ab{font-size:9px}
+.arch-key{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}.arch-key .ak{white-space:nowrap;margin-right:8px}.arch-key .ak b{font-family:var(--f-mono);font-size:11px}
+.arch-key details{flex-basis:100%}.arch-key details div{margin-top:4px;display:flex;flex-wrap:wrap;gap:2px 0}
+.slot .abrow{display:flex;gap:3px;align-items:center}

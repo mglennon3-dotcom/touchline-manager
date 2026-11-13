@@ -133,7 +133,9 @@ at a fifth to two-fifths of its players. A player's card shows his type, what it
 squad list, transfer lists and academy show it under his name. Like his attributes, it's known for your players,
 your league's and anyone fully scouted. Types describe players; they don't change how matches are played. The
 transfer search filters by type (5.74.1): with a position chosen it lists that position's types, otherwise all of
-them by position, and it finds only players whose type you know.
+them by position, and it finds only players whose type you know. On the Tactics pitch and the live
+match pitch each player's type shows as an abbreviation beside his fitness (TM Target man, BPD Ball-playing defender
+and so on), with a key under the pitch to the types in the XI and every type behind "All types" (5.75.3).
 
 **Team needs** has its own tab. It judges your best XI in your formation (ratings in position, ignoring fitness,
 form and who you've actually picked; injured and academy players left out). Each role is ranked by priority: your

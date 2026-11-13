@@ -634,7 +634,7 @@ function viewTactics() {
     const p = S.players[S.lineup[i]], sel = UI.sel && UI.sel.slot === i;
     if (!p) return `<button class="slot empty ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}"><span class="disc">${role}</span><span class="nm">Empty</span></button>`;
     const f = FAM[p.pos][role];
-    return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(slotRating(p, role))}</span><span class="nm">${esc(pitchName(p, S.lineup.map(id => S.players[id])))}</span><span class="fpct" style="--fc:${fitColor(p.fit)}">${Math.round(p.fit)}%</span></button>`;
+    return `<button class="slot ${f < .9 ? "oop" : ""} ${sel ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="slot" data-v="${i}" title="${esc(p.name)}, ${p.pos} playing ${role}"><span class="disc">${Math.round(slotRating(p, role))}</span><span class="nm">${esc(pitchName(p, S.lineup.map(id => S.players[id])))}</span><span class="abrow">${archAb(p)}<span class="fpct" style="--fc:${fitColor(p.fit)}">${Math.round(p.fit)}%</span></span></button>`;
   }).join("");
   const lines = PITCH_LINES;
   const ps = c.squad.map(P).filter(p => !p.acad || S.set.acadSel || (S.acadPick || []).includes(p.id)).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr), xi = new Set(S.lineup), bench = new Set(benchFor(c, S.lineup.filter(x => x != null)));
@@ -655,6 +655,7 @@ function viewTactics() {
     lineup: `<div class="stack" style="gap:10px">
     <div class="row between"><label class="row small">Formation <select id="tc-form" data-c="form">${formOpts(S.formation)}</select></label><span class="row" style="gap:6px"><button class="btn sm" data-a="autopick">Pick best XI</button><button class="btn sm" data-a="freshpick" title="Best side from players at ${FRESH_FIT}%+ fitness">Pick fresh XI</button><button class="btn sm" data-a="potpick" title="Favours players 23 and under with room to grow; academy players who are ready can start or sit on the bench">Pick high-potential XI</button></span></div>
     <div class="pitch">${lines}${slotsHtml}</div>
+    ${archKey(S.lineup.map(id => S.players[id]).filter(Boolean))}
     ${subsHtml}
     ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}
     ${(n => n ? `<label class="row small" style="gap:6px"><input type="checkbox" data-c="acadsel" ${S.set.acadSel ? "checked" : ""}> Include academy players in selection <span class="tiny muted">(${n} in the academy · <button class="lnk tiny" data-a="go" data-v="academy">academy</button>)</span></label>` : "")(c.squad.filter(id => P(id).acad).length)}
@@ -1166,6 +1167,15 @@ function modalPlayer(p) {
     ${actions}
     <div><h3 style="margin-bottom:6px">Career</h3>${table("hist-" + p.id, [{ k: "y", l: "Season", f: h => seasonLabel(h[0]) }, { k: "c", l: "Club", f: h => (S.clubs[h[2]] ? clubA(h[2], { short: true }) : h[1]) + (h[7] ? ' <span class="tiny muted">loan</span>' : "") }, { k: "a", l: "Apps", r: 1, f: h => h[3] }, { k: "g", l: "Goals", r: 1, f: h => h[4] }, { k: "as", l: "Assists", r: 1, f: h => h[5] }, { k: "r", l: "Avg", r: 1, f: h => h[6].toFixed(2) }], p.hist.slice().reverse(), { empty: "No completed seasons yet." })}</div></div>`;
 }
+// Archetype abbreviation on a pitch shirt, and the key under the pitch: the types in this XI, and every type behind a tap.
+const archAb = p => { const a = scoutLevel(p) >= 2 ? archetypeOf(p) : null; return a ? `<span class="ab" title="${esc(a[0])}">${a[3]}</span>` : ""; };
+function archKey(ps) {
+  const used = [], seen = new Set();
+  for (const p of ps) { const a = archetypeOf(p); if (a && !seen.has(a[3])) { seen.add(a[3]); used.push(a); } }
+  const item = a => `<span class="ak"><b>${a[3]}</b> ${a[0]}</span>`;
+  return `<div class="arch-key small"><span class="muted">Types:</span> ${used.map(item).join("")}
+    <details><summary class="tiny muted">All types</summary>${ROLES.map(r => `<div class="tiny"><span class="muted" style="margin-right:6px">${ROLE_NAME[r]}:</span>${ARCHETYPES[r].map(item).join("")}</div>`).join("")}</details></div>`;
+}
 // The archetype, once you can see his attributes (your own, your league's, or fully scouted): it is read from them.
 const archTag = p => { const a = scoutLevel(p) >= 2 ? archetypeOf(p) : null; return a ? `<br><span class="tiny muted">${a[0]}</span>` : ""; };
 const archLine = p => { const a = scoutLevel(p) >= 2 ? archetypeOf(p) : null; return a ? `<p class="small" style="margin:0"><b>${a[0]}</b> <span class="muted">· ${a[2]} Strengths: ${a[1].map(k => ATTR_NAME[k]).join(", ")}.</span></p>` : `<p class="small muted" style="margin:0">Type unknown: scout him fully to learn what kind of player he is.</p>`; };
@@ -1337,7 +1347,7 @@ function liveTeam(M, k) {
   const inSquad = new Set([...s.on.map(o => o.p.id), ...s.bench]), outside = pre ? eligibleIds(C(s.club)).map(P).filter(p => avail(p) && !inSquad.has(p.id)).sort((a, b) => ROLE_ORDER[a.pos] - ROLE_ORDER[b.pos] || b.ovr - a.ovr) : [];
   const slots = s.on.map((o, idx) => { const [role, x, y] = F[o.si] || [o.slot, 50, 50], f = FAM[o.p.pos][o.slot], on = sel.on === idx;
     return `<button class="slot ${f < .9 ? "oop" : ""} ${on ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="livetap" data-v="${idx}" ${done ? "disabled" : ""} title="${esc(o.p.name)}, ${o.p.pos} playing ${o.slot}, fitness ${Math.round(o.fit)}">
-      <span class="disc" title="Rating as ${o.slot}">${Math.round(slotRating(o.p, o.slot))}</span>${s.yel[o.p.id] ? '<span class="yc" aria-label="Booked"></span>' : ""}${(g => g ? `<span class="gl" aria-label="${g} goal${g > 1 ? "s" : ""}">${g > 1 ? g + "×" : ""}⚽</span>` : "")(M.goals.filter(x => x.pid === o.p.id).length)}${M.min > 0 ? `<span class="mr ${mrCls(matchRating(M, k, o.p.id))}" title="Match rating">${matchRating(M, k, o.p.id).toFixed(1)}</span>` : ""}<span class="nm">${esc(pitchName(o.p, s.on.map(x => x.p)))}</span><span class="fpct" style="--fc:${fitColor(o.fit)}">${Math.round(o.fit)}%</span></button>`; }).join("");
+      <span class="disc" title="Rating as ${o.slot}">${Math.round(slotRating(o.p, o.slot))}</span>${s.yel[o.p.id] ? '<span class="yc" aria-label="Booked"></span>' : ""}${(g => g ? `<span class="gl" aria-label="${g} goal${g > 1 ? "s" : ""}">${g > 1 ? g + "×" : ""}⚽</span>` : "")(M.goals.filter(x => x.pid === o.p.id).length)}${M.min > 0 ? `<span class="mr ${mrCls(matchRating(M, k, o.p.id))}" title="Match rating">${matchRating(M, k, o.p.id).toFixed(1)}</span>` : ""}<span class="nm">${esc(pitchName(o.p, s.on.map(x => x.p)))}</span><span class="abrow">${archAb(o.p)}<span class="fpct" style="--fc:${fitColor(o.fit)}">${Math.round(o.fit)}%</span></span></button>`; }).join("");
   // Positions nobody is in (a red card, or an injury with no subs left): tap a player, then the gap, to move him there.
   const empties = s.on.length < F.length ? F.map((f, si) => [f, si]).filter(([, si]) => !s.on.some(o => o.si === si)) : [];
   const emptyHtml = empties.map(([[role, x, y], si]) => `<button class="slot empty ${sel.empty === si ? "sel" : ""}" style="left:${x}%;top:${y}%" data-a="liveempty" data-v="${si}" ${done ? "disabled" : ""} title="Nobody at ${role}: tap a player, then here"><span class="disc">${role}</span><span class="nm">Empty</span></button>`).join("");
@@ -1345,6 +1355,7 @@ function liveTeam(M, k) {
   return `<div class="card live-team lv-team" style="--club:${C(s.club).color}"><div class="card-h"><h2>Your team</h2><span class="eyebrow">${pre ? "Before kick-off · team changes are free" : s.friendly ? `Friendly · unlimited subs (${s.subs} made)` : `${left} sub${left === 1 ? "" : "s"} left`}</span></div>
     <div class="row between small" style="margin-bottom:8px"><label class="row">Formation <select data-c="liveform" ${done ? "disabled" : ""}>${Object.keys(FORMATIONS).map(f => `<option ${f === s.form ? "selected" : ""}>${f}</option>`).join("")}</select></label><span class="muted">${MENT[s.ment].l}</span></div>
     <div class="pitch live">${PITCH_LINES}${slots}${emptyHtml}</div>
+    ${archKey(s.on.map(o => o.p))}
     <p class="small muted" style="margin:8px 0">${hint}</p>
     <h3 style="margin:4px 0 6px">Substitutes</h3>
     ${bench.length ? `<div class="bench">${bench.map(p => `<button class="bench-p ${sel.bench === p.id ? "sel" : ""}" data-a="livebench" data-v="${p.id}" ${canSub ? "" : "disabled"}><span class="pos">${p.pos}</span><span class="nm">${esc(p.name)}</span><span class="rt-pair"><b class="rt ${aCls(r20(p.ovr))}">${Math.round(r20(p.ovr))}</b>${sel.on != null && s.on[sel.on] && s.on[sel.on].slot !== p.pos ? `<span class="oop-r ${slotRating(p, s.on[sel.on].slot) < r20(p.ovr) - .5 ? "warn" : ""}">→ ${Math.round(slotRating(p, s.on[sel.on].slot))} at ${s.on[sel.on].slot}</span>` : ""}</span><span class="tiny num" style="color:${fitColor(p.fit)}">${Math.round(p.fit)}%</span></button>`).join("")}</div>` : '<p class="small muted">No substitutes available.</p>'}

@@ -1,6 +1,6 @@
 /* Offline support. When online, the game's files come fresh from the network (and refresh the cache), so updates
    show straight away; when offline, the cached copy is used. Google Fonts are cached the first time they load. */
-const VERSION = "touchline-5.75.2";
+const VERSION = "touchline-5.75.3";
 const FILES = ["./", "index.html", "app.css", "manifest.webmanifest", "icon.svg", "icon-192.png", "icon-512.png", "apple-touch-icon.png",
   "js/data.js", "js/world.js", "js/engine.js", "js/season.js", "js/market.js", "js/recruit.js", "js/story.js", "js/rivals.js", "js/stadium.js", "js/sponsors.js", "js/ui.js", "js/main.js"];
 const FONTS = "touchline-fonts";
