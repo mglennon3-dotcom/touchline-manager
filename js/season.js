@@ -888,7 +888,7 @@ function cupProgress(key) {
 
 /* Development by experience (5.75.9). Each week a player of 27 or under who is short of his potential earns XP
    (p.xp): about 1 a week for an average player in average conditions, scaled by his minutes, form, mood, coaching,
-   training, youth development (under 21) and the level of football (to the fourth power, so handling matters a lot),
+   training, youth development (under 21) and the level of football (to the sixth power, so handling decides it),
    and by his growth speed (once: a slow learner well handled still gets there). Each rating step (a point on the 100-scale)
    costs XP_NEED: the closer he is to his potential the more it costs (inversely to the gap left), so the last steps
    are the hardest and there's no deadline that pulls everyone up. Growth stops after 27.
@@ -902,7 +902,7 @@ const lateDeveloper = p => ((p.id * 2654435761) >>> 0) % 100 < 10;
 const growUntil = p => lateDeveloper(p) ? 30 : 27;
 // The cost rises as the gap closes, but not without limit (GROW_G0): pricing it on the gap alone made the last step
 // unaffordable, so of 27-year-olds still playing 1% reached potential and almost all finished two points short.
-const GROW_G0 = 4, GROW_PACE = .5, GROW_EXP = 4;
+const GROW_G0 = 6, GROW_PACE = .2, GROW_EXP = 6;
 function xpNeed(p) { const gap = p.pot - p.ovr; return gap > 0 ? GROW_WEEKS / ((gap + GROW_G0) * GROW_K(p.age) * GROW_PACE) : Infinity; }
 /* ---------- your academy ---------- */
 /* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
