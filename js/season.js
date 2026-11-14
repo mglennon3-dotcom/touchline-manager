@@ -389,6 +389,10 @@ function weekly() {
     for (const id of c.squad) {
       const p = P(id);
       if (isUser(c)) p.seen = (p.seen || 0) + 1;  // weeks your coaches have watched him (gsHint)
+      // AI clubs' under-21s play youth and reserve football when the first team doesn't pick them, as your academy
+      // players play their academy match: about half a match a week. Without it they averaged 6% of minutes, so from
+      // 18 their potential sank a point or two a season and nobody tracked from 16 reached his (5.75.8).
+      if (!isUser(c) && p.age <= ACAD_MAX_AGE && !p.loan) p.wm = Math.max(p.wm, possible * .5);
       p.pt = .75 * p.pt + .25 * Math.min(1, p.wm / (p.acad ? 90 : possible)); p.wm = 0;  // academy minutes count against an academy match a week
       if (p.inj > 0) p.inj--;
       // Potential is a ceiling, not a promise: minutes, form, happiness and the coach decide how close a player gets.
