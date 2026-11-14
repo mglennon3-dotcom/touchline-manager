@@ -876,18 +876,19 @@ function cupProgress(key) {
 }
 
 /* How fast a player grows towards his potential, before conditions (5.75.8). Each improvement adds a point on the
-   100-scale, so his gap to potential is the number of steps left. They're spread over the seasons until he's 26,
+   100-scale, so his gap to potential is the number of steps left. They're spread over the seasons until he's 25,
    weighted to youth (GROW_W), so with average conditions (minutes, form, mood, coaching, training, youth development
-   under 21 and his development speed, which multiply this) he arrives at about 26; better conditions bring him
-   sooner, worse ones later or not at all. At 27 anyone still short gets that season to close the gap; after 27 he
+   under 21 and his development speed, which multiply this) he arrives at about 25; better conditions bring him
+   sooner. At 26 and 27 anyone still short has those two seasons to close the gap, if conditions allow; after 27 he
    doesn't grow. Before, growth followed age alone (0.085 a week at 18 down to 0.015 at 25-27, whatever the gap), so
-   most players finished short and none of the potential-18-20 youngsters started at the 10 cap reached it by 26. */
-const GROW_W = a => a <= 18 ? 1.5 : a <= 21 ? 1.3 : a <= 24 ? 1 : .7, GROW_WEEKS = CAL.lastWeek + 1;
+   most players finished short and none of the potential-18-20 youngsters started at the 10 cap reached it by 26.
+   (A first version aimed at 26 thinned the elite: 19-rated players fell from about 30 to 12 in eight seasons.) */
+const GROW_W = a => a <= 18 ? 1.5 : a <= 21 ? 1.3 : 1, GROW_WEEKS = CAL.lastWeek + 1, GROW_BY = 25;
 function growthPace(p) {
   const gap = p.pot - p.ovr; if (gap <= 0 || p.age > 27) return 0;
   const left = Math.max(1, GROW_WEEKS - S.week);
-  if (p.age >= 27) return Math.min(.95, gap / left);
-  let w = GROW_W(p.age) * left; for (let a = p.age + 1; a <= 26; a++) w += GROW_W(a) * GROW_WEEKS;
+  if (p.age > GROW_BY) return Math.min(.95, gap / (left + (27 - p.age) * GROW_WEEKS));  // catching up by the end of 27
+  let w = GROW_W(p.age) * left; for (let a = p.age + 1; a <= GROW_BY; a++) w += GROW_W(a) * GROW_WEEKS;
   return Math.min(.95, gap * GROW_W(p.age) / w);
 }
 /* ---------- your academy ---------- */
