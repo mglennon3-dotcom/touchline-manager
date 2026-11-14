@@ -287,7 +287,8 @@ too (5.75.1); at the end of his youth deal an AI club keeps a youngster whose po
 its level (out of 20) on a senior contract and releases the rest.
 
 A new youth player, graduate or recruited prospect, starts at a rating of 10 at most (5.75.6; a top graduate
-could start at 15 and a prospect at 11); potential is unchanged, so the best still become stars with time.
+could start at 15 and a prospect at 11); potential is unchanged, so the best still become stars with time. Free agents of
+16 and 17 and graduates waiting in an intake from before then were brought down to it on loading (5.75.7).
 
 **Graduate intake.** At the end of each season, and in a new career's first preseason too (5.74.3), your academy
 offers a pool of five local 16-year-olds. Their

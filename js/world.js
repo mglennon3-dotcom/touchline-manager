@@ -244,11 +244,13 @@ function archetypeOf(p) {
 const YOUTH_WAGE = 50 * 52, YOUTH_PRO_AGE = 18;
 /* The best a new youth player can start at (5.75.6): 10 out of 20, for graduates and recruited prospects alike. A
    graduate with top potential started as high as 15 and a prospect at 11. Ratings are rebuilt from attributes, which
-   can land a little over the target, so if they do every attribute comes down by the same amount (he keeps his
+   can land a little over the target, so if they do his attributes come down one at a time in turn (he keeps his
    profile) until he's at the cap. Potential is untouched. */
 const YOUTH_START_CAP = o100(10);
 function capYouthStart(p) {
-  for (let i = 0; i < 20 && p.ovr > YOUTH_START_CAP; i++) { for (const k in p.at) p.at[k] = Math.max(1, p.at[k] - 1); setOvr(p); }
+  // One attribute at a time, round the whole set, so he stops at the cap rather than up to a point under it.
+  const ks = Object.keys(p.at); let i = 0;
+  while (p.ovr > YOUTH_START_CAP && i < ks.length * 20) { const k = ks[i % ks.length]; if (p.at[k] > 1) { p.at[k]--; setOvr(p); } i++; }
   p.pot = Math.max(p.pot, p.ovr); p.peak = p.ovr;
 }
 function youthDeal(p) { p.youth = true; p.wage = YOUTH_WAGE; p.yrs = Math.max(1, YOUTH_PRO_AGE + 1 - p.age); p.am = null; }

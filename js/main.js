@@ -639,6 +639,12 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
   // 5.75: your academy players under 18 move onto youth deals (50 a week until they're 18).
   if (!S.youth5 && S.club != null) { S.youth5 = 1; let n = 0; for (const id of me().squad) { const p = P(id); if (p && p.acad && p.age < YOUTH_PRO_AGE && !p.loan) { youthDeal(p); n++; } }
     if (n) news(`Academy players now sign youth deals: ${n} of yours under ${YOUTH_PRO_AGE} move onto ${perWeek(YOUTH_WAGE)}. At ${YOUTH_PRO_AGE} each can be offered a professional contract; the youth deal runs to the end of that season.`, true, "youth"); }
+  // 5.75.7: free agents of 16 and 17, and graduates still waiting in your intake, made before the 10 cap (5.75.6) come
+  // down to it, keeping their profile and potential.
+  if (!S.ycap && S.clubs) { S.ycap = 1; let n = 0;
+    const youths = [...S.fa.map(P), ...(S.intake ? S.intake.ids.map(id => S.players[id]) : [])].filter(p => p && p.age < YOUTH_PRO_AGE && p.ovr > YOUTH_START_CAP);
+    for (const p of youths) { capYouthStart(p); n++; }
+    if (n && S.club != null) news(`${n} young free agent${n > 1 ? "s" : ""} and graduates ${n > 1 ? "have" : "has"} had ${n > 1 ? "their" : "his"} rating brought down to the new youth maximum of 10; potential is unchanged.`, false, "youth"); }
   // 5.75.2: the 5.75 step only moved academy players: under-18s in your first-team squad kept senior wages. Every
   // club's under-18s are on youth deals now.
   if (!S.youth6 && S.clubs) { S.youth6 = 1; let n = 0; for (const c of activeClubs()) for (const id of c.squad) { const p = P(id); if (p && p.age < YOUTH_PRO_AGE && !p.loan && !p.youth) { youthDeal(p); if (isUser(c)) n++; } }
