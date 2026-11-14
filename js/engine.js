@@ -308,7 +308,8 @@ function step(M) {
   // Measured against real football (about 25 shots, 8-9 on target and 2.7 goals a game): at one shot in
   // five minutes the game managed 18 shots and 2.2 goals, with 0-0s and clean sheets far too common.
   const stA = MENT[A.ment], stD = MENT[D.ment];
-  if (A.on.length && R() < .26 * bend(stA.sh, rA.F || [1, 1]) * (rA.ish || 1)) {
+  if (A.on.length > 1 && R() < PEN_PER_MIN * clamp(rA.att / Math.max(1, rD.def), .6, 1.6)) penaltyInPlay(M, k, A, D);
+  else if (A.on.length && R() < .24 * bend(stA.sh, rA.F || [1, 1]) * (rA.ish || 1)) {
     A.shots++;
     // .12 rather than .125 since sides started chasing games late, which added goals.
     // A counter-attacking side gets better chances the more the other side has committed forward.
@@ -382,11 +383,40 @@ function step(M) {
     lg(M, "ft", -1, `Full time: ${C(M.h.club).name} ${M.h.goals}–${M.a.goals} ${C(M.a.club).name}${M.et ? " after extra time" : ""}${M.pens ? `, ${M.pens[0] > M.pens[1] ? C(M.h.club).short : C(M.a.club).short} win ${Math.max(...M.pens)}–${Math.min(...M.pens)} on penalties` : ""}.`);
   }
 }
+/* Penalties (5.76). A kick goes in on the taker's finishing and composure against the keeper's shot-stopping
+   (10 is neutral; 76% for two average players, the real-world rate), less when the taker is below 70% fitness.
+   It used to be overall ratings alone, and only in shootouts. */
+const penSkill = p => p.pos === "GK" ? 3 : (p.at.fin + p.at.cmp) / 2;
+function penChance(o, gk) {
+  const ss = gk && gk.p.pos === "GK" ? gk.p.at.ss : 3;
+  return clamp(.76 + (penSkill(o.p) - 10) * .012 - (ss - 10) * .009 - Math.max(0, 70 - o.fit) * .003, .4, .95);
+}
+// Who steps up: your order (S.penOrder, set on the Tactics page) for those on the pitch, then the best penalty
+// takers; the keeper last. AI sides go by penalty skill.
+function penOrderFor(s) {
+  const out = s.on.filter(o => o.slot !== "GK"), mine = isUser(C(s.club)) ? (S.penOrder || []) : [];
+  const rank = o => { const i = mine.indexOf(o.p.id); return i >= 0 ? i : 99; };
+  out.sort((a, b) => rank(a) - rank(b) || penSkill(b.p) - penSkill(a.p));
+  return out.concat(s.on.filter(o => o.slot === "GK"));
+}
+/* A penalty awarded in play (5.76): about 0.28 a match between the two sides, as in real football, a little more
+   often for the side on top. Ordinary chances were trimmed to match (shot rate .26 to .24) so goals stay level. */
+const PEN_PER_MIN = .0031;
+function penaltyInPlay(M, k, A, D) {
+  const o = penOrderFor(A)[0]; if (!o) return;
+  const gk = D.on.find(x => x.slot === "GK"), st = id => (M.ps = M.ps || {})[id] || (M.ps[id] = { sh: 0, sot: 0, xg: 0, kp: 0, xa: 0, sv: 0 });
+  const p = penChance(o, gk), xs = st(o.p.id);
+  A.shots++; xs.sh++; xs.xg += .76; A.xg = (A.xg || 0) + .76; A.big = (A.big || 0) + 1;
+  lg(M, "chance", k, `Penalty to ${C(A.club).short}! ${o.p.name} steps up.`);
+  const r = R();
+  if (r < p) { A.goals++; A.sot++; xs.sot++; M.goals.push({ side: k, pid: o.p.id, ast: null, min: M.min, n: sur(o.p), pen: true }); lg(M, "goal", k, `GOAL! ${o.p.name} scores from the spot.`); }
+  else if (r < p + (1 - p) * .7 && gk) { A.sot++; xs.sot++; st(gk.p.id).sv++; D.sav = (D.sav || 0) + 1; lg(M, "save", k, `Saved! ${sur(gk.p)} keeps out ${sur(o.p)}'s penalty.`); }
+  else lg(M, "miss", k, `${o.p.name} puts the penalty wide.`);
+}
 function shootout(M) {
-  const takers = s => s.on.filter(o => o.slot !== "GK").sort((a, b) => eff(b.p, "ST") - eff(a.p, "ST")).concat(s.on.filter(o => o.slot === "GK"));
-  const tk = [takers(M.h), takers(M.a)], gk = [M.h, M.a].map(s => (s.on.find(o => o.slot === "GK") || s.on[0]).p);
+  const tk = [penOrderFor(M.h), penOrderFor(M.a)], gk = [M.h, M.a].map(s => s.on.find(o => o.slot === "GK"));
   const sc = [0, 0];
-  const kick = (i, n) => { const t = tk[i][n % tk[i].length].p; const ok = R() < .76 + (t.ovr - 70) * .004 - (gk[1 - i].ovr - 70) * .003; if (ok) sc[i]++; return ok; };
+  const kick = (i, n) => { const o = tk[i][n % tk[i].length]; const ok = R() < penChance(o, gk[1 - i]); if (ok) sc[i]++; return ok; };
   let n = 0;
   const decided = (r0, r1) => sc[0] > sc[1] + r1 || sc[1] > sc[0] + r0;
   for (; n < 5; n++) { kick(0, n); if (decided(4 - n, 5 - n)) break; kick(1, n); if (decided(4 - n, 4 - n)) break; }

@@ -214,6 +214,8 @@ const ACT = {
   closemodal: (v, el, e) => { if (el.classList.contains("scrim") && e.target.closest("[data-stop]")) return; UI.modal = null; UI.bid = null; UI.confirm = null; renderModal(); render(); },
   decide: v => { const [id, ch] = v.split("|"); const m = S.inbox.find(x => x.id === +id); if (!m || m.done) return; const msg = resolveDecision(m, ch); save(); render(); if (msg) toast(msg); },
   seenreview: () => { S.seasonOverSeen = true; save(); render(); },
+  penmove: v => { const [id, d] = v.split("|").map(Number), ids = penOrderIds(), i = ids.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; S.penOrder = ids; save(); render(); },
+  penauto: () => { S.penOrder = []; save(); render(); },
   ment: v => { S.mentality = v; save(); render(); },
   tackle: v => { S.tackling = v; save(); render(); },
   instr: (v, el) => { if (v.includes("|")) { const [key, o] = v.split("|"); S[key] = o; } else S[el.dataset.k] = v; save(); render(); },

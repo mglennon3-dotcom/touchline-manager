@@ -518,3 +518,4 @@ select.fit-b{background-color:color-mix(in srgb,var(--loss) 22%,var(--surface));
 .arch-key{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline}.arch-key .ak{white-space:nowrap;margin-right:8px}.arch-key .ak b{font-family:var(--f-mono);font-size:11px}
 .arch-key details{flex-basis:100%}.arch-key details div{margin-top:4px;display:flex;flex-wrap:wrap;gap:2px 0}
 .slot .abrow{display:flex;gap:3px;align-items:center}
+.pen-list{display:grid;gap:4px}.pen-row{display:grid;grid-template-columns:22px 1fr auto auto;gap:8px;align-items:center;padding:4px 0;border-top:1px solid var(--line)}.pen-row:first-child{border-top:0}

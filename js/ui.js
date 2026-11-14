@@ -657,6 +657,7 @@ function viewTactics() {
     <div class="pitch">${lines}${slotsHtml}</div>
     ${archKey(S.lineup.map(id => S.players[id]).filter(Boolean))}
     ${subsHtml}
+    ${penCard()}
     ${S.formation !== S.me.form ? `<p class="hint warn">You prefer the ${S.me.form}. Teams play about 2% better in their coach's own system.</p>` : `<p class="hint good">Your preferred system: about 2% better across the pitch.</p>`}
     ${(n => n ? `<label class="row small" style="gap:6px"><input type="checkbox" data-c="acadsel" ${S.set.acadSel ? "checked" : ""}> Include academy players in selection <span class="tiny muted">(${n} in the academy · <button class="lnk tiny" data-a="go" data-v="academy">academy</button>)</span></label>` : "")(c.squad.filter(id => P(id).acad).length)}
     <label class="row small" style="gap:6px"><input type="checkbox" data-c="rotate" ${S.set.rotate ? "checked" : ""}> Assistant picks a fresh XI before every match <span class="tiny muted">(players at ${FRESH_FIT}%+ fitness first; your changes on match day stick)</span></label>
@@ -1169,6 +1170,18 @@ function modalPlayer(p) {
 }
 // Archetype abbreviation on a pitch shirt, and the key under the pitch: the types in this XI, and every type behind a tap.
 const archAb = p => { const a = scoutLevel(p) >= 2 ? archetypeOf(p) : null; return a ? `<span class="ab" title="${esc(a[0])}">${a[3]}</span>` : ""; };
+// Penalty takers (5.76): your XI's outfield players in the order they'd take penalties, in play and in shootouts.
+function penOrderIds() {
+  const on = S.lineup.map(id => S.players[id]).filter(p => p && p.pos !== "GK"), mine = S.penOrder || [];
+  const rank = p => { const i = mine.indexOf(p.id); return i >= 0 ? i : 99; };
+  return on.sort((a, b) => rank(a) - rank(b) || penSkill(b) - penSkill(a)).map(p => p.id);
+}
+function penCard() {
+  const ids = penOrderIds();
+  return `<div class="card"><div class="card-h"><h3>Penalty takers</h3>${S.penOrder && S.penOrder.length ? '<button class="lnk tiny" data-a="penauto">automatic order</button>' : '<span class="tiny muted">automatic: best first</span>'}</div>
+    <div class="pen-list">${ids.map((id, i) => { const p = P(id), sk = penSkill(p); return `<div class="pen-row"><b class="num">${i + 1}</b><span>${esc(p.name)} <span class="tiny muted">${p.pos}</span></span><span class="tiny muted">pen <b class="rt ${aCls(sk)}">${Math.round(sk)}</b></span><span class="row" style="gap:4px"><button class="btn sm" data-a="penmove" data-v="${id}|-1" ${i === 0 ? "disabled" : ""} aria-label="Move up">↑</button><button class="btn sm" data-a="penmove" data-v="${id}|1" ${i === ids.length - 1 ? "disabled" : ""} aria-label="Move down">↓</button></span></div>`; }).join("")}</div>
+    <p class="tiny muted" style="margin-top:6px">The first on the pitch takes any penalty in a match; in a shootout they go in this order, keeper last. A kick goes in on his finishing and composure ("pen", out of 20) against the keeper's shot-stopping, and tired legs (under 70% fitness) miss more.</p></div>`;
+}
 function archKey(ps) {
   const used = [], seen = new Set();
   for (const p of ps) { const a = archetypeOf(p); if (a && !seen.has(a[3])) { seen.add(a[3]); used.push(a); } }
