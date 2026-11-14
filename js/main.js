@@ -247,8 +247,10 @@ const ACT = {
     const xi = S.lineup.filter(id => id != null).map(P), young = xi.filter(p => p.age <= 23).length, age = (xi.reduce((s, p) => s + p.age, 0) / xi.length).toFixed(1);
     const parts = [r.acadXI ? `${r.acadXI} academy player${r.acadXI > 1 ? "s" : ""} starting` : "", r.acadBench ? `${r.acadBench} academy player${r.acadBench > 1 ? "s" : ""} on the bench` : ""].filter(Boolean);
     toast(`High-potential XI: ${young} of 11 aged 23 or under, average age ${age}.${parts.length ? " " + parts.join(", ") + "." : ""}`); },
-  freshpick: () => { const c = me(); S.acadPick = []; S.lineup = freshPick(eligibleIds(c), S.formation); UI.sel = null; save(); render(); const tired = S.lineup.filter(id => id != null && P(id).fit < FRESH_FIT).length; toast(tired ? `Fresh XI picked. ${tired} position${tired > 1 ? "s" : ""} had no one at ${FRESH_FIT}%+ fitness.` : `Fresh XI picked: everyone at ${FRESH_FIT}%+ fitness.`); },
-  autopick: () => { S.acadPick = []; S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI selected."); },
+  freshpick: () => { const c = me(); S.acadPick = []; S.bench = null; S.benchNo = []; S.lineup = freshPick(eligibleIds(c), S.formation); UI.sel = null; save(); render(); const tired = S.lineup.filter(id => id != null && P(id).fit < FRESH_FIT).length; toast(tired ? `Fresh XI picked. ${tired} position${tired > 1 ? "s" : ""} had no one at ${FRESH_FIT}%+ fitness.` : `Fresh XI picked: everyone at ${FRESH_FIT}%+ fitness.`); },
+  // The picks choose the bench too (5.76.1): your own subs and dropped players are cleared, and the bench is refilled
+  // with the best available, covering every line. It used to keep whatever bench you'd set, however stale.
+  autopick: () => { S.acadPick = []; S.bench = null; S.benchNo = []; S.lineup = autoPick(eligibleIds(me()), S.formation); UI.sel = null; save(); render(); toast("Best available XI and bench selected."); },
   slot: v => { const i = +v; if (UI.sel && UI.sel.pid != null) return assignSlot(i, UI.sel.pid); UI.sel = UI.sel && UI.sel.slot === i ? null : { slot: i }; render();
     // The "who plays here" list is below the pitch, off-screen on a phone: bring it into view.
     if (UI.sel) document.querySelector(".tac-pick")?.scrollIntoView({ block: "start" }); },

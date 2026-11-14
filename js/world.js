@@ -416,6 +416,10 @@ function potentialPick(c) {
   const xi = new Set(S.lineup);
   S.bench = eligibleIds(c).map(P).filter(p => !xi.has(p.id) && avail(p) && (S.acadPick.includes(p.id) || (p.age <= 23 && p.pot - p.ovr >= 8)))
     .sort((a, b) => b.pot - a.pot).slice(0, 5).map(p => p.id);
+  // Leave room for a keeper and two of each line among the automatic places: drop the lowest-potential youngster
+  // until the cover fits, so the high-potential bench never leaves a line empty.
+  const short = b => 1 + ["DEF", "MID", "ATT"].reduce((n, ln) => n + Math.max(0, BENCH_PER_LINE - b.filter(id => LINE[P(id).pos] === ln).length), 0);
+  while (S.bench.length && S.bench.length + short(S.bench) > RULES.benchSize) S.bench.pop();
   S.benchNo = [];
   return { acadXI: S.lineup.filter(id => id != null && P(id).acad).length, acadBench: S.bench.filter(id => P(id).acad).length };
 }
@@ -429,6 +433,7 @@ function freshPick(ids, f) {
 /* The nine substitutes. Yours are the ones you picked on the Tactics page (S.bench), still eligible,
    available and not in the XI; any spots left are filled as for AI clubs: a keeper, then the best and
    fittest. */
+const BENCH_PER_LINE = 2;
 function benchFor(c, xi, friendly) {
   // A friendly has no matchday squad rules: everyone available who isn't starting is on the bench, academy
   // players and unregistered seniors included (5.69).
@@ -445,7 +450,14 @@ function benchFor(c, xi, friendly) {
   if (gk && mine.length < RULES.benchSize) out.push(gk);
   // One keeper on the bench is enough: the fill adds no more once there is one (you can still pick a second).
   const haveGK = () => gk || mine.some(id => P(id).pos === "GK");
-  for (const p of rest) { if (mine.length + out.length >= RULES.benchSize) break; if (p !== gk && !(p.pos === "GK" && isUser(c) && haveGK())) out.push(p); }
+  /* Your bench covers every line (5.76.1): at least BENCH_PER_LINE defenders, midfielders and attackers, counting
+     the subs you chose, before the rest goes to the best and fittest. Filled on rating alone, a quarter of benches
+     had no striker and a fifth no centre-back, so an injury there meant someone out of position. */
+  if (isUser(c)) for (const ln of ["DEF", "MID", "ATT"]) {
+    let have = [...mine.map(P), ...out].filter(p => LINE[p.pos] === ln).length;
+    for (const p of rest) { if (have >= BENCH_PER_LINE || mine.length + out.length >= RULES.benchSize) break; if (LINE[p.pos] === ln && !out.includes(p)) { out.push(p); have++; } }
+  }
+  for (const p of rest) { if (mine.length + out.length >= RULES.benchSize) break; if (!out.includes(p) && !(p.pos === "GK" && isUser(c) && haveGK())) out.push(p); }
   return [...mine, ...out.map(p => p.id)];
 }
 function fixUserLineup() {

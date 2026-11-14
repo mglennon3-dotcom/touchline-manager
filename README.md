@@ -126,7 +126,11 @@ match card) picks the best side from players at 85%+ fitness, using tired player
 fill a spot. "Pick high-potential XI" favours players 23 and under with room to grow (up to about 4 points of credit for a
 teenager far below his ceiling): academy players rated Ready to start can start and those rated Ready can be
 substitutes, and the bench takes young prospects first. Across 15 clubs it changed 0-3 players, costing 0-0.4
-of team strength. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
+of team strength. Each of the three picks the bench too (5.76.1): subs you'd chosen and players you'd dropped
+are cleared, and the nine places go to a keeper, then at least two defenders, two midfielders and two attackers,
+then the best and fittest left (the high-potential pick keeps up to five youngsters but leaves room for that
+cover). Your automatic bench always keeps that cover; before, filled on rating alone, a quarter of benches had no
+striker. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
 the morning of each match day, so any change you make after that stands.
 
 **Archetypes** (5.74): every player has a type at his position, read from the attributes he leans on compared
