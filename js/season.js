@@ -902,7 +902,7 @@ const lateDeveloper = p => ((p.id * 2654435761) >>> 0) % 100 < 10;
 const growUntil = p => lateDeveloper(p) ? 30 : 27;
 // The cost rises as the gap closes, but not without limit (GROW_G0): pricing it on the gap alone made the last step
 // unaffordable, so of 27-year-olds still playing 1% reached potential and almost all finished two points short.
-const GROW_G0 = 6, GROW_PACE = .2, GROW_EXP = 6;
+const GROW_G0 = 10, GROW_PACE = .21, GROW_EXP = 6;
 function xpNeed(p) { const gap = p.pot - p.ovr; return gap > 0 ? GROW_WEEKS / ((gap + GROW_G0) * GROW_K(p.age) * GROW_PACE) : Infinity; }
 /* ---------- your academy ---------- */
 /* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
