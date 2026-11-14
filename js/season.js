@@ -408,7 +408,7 @@ function weekly() {
           // pyramid within eight seasons (the sixth tier 6.2 to 7.3, the fifth 8.1 to 9.3); now the way up is a move up.
           * (S.spread2 ? clamp(1 - Math.max(0, p.ovr - clv - 3) * .06, .4, 1) : 1);
         // Experience: conditions (all but growth speed) squared around an average player's, times growth speed.
-        if (p.age <= 27) {
+        if (p.age <= growUntil(p)) {
           p.xp = (p.xp || 0) + (m / gsMult(p) / GROW_M0) ** 2 * gsMult(p);
           for (let need = xpNeed(p); p.xp >= need && p.ovr < p.pot; need = xpNeed(p)) { p.xp -= need; growAttrs(p, 1); }
         }
@@ -644,7 +644,7 @@ function ageAndContracts() {
     if (c && p.age <= 20) p.yt[c.country] = (p.yt[c.country] || 0) + 1;
     p.age++;
     if (p.acad && p.age > ACAD_MAX_AGE) { p.acad = false; if (c && isUser(c)) up.push(p); }
-    if (p.age >= 29) { declineAttrs(p, ri(0, Math.min(4, p.age - 27))); p.pot = p.ovr; }
+    if (p.age >= growUntil(p) + 2) { declineAttrs(p, ri(0, Math.min(4, p.age - growUntil(p)))); p.pot = p.ovr; }  // a late developer declines from 31
     else if (p.age <= 24) {
       // Young players who don't play, or are miserable, lose some of their ceiling; a breakout season raises it.
       // Otherwise it stays where it is, give or take a point: the drift was ri(-2, 1), half a point lost a year for
@@ -896,6 +896,10 @@ function cupProgress(key) {
    of it. Asked for (harsh): about 20% reaching potential and about 45% within two points. */
 const GROW_K = a => .07 * (a <= 18 ? 1.3 : a <= 21 ? 1.15 : 1), GROW_WEEKS = CAL.lastWeek + 1, GROW_M0 = 1.19;
 // XP for the next step: an average week earns 1, so this is the weeks an average player needs.
+/* Late developers (5.75.9): about one player in ten, fixed by his id so every save has them without a new field,
+   keeps developing to 30 and starts to decline at 31 instead of 29. */
+const lateDeveloper = p => ((p.id * 2654435761) >>> 0) % 100 < 10;
+const growUntil = p => lateDeveloper(p) ? 30 : 27;
 function xpNeed(p) { const gap = p.pot - p.ovr; return gap > 0 ? GROW_WEEKS / (gap * GROW_K(p.age)) : Infinity; }
 /* ---------- your academy ---------- */
 /* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
