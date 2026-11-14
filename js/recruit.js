@@ -183,7 +183,7 @@ function signingDay() {
     if (y.commit == null || C(y.commit).gone) continue;
     const c = C(y.commit); y.signed = true;
     const p = makePlayer({ pos: y.pos, base: y.ovr + 9, age: 16, nat: y.nat, club: c.id, rep: c.rep });
-    p.name = y.name; p.ir = y.ir || p.ir; setRating(p, clamp(y.ovr + ri(0, 4), 33, 70)); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 1500 * MONEY;
+    p.name = y.name; p.ir = y.ir || p.ir; setRating(p, clamp(y.ovr + ri(0, 4), 33, YOUTH_START_CAP)); capYouthStart(p); p.pot = Math.max(p.ovr, y.pot + ri(-2, 2)); p.yrs = 3; p.wage = 1500 * MONEY;
     p.yt[c.country] = 1; p.from = y.region; youthDeal(p); if (isUser(c)) p.acad = true;  // on a youth deal; yours start in the academy
     c.squad.push(p.id);
   }

@@ -242,6 +242,15 @@ function archetypeOf(p) {
    shows in the expiring-contracts reminder and can be offered a senior contract (renewTerms) any time that season;
    one not offered leaves as a free agent, like any expiring contract. */
 const YOUTH_WAGE = 50 * 52, YOUTH_PRO_AGE = 18;
+/* The best a new youth player can start at (5.75.6): 10 out of 20, for graduates and recruited prospects alike. A
+   graduate with top potential started as high as 15 and a prospect at 11. Ratings are rebuilt from attributes, which
+   can land a little over the target, so if they do every attribute comes down by the same amount (he keeps his
+   profile) until he's at the cap. Potential is untouched. */
+const YOUTH_START_CAP = o100(10);
+function capYouthStart(p) {
+  for (let i = 0; i < 20 && p.ovr > YOUTH_START_CAP; i++) { for (const k in p.at) p.at[k] = Math.max(1, p.at[k] - 1); setOvr(p); }
+  p.pot = Math.max(p.pot, p.ovr); p.peak = p.ovr;
+}
 function youthDeal(p) { p.youth = true; p.wage = YOUTH_WAGE; p.yrs = Math.max(1, YOUTH_PRO_AGE + 1 - p.age); p.am = null; }
 function scoutLevel(p) {
   if (!S || S.club == null) return 2;
@@ -506,7 +515,7 @@ function academyPlayer(c, age) {
   // uniform 3-20 in 5.52.0, which made one graduate in 17 a potential 19-20 at every club.
   const sk = skillSample();
   p.pot = clamp(Math.round(sk ? pick(sk) + gauss() * 1.5 : o100(5 + c.academy * .55 + gauss() * 2.2)), 33, 95);
-  setRating(p, clamp(p.pot - ri(6, 14) - (18 - age) * 3, 33, p.pot));
+  setRating(p, clamp(p.pot - ri(6, 14) - (18 - age) * 3, 33, Math.min(p.pot, YOUTH_START_CAP))); capYouthStart(p);
   p.wage = Math.max(750 * MONEY, Math.round(wageDemand(p, c.rep) * .6 / 1000) * 1000);
   p.yt[c.country] = Math.max(1, age - 15); p.yrs = ri(2, 3);
   c.squad.push(p.id);
