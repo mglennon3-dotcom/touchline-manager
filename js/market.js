@@ -162,6 +162,26 @@ function aiTransferDay(intensity) {
   }
   listedMarket(intensity);
   if (S.spread2 && intensity > 0) sellUp(intensity);
+  if (intensity > 0) signYouthFA(intensity);
+}
+/* Free agents of 16 and 17 (mostly clubs' academy graduates not kept) are signed by AI clubs too, on youth deals
+   (5.75.5). The AI market looks only at 18 and over, so before this they sat unsigned, half the free-agent pool,
+   until the three-year limit removed them. A club takes one whose potential suits its level (within 2 points out of
+   20) if it has room among its young players; it judges potential from an estimate, not his true figure, as you
+   would without scouting him. About four in five are signed over a preseason. */
+function signYouthFA(intensity) {
+  const youth = S.fa.map(P).filter(p => p && p.age < YOUTH_PRO_AGE && !p.intake);
+  if (!youth.length) return;
+  const clubs = activeClubs().filter(c => !isUser(c) && !c.gone);
+  for (const p of youth) {
+    if (R() > .45 * intensity) continue;
+    const est = p.pot + gauss() * 4.5;  // a scout's view of his potential: within about a point and a half (out of 20)
+    const fits = clubs.filter(c => Math.abs(clubLevel(c) - est) <= 6 && c.squad.filter(id => P(id).age <= ACAD_MAX_AGE).length < ACAD_CAP && !hasNamesake(c, p.name));
+    if (!fits.length) continue;
+    const c = pick(fits);
+    transfer(p, c, 0, YOUTH_WAGE, 2);  // transfer() puts an under-18 on a youth deal
+    if (regInfo(c).seniors > RULES.aiSeniorCap) trimSquad(c, false);
+  }
 }
 /* Talent moves up the pyramid (worlds with the wider spread, 5.70). A player at an AI club more than two points (out
    of 20) above its level, 27 or under, draws a club from a higher division at about his level that can pay and that
