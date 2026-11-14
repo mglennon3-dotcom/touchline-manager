@@ -407,9 +407,9 @@ function weekly() {
           // game wherever they start, and growing into it at any level pulled the bottom divisions back to the old
           // pyramid within eight seasons (the sixth tier 6.2 to 7.3, the fifth 8.1 to 9.3); now the way up is a move up.
           * (S.spread2 ? clamp(1 - Math.max(0, p.ovr - clv - 3) * .06, .4, 1) : 1);
-        // Experience: conditions (all but growth speed) squared around an average player's, times growth speed.
+        // Experience: conditions (all but growth speed) around an average player's, to the power GROW_EXP, times growth speed.
         if (p.age <= growUntil(p)) {
-          p.xp = (p.xp || 0) + (m / gsMult(p) / GROW_M0) ** 2 * gsMult(p);
+          p.xp = (p.xp || 0) + (m / gsMult(p) / GROW_M0) ** GROW_EXP * gsMult(p);
           for (let need = xpNeed(p); p.xp >= need && p.ovr < p.pot; need = xpNeed(p)) { p.xp -= need; growAttrs(p, 1); }
         }
       }
@@ -888,8 +888,8 @@ function cupProgress(key) {
 
 /* Development by experience (5.75.9). Each week a player of 27 or under who is short of his potential earns XP
    (p.xp): about 1 a week for an average player in average conditions, scaled by his minutes, form, mood, coaching,
-   training, youth development (under 21) and the level of football (squared, so handling matters), and by his growth
-   speed (not squared: a slow learner well handled still gets there). Each rating step (a point on the 100-scale)
+   training, youth development (under 21) and the level of football (to the fourth power, so handling matters a lot),
+   and by his growth speed (once: a slow learner well handled still gets there). Each rating step (a point on the 100-scale)
    costs XP_NEED: the closer he is to his potential the more it costs (inversely to the gap left), so the last steps
    are the hardest and there's no deadline that pulls everyone up. Growth stops after 27.
    Why: 5.75.8 aimed every player at his potential by 25 and 99% of 27-year-olds still playing ended within two points
@@ -900,7 +900,10 @@ const GROW_K = a => .07 * (a <= 18 ? 1.3 : a <= 21 ? 1.15 : 1), GROW_WEEKS = CAL
    keeps developing to 30 and starts to decline at 31 instead of 29. */
 const lateDeveloper = p => ((p.id * 2654435761) >>> 0) % 100 < 10;
 const growUntil = p => lateDeveloper(p) ? 30 : 27;
-function xpNeed(p) { const gap = p.pot - p.ovr; return gap > 0 ? GROW_WEEKS / (gap * GROW_K(p.age)) : Infinity; }
+// The cost rises as the gap closes, but not without limit (GROW_G0): pricing it on the gap alone made the last step
+// unaffordable, so of 27-year-olds still playing 1% reached potential and almost all finished two points short.
+const GROW_G0 = 4, GROW_PACE = .5, GROW_EXP = 4;
+function xpNeed(p) { const gap = p.pot - p.ovr; return gap > 0 ? GROW_WEEKS / ((gap + GROW_G0) * GROW_K(p.age) * GROW_PACE) : Infinity; }
 /* ---------- your academy ---------- */
 /* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
    as playing time for development (an academy player's weekly minutes are measured against one match, not
