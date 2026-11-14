@@ -400,13 +400,15 @@ function weekly() {
         // Match ratings, on their own scale (6 an average game, 7 good, 8 great), the same for every age: a season
         // averaging 5 or less x0.85, 6 x1.0, 7 x1.15, 8+ x1.25. Fewer than 3 appearances counts as average.
         const avgR = p.s.app >= 3 ? p.s.rt / p.s.app : 6, formMult = avgR <= 7 ? clamp(1 + .15 * (avgR - 6), .85, 1.15) : 1.15 + .1 * Math.min(1, avgR - 7);
-        const ch = growthPace(p) * t.grow * (p.age <= 21 ? acad : 1)
+        const m = t.grow * (p.age <= 21 ? acad : 1)
           * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * formMult * gsMult(p)
           // The standard of football (worlds with the wider spread, 5.70): more than a point (out of 20) above his club
           // he learns less each week, down to 40% at about 2.3 points above. Graduates' potential is drawn from the whole
           // game wherever they start, and growing into it at any level pulled the bottom divisions back to the old
           // pyramid within eight seasons (the sixth tier 6.2 to 7.3, the fifth 8.1 to 9.3); now the way up is a move up.
           * (S.spread2 ? clamp(1 - Math.max(0, p.ovr - clv - 3) * .06, .4, 1) : 1);
+        // Conditions squared around an average player's (GROW_M0): good handling pays, poor handling costs (5.75.9).
+        const ch = Math.min(.95, growthPace(p) * (m / GROW_M0) ** 2);
         if (R() < ch) growAttrs(p, 1);
       }
       if (isUser(c) && S.training === "int" && !p.inj && R() < .006 * injMult(p)) injure(p, true);
@@ -882,21 +884,18 @@ function cupProgress(key) {
   return null;
 }
 
-/* How fast a player grows towards his potential, before conditions (5.75.8). Each improvement adds a point on the
-   100-scale, so his gap to potential is the number of steps left. They're spread over the seasons until he's 25,
-   weighted to youth (GROW_W), so with average conditions (minutes, form, mood, coaching, training, youth development
-   under 21 and his development speed, which multiply this) he arrives at about 25; better conditions bring him
-   sooner. At 26 and 27 anyone still short has those two seasons to close the gap, if conditions allow; after 27 he
-   doesn't grow. Before, growth followed age alone (0.085 a week at 18 down to 0.015 at 25-27, whatever the gap), so
-   most players finished short and none of the potential-18-20 youngsters started at the 10 cap reached it by 26.
-   (A first version aimed at 26 thinned the elite: 19-rated players fell from about 30 to 12 in eight seasons.) */
-const GROW_W = a => a <= 18 ? 1.5 : a <= 21 ? 1.3 : 1, GROW_WEEKS = CAL.lastWeek + 1, GROW_BY = 25;
+/* How fast a player grows towards his potential, before conditions (5.75.9). Each improvement adds a point on the
+   100-scale. A season's growth is a share of the gap still to go (GROW_K, a little more for teenagers), so there's no
+   deadline that pulls everyone up: 5.75.8 aimed every player at his potential by 25, re-aiming each week, and 99% of
+   27-year-olds still playing finished within two points of it. Conditions decide how far he gets (see weekly: minutes,
+   form, mood, coaching, training, youth development under 21, growth speed, the level of football), scaled so an
+   average player's count as 1 and then squared, so good handling pays and poor handling costs. Growth stops after 27.
+   Calibrated (asked for: about 20% reach potential, about 45% within two points) on a model of the measured
+   conditions: 0.07 gave 19% reaching it, 31% within one point and 50% within two. */
+const GROW_K = a => .07 * (a <= 18 ? 1.3 : a <= 21 ? 1.15 : 1), GROW_WEEKS = CAL.lastWeek + 1, GROW_M0 = 1.19;
 function growthPace(p) {
   const gap = p.pot - p.ovr; if (gap <= 0 || p.age > 27) return 0;
-  const left = Math.max(1, GROW_WEEKS - S.week);
-  if (p.age > GROW_BY) return Math.min(.95, gap / (left + (27 - p.age) * GROW_WEEKS));  // catching up by the end of 27
-  let w = GROW_W(p.age) * left; for (let a = p.age + 1; a <= GROW_BY; a++) w += GROW_W(a) * GROW_WEEKS;
-  return Math.min(.95, gap * GROW_W(p.age) / w);
+  return Math.min(.95, gap * GROW_K(p.age) / GROW_WEEKS);
 }
 /* ---------- your academy ---------- */
 /* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
