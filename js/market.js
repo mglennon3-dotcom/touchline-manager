@@ -318,7 +318,9 @@ function userBidInner(p, fee, yrs, wage, st) {
     st.feeOK = fee; st.feePlan = plan; st.counterFee = null;
   }
   // 2. Personal terms.
-  const demand = contractDemand(p, c, w), min = wageFloor(p, demand, w, yrs);
+  // Under 18 he signs a youth deal (5.75.4): the wage is fixed, so there's nothing to haggle over.
+  const youthD = p.age < YOUTH_PRO_AGE; if (youthD) wage = YOUTH_WAGE;
+  const demand = contractDemand(p, c, w), min = youthD ? YOUTH_WAGE : wageFloor(p, demand, w, yrs);
   if (wage < min) {
     st.playerNo = (st.playerNo || 0) + 1;
     if (st.playerNo >= 3) { lock(); return { ok: false, res: "refused", msg: `${p.name} walks away from the talks after three offers below what he'll accept. Try again next week.` }; }
@@ -328,8 +330,11 @@ function userBidInner(p, fee, yrs, wage, st) {
   }
   const fromRival = p.club >= 0 ? rivalry(p.club, c.id) : 0, rivalClub = p.club >= 0 ? C(p.club) : null;
   transfer(p, c, fee, wage, yrs, plan);
+  // A 16- or 17-year-old goes into your academy if it has a place, like your own graduates.
+  if (youthD && acadCount(c) < ACAD_CAP) p.acad = true;
   if (fromRival) { S.board = clamp(S.board - fromRival, 0, 100); news(`Signing ${p.name} from ${rivalClub.name} divides opinion. Some supporters will never accept a player from across the divide.`, true, "transfer"); }
   fixUserLineup();
+  if (youthD) return { ok: true, res: "signed", msg: `${p.name} signs a youth deal on ${perWeek(YOUTH_WAGE)}${fee ? ` for ${money(fee)}` : ""}${p.acad ? " and joins your academy" : ""}. At ${YOUTH_PRO_AGE} he can be offered a professional contract.` };
   return { ok: true, res: "signed", msg: `${p.name} signs a ${yrs}-year deal on ${perWeek(wage)}${fee ? ` for ${money(fee)}${plan > 1 ? `, paid over ${plan} years (${money(fee / plan)} now)` : ""}` : ""}.` };
 }
 function whyNot(p, b) {
