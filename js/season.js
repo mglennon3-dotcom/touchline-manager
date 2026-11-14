@@ -644,7 +644,7 @@ function ageAndContracts() {
     if (c && p.age <= 20) p.yt[c.country] = (p.yt[c.country] || 0) + 1;
     p.age++;
     if (p.acad && p.age > ACAD_MAX_AGE) { p.acad = false; if (c && isUser(c)) up.push(p); }
-    if (p.age >= growUntil(p) + 2) { declineAttrs(p, ri(0, Math.min(4, p.age - growUntil(p)))); p.pot = p.ovr; }  // a late developer declines from 31
+    if (p.age >= growUntil(p) + 2) { declineAttrs(p, ri(0, Math.min(4, p.age - growUntil(p)))); p.pot = p.ovr; }  // decline as he turns 29, a late developer 32
     else if (p.age <= 24) {
       // Young players who don't play, or are miserable, lose some of their ceiling; a breakout season raises it.
       // Otherwise it stays where it is, give or take a point: the drift was ri(-2, 1), half a point lost a year for
@@ -886,18 +886,19 @@ function cupProgress(key) {
   return null;
 }
 
-/* Development by experience (5.75.9). Each week a player of 27 or under who is short of his potential earns XP
+/* Development by experience (5.76). Each week a player of 27 or under who is short of his potential earns XP
    (p.xp): about 1 a week for an average player in average conditions, scaled by his minutes, form, mood, coaching,
    training, youth development (under 21) and the level of football (to the sixth power, so handling decides it),
    and by his growth speed (once: a slow learner well handled still gets there). Each rating step (a point on the 100-scale)
    costs XP_NEED: the closer he is to his potential the more it costs (inversely to the gap left), so the last steps
    are the hardest and there's no deadline that pulls everyone up. Growth stops after 27.
    Why: 5.75.8 aimed every player at his potential by 25 and 99% of 27-year-olds still playing ended within two points
-   of it. Asked for (harsh): about 20% reaching potential and about 45% within two points. */
+   of it. Asked for (harsh): about 20% reaching potential and about 45% within two points. Measured (two 11-season runs,
+   27-year-olds still playing): 18% reached, 28-29% within one point, 48-52% within two, 69-73% within three. */
 const GROW_K = a => .07 * (a <= 18 ? 1.3 : a <= 21 ? 1.15 : 1), GROW_WEEKS = CAL.lastWeek + 1, GROW_M0 = 1.19;
 // XP for the next step: an average week earns 1, so this is the weeks an average player needs.
-/* Late developers (5.75.9): about one player in ten, fixed by his id so every save has them without a new field,
-   keeps developing to 30 and starts to decline at 31 instead of 29. */
+/* Late developers (5.76): about one player in ten, fixed by his id so every save has them without a new field,
+   keeps developing to 30 and starts to decline as he turns 32 instead of 29. */
 const lateDeveloper = p => ((p.id * 2654435761) >>> 0) % 100 < 10;
 const growUntil = p => lateDeveloper(p) ? 30 : 27;
 // The cost rises as the gap closes, but not without limit (GROW_G0): pricing it on the gap alone made the last step

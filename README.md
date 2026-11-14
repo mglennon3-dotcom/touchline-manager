@@ -75,6 +75,13 @@ With only the home sides changing over 3,376 matches: Normal took 1.55 points a 
 reds; Mark aggressively 1.59 points but 2.8 yellows and 0.16 reds (so more bans to come); Stay on feet 1.47
 points, 1.15 yellows and 0.04 reds. AI sides tackle normally.
 
+**Penalties** (5.76) are awarded in play as well as in shootouts: about 0.26 a match (measured), a little more often
+for the side on top, with ordinary chances trimmed so goals stay level (2.91 a match, 2.93 before). A kick goes in on
+the taker's finishing and composure ("pen" out of 20) against the keeper's shot-stopping: 76% for two average players
+(75% measured), less below 70% fitness; misses are saved or put wide. Set your takers on Tactics > Line-up (Penalty
+takers): the first on the pitch takes any penalty in a match, and in a shootout they go in that order, keeper last.
+Without an order it's the best penalty takers first, as AI sides do.
+
 **Team instructions** (5.66): your own side has no style of play. It plays Neutral, shaped by five
 instructions, each with three settings and a fit judged on the players who carry it out:
 - *Players*: push forward (more chances at both ends, and open to counter-attacks; needs Stamina, Finishing,
@@ -185,14 +192,18 @@ Blocks and Beaten columns.
 **Development** follows the same rating scale for every age: a season averaging 5 or less slows a player's weekly
 progress (x0.85), 6 is neutral, 7 (good) speeds it (x1.15) and 8+ (great) more (x1.25). With 60%+ of the minutes,
 a good season (7+) raises his potential by 1-3 at the end of it and a great one (8+) by 2-4.
-Growth aims at potential (5.75.8): a player's gap to it is spread over the seasons until he's 25, weighted to youth,
-so with average conditions he gets there at about 25; minutes, form, mood, coaching, training, youth development
-(under 21) and his growth speed make it sooner or later, and at 26 and 27 anyone short has two seasons to catch up.
-After 27 he doesn't grow. Potential holds steady with normal handling (it drifted down half a point a year for
-everyone); 18-and-overs who barely play or are miserable still lose some of it, and breakout seasons raise it. AI
-clubs' 20-and-unders play youth and reserve football (about half a match a week) when the first team doesn't pick
-them, as your academy plays its matches. Following a world's 16-year-olds for eleven seasons, of those still playing
-at 27, 68% reached their potential, 89% were within a point and 99% within two.
+Growth is earned (5.76): each week a player short of his potential gains experience, about one unit for an average
+player in average conditions, more with minutes, form, mood, coaching, training, the level he plays at and youth
+development (under 21), and the effect is steep, so how he's handled decides it. Growth speed multiplies it once:
+a slow learner who plays every week still gets there. Each rating step costs experience, and the closer he is to his
+potential the more it costs, so the last steps are the hardest and nothing pulls everyone up to it. Growth stops
+after 27, and decline starts at 29. **Late developers**: one player in ten (fixed per player, so existing saves have
+them too) keeps developing until 30 and starts to decline at 32. Potential holds steady with normal handling;
+18-and-overs who barely play or are miserable lose some of it, and breakout seasons raise it. AI clubs' 20-and-unders
+play youth and reserve football (about half a match a week) when the first team doesn't pick them, as your academy
+plays its matches. Following a world's 16-year-olds for eleven seasons (two runs), of those still playing at 27, 18%
+reached their potential, about 29% were within a point, about half within two and 70% within three (5.75.8: 68%, 89%
+and 99%).
 
 **Academy** (its own page): your youth players are kept apart from the first team. Graduates (see Graduate intake below) and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
