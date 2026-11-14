@@ -639,8 +639,11 @@ function ageAndContracts() {
     if (p.age >= 29) { declineAttrs(p, ri(0, Math.min(4, p.age - 27))); p.pot = p.ovr; }
     else if (p.age <= 24) {
       // Young players who don't play, or are miserable, lose some of their ceiling; a breakout season raises it.
+      // Otherwise it stays where it is, give or take a point: the drift was ri(-2, 1), half a point lost a year for
+      // everyone, so even a well-handled youngster's ceiling sank about 1.3 (out of 20) by 24 and nobody tracked
+      // from 16 reached the potential he started with (5.75.8).
       const avg = p.s.app ? p.s.rt / p.s.app : 6;
-      let d = ri(-2, 1);
+      let d = ri(-1, 1);
       if (p.age >= 18 && p.pt < .25) d -= ri(1, 3);
       if (p.mood < 35) d -= ri(0, 2);
       if (p.pt > .6 && avg >= 8) d += ri(2, 4); else if (p.pt > .6 && avg >= 7) d += ri(1, 3);  // a breakout season on the rating scale: good (7+) raises his ceiling, great (8+) more
