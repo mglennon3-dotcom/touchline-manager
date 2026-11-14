@@ -396,7 +396,7 @@ function weekly() {
         // Match ratings, on their own scale (6 an average game, 7 good, 8 great), the same for every age: a season
         // averaging 5 or less x0.85, 6 x1.0, 7 x1.15, 8+ x1.25. Fewer than 3 appearances counts as average.
         const avgR = p.s.app >= 3 ? p.s.rt / p.s.app : 6, formMult = avgR <= 7 ? clamp(1 + .15 * (avgR - 6), .85, 1.15) : 1.15 + .1 * Math.min(1, avgR - 7);
-        const ch = (p.age <= 18 ? .085 : p.age <= 21 ? .07 : p.age <= 24 ? .04 : p.age <= 27 ? .015 : 0) * 1.12 * t.grow * (p.age <= 21 ? acad : 1)
+        const ch = growthPace(p) * t.grow * (p.age <= 21 ? acad : 1)
           * coachDev * (.6 + .6 * p.pt) * (.8 + .4 * p.mood / 100) * formMult * gsMult(p)
           // The standard of football (worlds with the wider spread, 5.70): more than a point (out of 20) above his club
           // he learns less each week, down to 40% at about 2.3 points above. Graduates' potential is drawn from the whole
@@ -875,6 +875,21 @@ function cupProgress(key) {
   return null;
 }
 
+/* How fast a player grows towards his potential, before conditions (5.75.8). Each improvement adds a point on the
+   100-scale, so his gap to potential is the number of steps left. They're spread over the seasons until he's 26,
+   weighted to youth (GROW_W), so with average conditions (minutes, form, mood, coaching, training, youth development
+   under 21 and his development speed, which multiply this) he arrives at about 26; better conditions bring him
+   sooner, worse ones later or not at all. At 27 anyone still short gets that season to close the gap; after 27 he
+   doesn't grow. Before, growth followed age alone (0.085 a week at 18 down to 0.015 at 25-27, whatever the gap), so
+   most players finished short and none of the potential-18-20 youngsters started at the 10 cap reached it by 26. */
+const GROW_W = a => a <= 18 ? 1.5 : a <= 21 ? 1.3 : a <= 24 ? 1 : .7, GROW_WEEKS = CAL.lastWeek + 1;
+function growthPace(p) {
+  const gap = p.pot - p.ovr; if (gap <= 0 || p.age > 27) return 0;
+  const left = Math.max(1, GROW_WEEKS - S.week);
+  if (p.age >= 27) return Math.min(.95, gap / left);
+  let w = GROW_W(p.age) * left; for (let a = p.age + 1; a <= 26; a++) w += GROW_W(a) * GROW_WEEKS;
+  return Math.min(.95, gap * GROW_W(p.age) / w);
+}
 /* ---------- your academy ---------- */
 /* Each season week the academy plays an unofficial under-18 match against another club's academy. It counts
    as playing time for development (an academy player's weekly minutes are measured against one match, not
