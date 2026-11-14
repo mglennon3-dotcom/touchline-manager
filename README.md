@@ -185,6 +185,14 @@ Blocks and Beaten columns.
 **Development** follows the same rating scale for every age: a season averaging 5 or less slows a player's weekly
 progress (x0.85), 6 is neutral, 7 (good) speeds it (x1.15) and 8+ (great) more (x1.25). With 60%+ of the minutes,
 a good season (7+) raises his potential by 1-3 at the end of it and a great one (8+) by 2-4.
+Growth aims at potential (5.75.8): a player's gap to it is spread over the seasons until he's 25, weighted to youth,
+so with average conditions he gets there at about 25; minutes, form, mood, coaching, training, youth development
+(under 21) and his growth speed make it sooner or later, and at 26 and 27 anyone short has two seasons to catch up.
+After 27 he doesn't grow. Potential holds steady with normal handling (it drifted down half a point a year for
+everyone); 18-and-overs who barely play or are miserable still lose some of it, and breakout seasons raise it. AI
+clubs' 20-and-unders play youth and reserve football (about half a match a week) when the first team doesn't pick
+them, as your academy plays its matches. Following a world's 16-year-olds for eleven seasons, of those still playing
+at 27, 68% reached their potential, 89% were within a point and 99% within two.
 
 **Academy** (its own page): your youth players are kept apart from the first team. Graduates (see Graduate intake below) and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
