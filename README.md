@@ -250,7 +250,9 @@ plays for the first team still plays that week's academy match if he was on for 
 
 **Scouting assistant:** an on/off toggle on both Scouted lists (Youth and Transfers), off unless you
 switch it on. When on, at the end of each week it spends the scouting hours you left unused (your own
-scouting comes first) on youth prospects and transfer targets: prospects with the best potential estimates,
+scouting comes first). Prospects you've offered a place and haven't signed come first (5.78.3), best first: a call to
+his family each week, a word with his youth coaches once, then his report completed (calls and coaches are by phone, so
+free anywhere). What's left goes on youth prospects and transfer targets: prospects with the best potential estimates,
 favouring positions your formation uses, and players at positions Team Needs flags who would improve on
 your weakest starter. It only scouts in England, where scouting is free, so it never spends your money.
 

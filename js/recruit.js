@@ -209,6 +209,15 @@ const autoScoutOn = () => { const v = (S.set || {}).autoScout; return v === true
 function autoScout() {
   if (!autoScoutOn() || !S.me) return;
   const mode = "both", c = me(), ok = code => code === "ENG" && travelCost(code) === 0, uses = new Set(slotsOf(S.formation));
+  /* Prospects you've offered a place come first (5.78.3): before scouting anyone new, the hours go on the lads you're
+     already trying to sign and haven't yet (undecided, or committed elsewhere and still able to change his mind),
+     best first. A call to his family each week, a word with his youth coaches once, then his report completed. Calls
+     and his coaches are by phone, so they cost nothing wherever he lives; scouting him stays England-only, as below. */
+  const mine = S.prospects.filter(y => y.offers.includes(c.id) && y.commit !== c.id && !y.signed).sort((a, b) => viewMid(prospectPot(b)) - viewMid(prospectPot(a)));
+  const worked = new Set(), canAfford = n => S.rec.hours >= n;
+  for (const y of mine) if (y.called !== S.week + S.year * 100 && canAfford(REC_COST.call)) { recAct(y, "call"); worked.add(y.name); }
+  for (const y of mine) if (!y.coach && canAfford(scoutHours(REC_COST.coach, prospectCountry(y)))) { recAct(y, "coach"); worked.add(y.name); }
+  for (const y of mine) while (y.sc < 3 && ok(prospectCountry(y)) && canAfford(scoutHours(REC_COST.scout, prospectCountry(y)))) { const before = y.sc; recAct(y, "scout"); worked.add(y.name); if (y.sc === before) break; }
   const youth = mode === "players" ? [] : S.prospects.filter(y => y.commit == null && !y.signed && y.sc < 2 && !y.hide && ok(prospectCountry(y)))
     .map(y => ({ k: "y", o: y, cost: scoutHours(REC_COST.scout, prospectCountry(y)), s: viewMid(prospectPot(y)) + (uses.has(y.pos) ? 1.5 : 0) - km(y, c) / 400 }));
   let players = [];
@@ -232,8 +241,9 @@ function autoScout() {
     else { scoutPlayer(x.o); if (scoutLevel(x.o) >= 2) pickList.splice(idx, 1); if (!done.p.includes(x.o.name)) done.p.push(x.o.name); }
     if (mode === "both") turn = turn === "y" ? "p" : "y";
   }
-  S.autoLast = { w: whenLabel(), y: done.y.length, p: done.p.length };
+  S.autoLast = { w: whenLabel(), y: done.y.length, p: done.p.length, o: worked.size };
   const names = a => a.slice(0, 3).join(", ") + (a.length > 3 ? ` and ${a.length - 3} more` : "");
+  if (worked.size) news(`Your recruiters worked on ${worked.size} prospect${worked.size > 1 ? "s" : ""} you've offered a place (${names([...worked])}): calls, a word with their coaches and fuller reports.`, false, "youth");
   if (done.y.length || done.p.length) news(`Your scouts filed reports on ${[done.y.length ? `${done.y.length} youth prospect${done.y.length > 1 ? "s" : ""} (${names(done.y)})` : "", done.p.length ? `${done.p.length} transfer target${done.p.length > 1 ? "s" : ""} (${names(done.p)})` : ""].filter(Boolean).join(" and ")}.`, false, done.p.length ? "transfer" : "youth");
 }
 

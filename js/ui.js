@@ -932,7 +932,7 @@ function hoursStrip() {
 function scoutAssistHtml() {
   const on = autoScoutOn(), L = S.autoLast;
   return `<div class="assist row small"><label class="row"><input type="checkbox" data-c="autoscout" ${on ? "checked" : ""}> <b>Scouting assistant</b></label>
-    <span class="tiny muted">${on ? `On: your scouts use the hours you leave each week on youth prospects and transfer targets in England. It never travels abroad, so it never costs money.${L ? ` Last time (${L.w}): ${L.y} youth, ${L.p} transfer.` : ""}` : "Off: only the scouting you choose to do."}</span></div>`;
+    <span class="tiny muted">${on ? `On: the hours you leave each week go first to prospects you've offered a place (a call, a word with their coaches, a fuller report), then to scouting youth prospects and transfer targets in England. It never travels abroad, so it never costs money.${L ? ` Last time (${L.w}): ${L.o ? `${L.o} offered, ` : ""}${L.y} youth, ${L.p} transfer.` : ""}` : "Off: only the scouting you choose to do."}</span></div>`;
 }
 /* Youth search: how many other clubs want a prospect (5.77.1). Interest is any AI club that has started courting
    him (an offer is the next step). Most of a class has none; the best are wanted by up to 30-odd clubs, so the slider
