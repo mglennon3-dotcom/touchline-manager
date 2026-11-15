@@ -500,10 +500,9 @@ function newClub(lgKey, rep) {
 }
 function genSquad(c) {
   const lvl = lvlForRep(c.rep), dom = isForeign(c) ? (c.tier === 1 ? .62 : .8) : c.tier === 1 ? .6 : c.tier <= 3 ? .78 : .9;
-  const foreign = ALL_NATS.filter(n => n !== c.country);
   for (const [pos, n] of Object.entries(ROLE_MIX)) for (let i = 0; i < n - (isForeign(c) && c.tier > 1 && i === n - 1 && n > 2 ? 1 : 0); i++) {
     const age = i === n - 1 && R() < .45 ? ri(18, 21) : ri(20, 33);
-    const nat = R() < dom ? c.country : pick(foreign);
+    const nat = R() < dom ? c.country : pickNat(c.country);
     const p = makePlayer({ pos, base: lvl + 1.6 - i * 2.3, age, nat, club: c.id, rep: c.rep });
     if (nat === c.country ? R() < .88 : (age <= 23 && R() < .25)) p.yt[c.country] = 3;
     if (R() < (c.tier <= 2 ? .5 : .2)) { const fee = Math.round(value(p) * rf(.6, 1.3)); const yrs = p.yrs + ri(0, 2); p.am = { per: Math.round(fee / yrs), left: p.yrs }; }
@@ -599,7 +598,7 @@ function newWorld() {
   // Income scale per division, anchored to reputation the same way wages are anchored to ability (≈6% per point).
   S.revK = {};
   for (const key of Object.keys(LG)) { const ks = S.leagues[key].clubs.map(C).map(c => c.revBase / Math.pow(1.061, c.rep)).sort((a, b) => a - b); S.revK[key] = ks[Math.floor(ks.length / 2)]; }
-  for (let i = 0; i < 80; i++) { const p = makePlayer({ pos: pick(ROLES), base: ri(48, 70), age: ri(22, 34), nat: R() < .6 ? "ENG" : pick(ALL_NATS), rep: 40 }); if (p.nat === "ENG") p.yt.ENG = 3; toFreeAgent(p); }
+  for (let i = 0; i < 80; i++) { const p = makePlayer({ pos: pick(ROLES), base: ri(48, 70), age: ri(22, 34), nat: R() < .6 ? "ENG" : pickNat(), rep: 40 }); if (p.nat === "ENG") p.yt.ENG = 3; toFreeAgent(p); }
   for (const L of Object.values(S.leagues)) [...L.clubs].sort((a, b) => C(b).rep - C(a).rep).forEach((id, i) => S.lastPos[id] = i + 1);
   return S;
 }

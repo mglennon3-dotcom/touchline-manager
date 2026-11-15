@@ -16,9 +16,9 @@ const FACTOR_HELP = {
 };
 const starsOf = pot => pot >= 86 ? 5 : pot >= 80 ? 4 : pot >= 73 ? 3 : pot >= 66 ? 2 : 1;
 
-/* Each year's class: 80 from England, 18 from each of the seven countries abroad and 30 from further afield (Brazil,
-   Argentina, West Africa, Scandinavia). It was 7 and 22: a single foreign country showed a handful of names. */
-const PROSPECTS = { ENG: 80, abroad: 18, row: 30 };
+/* Each year's class: 80 from England, 18 from each of the seven countries abroad and 60 from fifteen countries further
+   afield (ABROAD). It was 7 and 22: a single foreign country showed a handful of names. */
+const PROSPECTS = { ENG: 80, abroad: 18, row: 60 };  // row 30 until 5.78, when it went from four regions to fifteen countries
 function addProspect(nat, country, region, lat, lon) {
   const pot = clamp(Math.round(62 + Math.pow(R(), 1.8) * 32 + gauss() * 2), 52, 95);
   const pri = {}; for (const [k] of FACTORS) pri[k] = .6 + R() * .6;
@@ -32,7 +32,8 @@ function addProspect(nat, country, region, lat, lon) {
   S.prospects.push(y); return y;
 }
 const addFrom = code => { const [r, la, lo] = pick(COUNTRY[code].regions); return addProspect(code, code, r, la, lo); };
-const addRow = () => { const [code, r, la, lo] = pick(ABROAD); return addProspect(code, null, r, la, lo); };
+// Weighted as for foreign players (ABROAD): Brazil and Argentina most, Japan, Korea and the USA least.
+const addRow = () => { let t = R() * sum(ABROAD, a => a[4]), a = ABROAD[0]; for (const x of ABROAD) { t -= x[4]; if (t <= 0) { a = x; break; } } return addProspect(a[0], null, a[1], a[2], a[3]); };
 function newProspectClass() {
   S.prospects = [];
   for (let i = 0; i < PROSPECTS.ENG; i++) addFrom("ENG");

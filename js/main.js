@@ -648,6 +648,10 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
     if (n) news(`Academy players now sign youth deals: ${n} of yours under ${YOUTH_PRO_AGE} move onto ${perWeek(YOUTH_WAGE)}. At ${YOUTH_PRO_AGE} each can be offered a professional contract; the youth deal runs to the end of that season.`, true, "youth"); }
   // 5.75.7: free agents of 16 and 17, and graduates still waiting in your intake, made before the 10 cap (5.75.6) come
   // down to it, keeping their profile and potential.
+  // 5.78: rest of the world is fifteen countries; this year's class gets its extra 30 from them (players already in the
+  // game keep their nationalities, and new ones are drawn from the wider list).
+  if (!S.row15 && S.clubs) { S.row15 = 1; const n = S.prospects && S.prospects.length && S.phase === "season" ? topUpProspects() : 0;
+    if (n && S.club != null) news(`Youth recruitment now reaches fifteen countries outside the eight leagues: ${n} more prospects from around the world join this year's class.`, true, "youth"); }
   // 5.77: a season already under way gets its preview now (ratings as they stand, so the summary's growth counts from
   // here), and next summer's preview compares against the squad you have today.
   if (S.phase === "season" && S.club != null && !S.preview) { S.expAll = S.expAll || {}; for (const id of S.leagues[me().lg].clubs) if (S.expAll[id] == null) S.expAll[id] = expectedPos(C(id)); buildPreview(); S.preview.late = S.week > 0; }

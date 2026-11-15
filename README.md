@@ -166,8 +166,13 @@ Trips abroad cost travel, shown on the button.
 The first club to offer a place (while the offer stands) gets an edge, worth about a home visit: he remembers
 who believed in him first. It settles about a quarter of contested races, and offering early to your top
 targets won 9 of 12 in testing against 5-8 without it. The Offered tab and his profile show who offered first.
-Each year's youth class has 80 prospects from England, 18 from each of the seven countries abroad and 30 from
-further afield (Brazil, Argentina, West Africa, Scandinavia). The Youth page has four tabs: Offered, Scouted, All prospects (the full class with filters) and Committed.
+Each year's youth class has 80 prospects from England, 18 from each of the seven countries abroad and 60 from the
+rest of the world (5.78): Brazil and Argentina most often, then Colombia, Uruguay, Ghana, Nigeria, Norway, Denmark and
+Croatia, then Senegal, Ivory Coast and Serbia, and least often the United States, Japan and South Korea (it was 30
+from four regions). Each country has its own names and distance, and players from all fifteen turn up in squads
+across the world, weighted the same way so the eight league countries still supply most foreign players. In a new
+world 11% of players are from the rest of the world, Brazil the most at 1.2%. An existing save's current class gets
+30 more rest-of-world prospects when loaded mid-season; players already in the game keep their nationalities. The Youth page has four tabs: Offered, Scouted, All prospects (the full class with filters) and Committed.
 **Youth search filters** (5.77.1): Show can be set to *Unoffered by you* (undecided prospects you haven't offered
 a place) or *No offers from anyone*, and a **Clubs interested** slider keeps prospects courted by at most none, 1, 2,
 3, 5, 10 or 20 other clubs (or any number). Every prospect list has a Clubs interested column: a bar that fills at 20

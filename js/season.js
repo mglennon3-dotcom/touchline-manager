@@ -774,7 +774,7 @@ function aiMaintain(c) {
       if (fa) { S.fa = S.fa.filter(id => id !== fa.id); fa.club = c.id; fa.yrs = ri(1, 3); fa.wage = wageDemand(fa, c.rep); fa.joined = S.year; c.squad.push(fa.id); }
       // Fillers are journeymen a little below the club's level; generating young ones here fed a ratings spiral.
       // Anchored to reputation, not current level, so divisions neither spiral up nor drain away over decades.
-      else { const age = ri(21, 29), p = makePlayer({ pos, base: lvlForRep(c.rep) - 3, age, nat: R() < .7 ? c.country : pick(ALL_NATS), club: c.id, rep: c.rep }); p.pot = p.ovr + (age <= 24 ? ri(0, 3) : 0); if (p.nat === c.country) p.yt[c.country] = 3; c.squad.push(p.id); }
+      else { const age = ri(21, 29), p = makePlayer({ pos, base: lvlForRep(c.rep) - 3, age, nat: R() < .7 ? c.country : pickNat(c.country), club: c.id, rep: c.rep }); p.pot = p.ovr + (age <= 24 ? ri(0, 3) : 0); if (p.nat === c.country) p.yt[c.country] = 3; c.squad.push(p.id); }
     }
   }
   const cap = c.owner === "reckless" ? 1.18 : OWNER[c.owner].target[1] + .06;
