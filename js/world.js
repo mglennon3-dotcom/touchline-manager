@@ -450,14 +450,16 @@ function benchFor(c, xi, friendly) {
   if (gk && mine.length < RULES.benchSize) out.push(gk);
   // One keeper on the bench is enough: the fill adds no more once there is one (you can still pick a second).
   const haveGK = () => gk || mine.some(id => P(id).pos === "GK");
-  /* Your bench covers every line (5.76.1): at least BENCH_PER_LINE defenders, midfielders and attackers, counting
-     the subs you chose, before the rest goes to the best and fittest. Filled on rating alone, a quarter of benches
-     had no striker and a fifth no centre-back, so an injury there meant someone out of position. */
-  if (isUser(c)) for (const ln of ["DEF", "MID", "ATT"]) {
+  /* Every bench covers every line: at least BENCH_PER_LINE defenders, midfielders and attackers (counting the subs
+     you chose), before the rest goes to the best and fittest. Filled on rating alone, a quarter of benches had no
+     striker and a fifth no centre-back, so an injury there meant someone out of position. Yours from 5.76.1, AI
+     clubs' from 5.78.1. */
+  for (const ln of ["DEF", "MID", "ATT"]) {
     let have = [...mine.map(P), ...out].filter(p => LINE[p.pos] === ln).length;
     for (const p of rest) { if (have >= BENCH_PER_LINE || mine.length + out.length >= RULES.benchSize) break; if (LINE[p.pos] === ln && !out.includes(p)) { out.push(p); have++; } }
   }
-  for (const p of rest) { if (mine.length + out.length >= RULES.benchSize) break; if (!out.includes(p) && !(p.pos === "GK" && isUser(c) && haveGK())) out.push(p); }
+  // One keeper is enough for AI clubs too (5.78.1): 37% of their benches carried two, a wasted place.
+  for (const p of rest) { if (mine.length + out.length >= RULES.benchSize) break; if (!out.includes(p) && !(p.pos === "GK" && haveGK())) out.push(p); }
   return [...mine, ...out.map(p => p.id)];
 }
 function fixUserLineup() {
