@@ -299,6 +299,7 @@ function viewHome() {
   const c = me(), parts = [];
   for (const m of openDecisions()) parts.push(`<section class="decision"><div class="eyebrow">Decision needed · ${m.w}</div><h3>${esc(m.title)}</h3><p>${esc(m.body)}</p><div class="row">${m.opts.map(([k, l], i) => `<button class="btn ${i === 0 ? "primary" : ""}" data-a="decide" data-v="${m.id}|${k}">${l}</button>`).join("")}</div></section>`);
   if (S.phase === "summer" && S.seasonOver && !S.seasonOverSeen) parts.push(seasonReview());
+  if (S.phase === "season" && S.preview && S.preview.year === S.year && !S.previewSeen) parts.push(previewCard());
   if (S.phase === "season") { if (CAL.jan.includes(S.week)) parts.push(janCard()); parts.push(nextMatchCard());
     // The fixtures after the next match (that one has its own card above).
     const up = upcomingFixtures(6).slice(1);
@@ -307,7 +308,9 @@ function viewHome() {
   const recent = (S.myRes || []).slice(-6).reverse();
   if (recent.length) parts.push(`<section class="card"><div class="card-h"><h2>Recent results</h2><button class="lnk small" data-a="go" data-v="fixtures">All fixtures</button></div>${recent.map(resultRow).join("")}</section>`);
   const L = S.leagues[c.lg], t = standings(L), i = t.findIndex(r => r.id === c.id), lo = clamp(i - 3, 0, t.length - 7);
-  const side = `<section class="card"><div class="card-h"><h2>${leagueName(L.key)}</h2><button class="lnk small" data-a="go" data-v="league">Full table</button></div>
+  const again = S.phase === "season" && S.preview && S.preview.year === S.year && S.previewSeen ? '<button class="lnk small" data-a="showpreview">Season preview</button>'
+    : S.phase === "summer" && S.seasonOver && S.seasonOverSeen ? '<button class="lnk small" data-a="showsummary">Last season</button>' : "";
+  const side = `<section class="card"><div class="card-h"><h2>${leagueName(L.key)}</h2><span class="row" style="gap:12px">${again}<button class="lnk small" data-a="go" data-v="league">Full table</button></span></div>
       ${miniTable(L, t.slice(lo, lo + 7), lo)}</section>
     ${rivalsCard()}
     ${academyHomeCard(c)}
@@ -403,6 +406,51 @@ function awardsHtml(l, compact) {
   }
   return out;
 }
+/* Season preview and summary (5.77): built in season.js (buildPreview, buildSummary); shown on Home until you dismiss
+   them and kept a tap away after that (the league card's links). */
+const pLink = (id, name) => S.players[id] ? `<button class="lnk" data-a="player" data-v="${id}">${esc(name || P(id).name)}</button>` : esc(name || "");
+function previewHtml(pv) {
+  const c = me(), oneOf = ids => ids.map(id => clubA(id, { short: true })).join(", ");
+  const watch = pv.watch != null && S.players[pv.watch] ? P(pv.watch) : null;
+  const ins = pv.ins == null ? "" : `<div class="sv-row"><span class="eyebrow">In</span><span>${pv.ins.length ? pv.ins.map(id => S.players[id] ? `${pLink(id)} <span class="tiny muted">${P(id).pos}${P(id).loan && P(id).loan.from !== S.club ? " · loan" : ""}</span>` : "").filter(Boolean).join(", ") : '<span class="muted">No new signings</span>'}${pv.youth ? ` <span class="tiny muted">+ ${pv.youth} to the academy</span>` : ""}</span></div>
+    <div class="sv-row"><span class="eyebrow">Out</span><span>${pv.outs.length ? pv.outs.map(([id, n, pos, club]) => { const p = S.players[id]; const where = p && p.loan && p.loan.from === S.club ? `loan to ${C(p.club).short}` : club >= 0 ? C(club).short : p ? "released" : "retired"; return `${pLink(id, n)} <span class="tiny muted">${pos} · ${esc(where)}</span>`; }).join(", ") : '<span class="muted">Nobody left</span>'}</span></div>`;
+  return `<p>The board wants you to <b>${expText(pv.exp, pv.lg).toLowerCase()}</b>: the pundits have you <b>${ord(pv.exp)}</b> of ${pv.n}. Your squad is the <b>${ord(pv.lvRank)}</b> strongest in the ${leagueName(pv.lg)} (${r20(pv.lv).toFixed(1)} out of 20).</p>
+    <div class="sv">
+      <div class="sv-row"><span class="eyebrow">Favourites</span><span>${oneOf(pv.tips)}</span></div>
+      ${pv.drop.length ? `<div class="sv-row"><span class="eyebrow">${LG[pv.lg].tier === 1 ? "Tipped to go down" : "Tipped to struggle"}</span><span>${oneOf(pv.drop)}</span></div>` : ""}
+      <div class="sv-row"><span class="eyebrow">Key players</span><span>${pv.key.filter(id => S.players[id]).map(id => `${pLink(id)} <span class="tiny muted">${P(id).pos} · ${Math.round(r20(pv.ovr[id] ?? P(id).ovr))}</span>`).join(", ")}</span></div>
+      ${watch ? `<div class="sv-row"><span class="eyebrow">One to watch</span><span>${pLink(watch.id)} <span class="tiny muted">${watch.pos} · ${watch.age} · ${Math.round(r20(pv.ovr[watch.id] ?? watch.ovr))} now</span></span></div>` : ""}
+      ${ins}
+      <div class="sv-row"><span class="eyebrow">Squad</span><span>average age ${pv.age} · wages ${money(pv.wages)} a year</span></div>
+      ${pv.cups.length ? `<div class="sv-row"><span class="eyebrow">Competitions</span><span>${leagueName(pv.lg)}, ${pv.cups.map(esc).join(", ")}</span></div>` : ""}
+      ${pv.fx.length ? `<div class="sv-row"><span class="eyebrow">Opening games</span><span>${pv.fx.map(f => `${f.h === S.club ? "v" : "at"} ${clubA(f.h === S.club ? f.a : f.h, { short: true })}`).join(", ")}</span></div>` : ""}
+    </div>`;
+}
+function previewCard() {
+  const pv = S.preview;
+  return `<section class="card summary"><div class="eyebrow">${seasonLabel(pv.year)} preview</div>${previewHtml(pv)}
+    <div class="row" style="margin-top:12px"><button class="btn" data-a="seenpreview">Got it</button></div></section>`;
+}
+function summaryHtml(m) {
+  if (!m) return "";
+  const r = m.rec, list = (a, f) => a.length ? a.map(x => `${pLink(x[0], x[1])} <span class="tiny muted">${x[2]}</span> <b class="num">${f(x[3])}</b>`).join(", ") : '<span class="muted">—</span>';
+  const game = g => g ? `${g[3] ? "v" : "at"} ${clubA(g[0], { short: true })} <b class="num">${g[1]}–${g[2]}</b> <span class="tiny muted">${esc(g[4] || "")}</span>` : "";
+  const vs = m.pred == null ? "" : ` (tipped ${ord(m.pred)})`;
+  return `<div class="sv">
+      <div class="sv-row"><span class="eyebrow">League</span><span>P${r.p} W${r.w} D${r.d} L${r.l}, goals ${r.gf}–${r.ga}, <b>${r.pts} pts</b>${vs}</span></div>
+      <div class="sv-row"><span class="eyebrow">All games</span><span>${m.all.n} played: won ${m.all.w}, drew ${m.all.d}, lost ${m.all.l}</span></div>
+      ${m.cups.length ? `<div class="sv-row"><span class="eyebrow">Cups</span><span>${m.cups.map(([n, t, cls]) => `${esc(n)}: <span class="${cls}">${esc(t.toLowerCase())}</span>`).join("; ")}</span></div>` : ""}
+      ${m.pots != null && S.players[m.pots] ? `<div class="sv-row"><span class="eyebrow">Player of the season</span><span><b>${pLink(m.pots)}</b> <span class="tiny muted">${m.best[0][2]} · ${m.best[0][3].toFixed(2)} average</span></span></div>` : ""}
+      ${m.young != null && m.young !== m.pots && S.players[m.young] ? `<div class="sv-row"><span class="eyebrow">Young player</span><span>${pLink(m.young)} <span class="tiny muted">${P(m.young).pos} · ${P(m.young).age} · ${P(m.young).s.app ? (P(m.young).s.rt / P(m.young).s.app).toFixed(2) + " average" : ""}</span></span></div>` : ""}
+      <div class="sv-row"><span class="eyebrow">Goals</span><span>${list(m.goals, v => v)}</span></div>
+      <div class="sv-row"><span class="eyebrow">Assists</span><span>${list(m.assists, v => v)}</span></div>
+      <div class="sv-row"><span class="eyebrow">Best rated</span><span>${list(m.best, v => v.toFixed(2))}</span></div>
+      ${m.apps.length ? `<div class="sv-row"><span class="eyebrow">Ever-present</span><span>${list(m.apps, v => v + " apps")}</span></div>` : ""}
+      ${m.big ? `<div class="sv-row"><span class="eyebrow">Best win</span><span>${game(m.big)}</span></div>` : ""}
+      ${m.bad ? `<div class="sv-row"><span class="eyebrow">Worst defeat</span><span>${game(m.bad)}</span></div>` : ""}
+      ${m.grew.length ? `<div class="sv-row"><span class="eyebrow">Development</span><span>${m.grewN} player${m.grewN > 1 ? "s" : ""} improved${m.late ? " since the preview" : ""} (+${m.grewPts} in all): ${m.grew.map(x => `${pLink(x[0], x[1])} <span class="tiny muted">${x[2]} · ${x[4]}</span> <b class="num good">+${x[3]}</b>`).join(", ")}</span></div>` : ""}
+    </div>`;
+}
 function seasonReview() {
   const o = S.seasonOver, c = me();
   const tro = o.won.map(trophyName);
@@ -410,6 +458,7 @@ function seasonReview() {
     <div class="big" style="margin:8px 0 6px">${ord(o.pos)} in the ${leagueName(o.lg)}</div>
     <div class="prose"><p>The board's target was ${expText(o.exp, o.lg).toLowerCase()} (${ord(o.exp)}). ${tro.length ? `Trophies: <b>${tro.join(", ")}</b>.` : ""}</p>
     ${o.moved === "up" ? `<p class="good"><b>Promoted!</b> Next season you play in the ${leagueName(o.to)}. Income rises sharply.</p>` : o.moved === "down" ? `<p class="bad"><b>Relegated</b> to the ${leagueName(o.to)}. Income falls; relegation clauses cut some wages.</p>` : ""}
+    ${summaryHtml(o.sum)}
     <p>Board reaction: <b class="${o.board >= 0 ? "good" : "bad"}">${o.board >= 0 ? "+" : ""}${o.board}</b>. You earned <b>${o.earned || 1} coaching point${(o.earned || 1) > 1 ? "s" : ""}</b> to spend on the Manager page. ${S.qual.CC.includes(S.club) ? "You qualify for the Champions Cup." : S.qual.CS.includes(S.club) ? "You qualify for the Continental Shield." : S.qual.CT.includes(S.club) ? "You qualify for the Continental Trophy." : ""}</p>
     ${(() => { const h = S.history[0], l = h && h.L[o.lg]; if (!l) return ""; const yours = c.squad.map(P).flatMap(p => (p.awards || []).filter(a => a.endsWith(seasonLabel(h.year))).map(a => `${esc(p.name)}: ${esc(a.split(",")[0])}`));
       return `<h3 style="margin:10px 0 6px">${leagueName(o.lg)} awards</h3>${awardsHtml(l, true)}${yours.length ? `<p class="small good" style="margin-top:6px">Your honours: ${[...new Set(yours)].join("; ")}</p>` : ""}`; })()}
@@ -1115,6 +1164,8 @@ function renderModal() {
   else if (m.t === "prospect") html = modalProspect(S.prospects.find(y => y.id === m.id));
   else if (m.t === "bid" && S.players[m.id]) html = modalBid(S.players[m.id]);
   else if (m.t === "coach") html = modalCoach(m);
+  else if (m.t === "preview" && S.preview) html = mHead(`${seasonLabel(S.preview.year)} preview`, leagueName(S.preview.lg), "var(--accent)") + `<div class="modal-b">${previewHtml(S.preview)}</div>`;
+  else if (m.t === "summary" && S.seasonOver) html = mHead(`${seasonLabel(S.year)} review`, `${ord(S.seasonOver.pos)} in the ${leagueName(S.seasonOver.lg)}`, "var(--accent)") + `<div class="modal-b">${summaryHtml(S.seasonOver.sum) || '<p class="muted">No summary was kept for that season.</p>'}</div>`;
   else { UI.modal = null; el.innerHTML = ""; return; }
   el.innerHTML = `<div class="scrim" data-a="closemodal"><div class="modal" role="dialog" aria-modal="true" data-stop="1">${html}</div></div>`;
 }

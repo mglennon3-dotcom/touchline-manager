@@ -209,6 +209,16 @@ plays its matches. Following a world's 16-year-olds for eleven seasons (two runs
 reached their potential, about 29% were within a point, about half within two and 70% within three (5.75.8: 68%, 89%
 and 99%).
 
+**Season preview and summary** (5.77): as each season kicks off, Home shows a preview of it: the board's target and
+where the pundits tip you, your squad's strength rank, the favourites and those tipped to struggle, your key players and
+one young player to watch, who came and went over the summer (and how many joined the academy), average age, wage bill,
+competitions and your opening games. At the end of the season the review adds a summary: league record against the
+prediction, every game's results, how far you went in each cup, player of the season and best young player, top
+scorers, assists, best rated and most appearances, your best win and worst defeat, and who improved since the preview
+(players out on loan included). Both stay on Home until you tap Got it, then a link on the league card reopens them
+(Season preview during the season, Last season in the summer). A season already under way gets its preview when you
+load it, with growth counted from that point.
+
 **Academy** (its own page): your youth players are kept apart from the first team. Graduates (see Graduate intake below) and
 signed youth recruits join it; players 20 and under can be sent down from the first-team squad (on the
 Academy page or the player's own card, which also has Promote to first team). Academy

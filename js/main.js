@@ -214,6 +214,9 @@ const ACT = {
   closemodal: (v, el, e) => { if (el.classList.contains("scrim") && e.target.closest("[data-stop]")) return; UI.modal = null; UI.bid = null; UI.confirm = null; renderModal(); render(); },
   decide: v => { const [id, ch] = v.split("|"); const m = S.inbox.find(x => x.id === +id); if (!m || m.done) return; const msg = resolveDecision(m, ch); save(); render(); if (msg) toast(msg); },
   seenreview: () => { S.seasonOverSeen = true; save(); render(); },
+  seenpreview: () => { S.previewSeen = true; save(); render(); },
+  showpreview: () => { UI.modal = { t: "preview" }; renderModal(); },
+  showsummary: () => { UI.modal = { t: "summary" }; renderModal(); },
   penmove: v => { const [id, d] = v.split("|").map(Number), ids = penOrderIds(), i = ids.indexOf(id), j = i + d; if (i < 0 || j < 0 || j >= ids.length) return; [ids[i], ids[j]] = [ids[j], ids[i]]; S.penOrder = ids; save(); render(); },
   penauto: () => { S.penOrder = []; save(); render(); },
   ment: v => { S.mentality = v; save(); render(); },
@@ -645,6 +648,9 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
     if (n) news(`Academy players now sign youth deals: ${n} of yours under ${YOUTH_PRO_AGE} move onto ${perWeek(YOUTH_WAGE)}. At ${YOUTH_PRO_AGE} each can be offered a professional contract; the youth deal runs to the end of that season.`, true, "youth"); }
   // 5.75.7: free agents of 16 and 17, and graduates still waiting in your intake, made before the 10 cap (5.75.6) come
   // down to it, keeping their profile and potential.
+  // 5.77: a season already under way gets its preview now (ratings as they stand, so the summary's growth counts from
+  // here), and next summer's preview compares against the squad you have today.
+  if (S.phase === "season" && S.club != null && !S.preview) { S.expAll = S.expAll || {}; for (const id of S.leagues[me().lg].clubs) if (S.expAll[id] == null) S.expAll[id] = expectedPos(C(id)); buildPreview(); S.preview.late = S.week > 0; }
   if (!S.ycap && S.clubs) { S.ycap = 1; let n = 0;
     const youths = [...S.fa.map(P), ...(S.intake ? S.intake.ids.map(id => S.players[id]) : [])].filter(p => p && p.age < YOUTH_PRO_AGE && p.ovr > YOUTH_START_CAP);
     for (const p of youths) { capYouthStart(p); n++; }

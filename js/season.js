@@ -104,6 +104,7 @@ function startSeason() {
   S.expPos = expectedPos(me());
   // Pre-season predictions for every English club, used for Manager of the Season.
   S.expAll = {}; for (const k of ENG_LGS) S.leagues[k].clubs.forEach(id => S.expAll[id] = expectedPos(C(id)));
+  buildPreview();
 }
 
 /* ---------- continental ---------- */
@@ -615,6 +616,11 @@ function endSeason() {
   // AI coaches improve slowly too, and drift back if they're past it.
   for (const c of activeClubs()) if (!isUser(c) && c.coach && R() < .3) { const k = pick(COACH_KEYS)[0]; c.coach[k] = clamp(c.coach[k] + (R() < .7 ? 1 : -1), 1, 20); }
   S.seasonOver = { pos: myPos, exp, lg: myKey, board: d, earned, won: won.map(t => t.t), moved: myMove ? myMove[1] : null, to: myMove ? myMove[3] : null };
+  S.seasonOver.sum = buildSummary(myPos);
+  // Next season's preview compares against this squad; loanees in go home, so they aren't departures.
+  // Players out on loan leave the squad list while they're away, but come back, so they count as yours.
+  S.lastSquad = [...me().squad.filter(id => { const p = S.players[id]; return p && !(p.loan && p.loan.from !== S.club); }),
+    ...Object.values(S.players).filter(p => p.loan && p.loan.from === S.club).map(p => p.id)];
   if (S.board <= 0 && !S.set.unsackable) S.sacked = true;  // unsackable mode: the board grumbles but can't fire you
 
   // player records, then loans go home
@@ -866,6 +872,58 @@ function settleFriendly(M, f) {
 function playFriendlySim() {
   const f = friendlyAt(S.summerDay); if (!f || f.played) return;
   const M = runToEnd(makeMatch(friendlyFixture(f), true)); settleFriendly(M, f);
+}
+
+/* Season preview and summary (5.77). The preview is taken as the season starts, after the window has shut, so it
+   shows the squad you actually go in with: the board's target, the pre-season favourites, your key men and one to
+   watch, who came and went, and the opening fixtures. It keeps every player's rating then, which the summary uses to
+   say who grew. The summary is taken at the final whistle, before loans end and players age, so a loanee's season
+   and a veteran's last one still count. */
+const CUP_KEYS = () => ["FA", "LC", "CC", "CS", "CT", ...Object.keys(S.ko || {}).filter(k => k.startsWith("PO"))];
+function buildPreview() {
+  const c = me(), L = S.leagues[c.lg], ps = c.squad.map(P).filter(Boolean), last = S.lastSquad ? new Set(S.lastSquad) : null;
+  const tips = L.clubs.slice().sort((a, b) => (S.expAll[a] || 99) - (S.expAll[b] || 99));
+  const senior = ps.filter(p => !p.acad && !(p.loan && p.loan.from === c.id));
+  const watch = ps.filter(p => p.age <= 21 && !(p.loan && p.loan.from === c.id)).sort((a, b) => b.pot - a.pot)[0];
+  const up = typeof upcomingFixtures === "function" ? upcomingFixtures(3).map(f => ({ h: f.h, a: f.a, label: f.label })) : [];
+  S.preview = {
+    year: S.year, lg: c.lg, exp: S.expPos, tips: tips.slice(0, 3), drop: LG[c.lg].down ? tips.slice(-LG[c.lg].down) : [],
+    lv: clubLevel(c), lvRank: L.clubs.map(id => clubLevel(C(id))).filter(v => v > clubLevel(c)).length + 1, n: L.clubs.length,
+    key: senior.slice().sort((a, b) => b.ovr - a.ovr).slice(0, 3).map(p => p.id), watch: watch ? watch.id : null,
+    // A first season has nothing to compare with, so no ins and outs.
+    ins: last ? ps.filter(p => !last.has(p.id) && !p.acad).map(p => p.id) : null,
+    outs: last ? S.lastSquad.filter(id => !c.squad.includes(id)).map(id => { const p = S.players[id]; return p ? [id, p.name, p.pos, p.club] : null; }).filter(Boolean) : null,
+    youth: last ? ps.filter(p => !last.has(p.id) && p.acad).length : 0,
+    age: +(avgOf(senior.map(p => p.age))).toFixed(1), wages: wageBill(c),
+    cups: CUP_KEYS().filter(k => cupProgress(k)).map(k => S.ko[k] ? S.ko[k].name : k),
+    fx: up, ovr: Object.fromEntries(ps.map(p => [p.id, p.ovr])),
+  };
+  S.previewSeen = false;
+}
+function buildSummary(myPos) {
+  const c = me(), L = S.leagues[c.lg], row = standings(L).find(r => r.id === c.id) || {}, pv = S.preview && S.preview.year === S.year ? S.preview : null;
+  // Everyone who played for you: the squad now (loanees in included) and anyone sold mid-season is gone from the
+  // squad, so only those still here are named.
+  const ps = c.squad.map(P).filter(p => p && p.s && !(p.loan && p.loan.from === c.id));
+  const avgR = p => p.s.app ? p.s.rt / p.s.app : 0, line = p => [p.id, p.name, p.pos];
+  const by = (f, n, min = 1) => ps.filter(p => f(p) >= min).sort((a, b) => f(b) - f(a)).slice(0, n).map(p => [...line(p), f(p)]);
+  const minApps = Math.max(5, Math.round(sum(ps, p => p.s.app) / Math.max(1, ps.length) * .5));
+  const rated = ps.filter(p => p.s.app >= minApps).sort((a, b) => avgR(b) - avgR(a));
+  const res = (S.myRes || []).filter(r => r.hg != null).map(r => { const home = r.h === S.club; return { ...r, gf: home ? r.hg : r.ag, ga: home ? r.ag : r.hg, opp: home ? r.a : r.h, home }; });
+  const big = res.filter(r => r.gf > r.ga).sort((a, b) => (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf)[0];
+  const bad = res.filter(r => r.ga > r.gf).sort((a, b) => (b.ga - b.gf) - (a.ga - a.gf) || b.ga - a.ga)[0];
+  const away = Object.values(S.players).filter(p => p.loan && p.loan.from === c.id);  // out on loan: their growth is yours
+  const grew = pv ? [...ps, ...away].filter(p => pv.ovr[p.id] != null).map(p => [...line(p), +((p.ovr - pv.ovr[p.id]) / 3).toFixed(1), p.age]).filter(x => x[3] > 0).sort((a, b) => b[3] - a[3]) : [];
+  return {
+    year: S.year, rec: { w: row.w, d: row.d, l: row.l, gf: row.gf, ga: row.ga, pts: row.pts, p: row.p }, pred: pv ? pv.exp : null,
+    all: { w: res.filter(r => r.gf > r.ga).length, d: res.filter(r => r.gf === r.ga).length, l: res.filter(r => r.gf < r.ga).length, n: res.length },
+    cups: CUP_KEYS().map(k => [S.ko[k] ? S.ko[k].name : k, cupProgress(k)]).filter(x => x[1]).map(([n, p]) => [n, p.t, p.cls]),
+    goals: by(p => p.s.g, 3), assists: by(p => p.s.a, 3), apps: by(p => p.s.app, 1),
+    best: rated.slice(0, 3).map(p => [...line(p), +avgR(p).toFixed(2)]), pots: rated[0] ? rated[0].id : null,
+    young: (rated.filter(p => p.age <= 21)[0] || {}).id ?? null,
+    big: big ? [big.opp, big.gf, big.ga, big.home, big.label] : null, bad: bad ? [bad.opp, bad.gf, bad.ga, bad.home, bad.label] : null,
+    grew: grew.slice(0, 4), grewN: grew.length, grewPts: +sum(grew, x => x[3]).toFixed(1), late: !!(pv && pv.late),
+  };
 }
 
 /* How far your club has got in a cup this season, for the Finances page. */
