@@ -168,6 +168,13 @@ who believed in him first. It settles about a quarter of contested races, and of
 targets won 9 of 12 in testing against 5-8 without it. The Offered tab and his profile show who offered first.
 Each year's youth class has 80 prospects from England, 18 from each of the seven countries abroad and 30 from
 further afield (Brazil, Argentina, West Africa, Scandinavia). The Youth page has four tabs: Offered, Scouted, All prospects (the full class with filters) and Committed.
+**Youth search filters** (5.77.1): Show can be set to *Unoffered by you* (undecided prospects you haven't offered
+a place) or *No offers from anyone*, and a **Clubs interested** slider keeps prospects courted by at most none, 1, 2,
+3, 5, 10 or 20 other clubs (or any number). Every prospect list has a Clubs interested column: a bar that fills at 20
+clubs (red from 10), the count, and how many have offered (clubs offer once their interest is strong enough, up to six
+offers a prospect). In one class at week 12, 163 of 214 undecided prospects had no other club interested and the most
+wanted had 33.
+
 Offered and Scouted are your working lists: **Offered places** (everyone you've offered a place who
 hasn't signed: your standing among his suitors, how many other offers he has, or which club he chose) and
 **Scouted prospects** (everyone you've scouted but not offered). Offering moves a prospect from the second

@@ -389,7 +389,7 @@ const CHG = {
   import: (v, el) => { const f = el.files && el.files[0]; if (!f) return; const r = new FileReader(); r.onload = async () => { try { const d = JSON.parse(r.result); d.saveId = newSaveId(); if (!adoptSave(d)) throw new Error("not a save"); await save(); render(); toTop(); toast("Save file loaded as a new career."); } catch (e) { toast("That file isn't a Touchline Manager save."); } }; r.readAsText(f); },
   "tf-pos": v => { UI.tf.pos = v; if (v !== "ALL" && UI.tf.arch && UI.tf.arch !== "ALL" && !(ARCHETYPES[v] || []).some(a => a[0] === UI.tf.arch)) UI.tf.arch = "ALL"; render(); },
   "tf-arch": v => { UI.tf.arch = v; if (v !== "ALL" && UI.tf.pos !== "ALL" && !(ARCHETYPES[UI.tf.pos] || []).some(a => a[0] === v)) UI.tf.pos = "ALL"; render(); }, "tf-age": v => { UI.tf.age = +v; render(); }, "tf-min": v => { UI.tf.min = +v; render(); }, "tf-fee": v => { UI.tf.fee = +v; render(); }, "tf-lg": v => { UI.tf.lg = v; render(); }, "tf-int": v => { UI.tf.int = v; render(); },
-  "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); },
+  "yf-reg": v => { UI.yf.reg = v; render(); }, "yf-pos": v => { UI.yf.pos = v; render(); }, "yf-st": v => { UI.yf.st = v; render(); }, "yf-int": v => { UI.yf.int = +v; render(); },
   "bid-fee": v => { UI.bid.fee = +v; UI.bid.msg = ""; renderModal(); }, "bid-yrs": v => { UI.bid.yrs = +v; UI.bid.msg = ""; renderModal(); }, "list-pct": v => { const m = UI.modal, p = m && P(m.id); if (!p) return; p.listPct = +v; save(); render(); toast(`${p.name} now listed at ${money(askingPrice(p))}.`); }, "bid-plan": v => { const b = UI.bid, from = deferMult(b.plan || 1), to = deferMult(+v); b.plan = +v; b.fee = roundFee(b.fee / from * to); b.counterFee = null; b.msg = ""; renderModal(); }, "bid-wage": v => { UI.bid.wage = +v; UI.bid.msg = ""; renderModal(); },
 };
 document.addEventListener("click", e => {
@@ -458,7 +458,7 @@ window.addEventListener("resize", fitMenu);
 new MutationObserver(() => { floatSrc = null; floatHead(); fitMenu(); }).observe(document.getElementById("app"), { childList: true, subtree: true });
 new MutationObserver(syncMastHeight).observe(document.getElementById("app"), { childList: true });
 // Sliders that show their value as you drag (data-live: the label to update; data-wage: what the share is of).
-document.addEventListener("input", e => { const t = e.target; if (!t.dataset || !t.dataset.live) return; const l = document.getElementById(t.dataset.live), v = +t.value; if (l) l.textContent = `${v}% · ${perWeek(+t.dataset.wage * v / 100)}`; });
+document.addEventListener("input", e => { const t = e.target; if (!t.dataset || !t.dataset.live) return; const l = document.getElementById(t.dataset.live), v = +t.value; if (l) l.textContent = t.dataset.fmt === "yint" ? yIntLabel(v) : `${v}% · ${perWeek(+t.dataset.wage * v / 100)}`; });
 document.addEventListener("change", e => { const t = e.target.closest("[data-c]"); if (t) CHG[t.dataset.c]?.(t.value, t); });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && UI.modal) { UI.modal = null; UI.bid = null; renderModal(); render(); } });
 window.addEventListener("hashchange", () => { const h = location.hash.slice(1); if (VIEWS[h] && h !== UI.page) { UI.page = h; render(); } });

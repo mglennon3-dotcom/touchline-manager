@@ -934,6 +934,18 @@ function scoutAssistHtml() {
   return `<div class="assist row small"><label class="row"><input type="checkbox" data-c="autoscout" ${on ? "checked" : ""}> <b>Scouting assistant</b></label>
     <span class="tiny muted">${on ? `On: your scouts use the hours you leave each week on youth prospects and transfer targets in England. It never travels abroad, so it never costs money.${L ? ` Last time (${L.w}): ${L.y} youth, ${L.p} transfer.` : ""}` : "Off: only the scouting you choose to do."}</span></div>`;
 }
+/* Youth search: how many other clubs want a prospect (5.77.1). Interest is any AI club that has started courting
+   him (an offer is the next step). Most of a class has none; the best are wanted by up to 30-odd clubs, so the slider
+   moves through uneven steps (YINT_STEPS) rather than one club at a time, and the bar fills at 20. */
+const YINT_STEPS = [0, 1, 2, 3, 5, 10, 20, Infinity], YINT_MAX = YINT_STEPS.length - 1;
+const rivalsFor = (y, c) => Object.keys(y.rel).map(Number).filter(id => id !== c.id && S.clubs[id] && !C(id).gone && !isUser(C(id))).length;
+const rivalOffers = (y, c) => y.offers.filter(id => id !== c.id).length;
+const yIntLabel = i => i >= YINT_MAX ? "any number" : i === 0 ? "none" : `${YINT_STEPS[i]} or fewer`;
+function interestHtml(y, c) {
+  const n = rivalsFor(y, c), o = rivalOffers(y, c);
+  if (!n) return '<span class="tiny muted">none</span>';
+  return `<span class="bar ${n >= 10 ? "hot" : ""}" title="${n} club${n > 1 ? "s" : ""} interested, ${o} offered"><i style="width:${Math.min(1, n / 20) * 100}%"></i></span> <span class="tiny num">${n}${o ? ` · ${o} offer${o > 1 ? "s" : ""}` : ""}</span>`;
+}
 function viewYouth() {
   const c = me(), f = UI.yf;
   let ys = S.prospects.slice();
@@ -941,7 +953,12 @@ function viewYouth() {
   // because it overrode them: switching Spain on still showed only English prospects.
   const yOff = new Set(S.set.yCtyOff || []); if (yOff.size) ys = ys.filter(y => !yOff.has(prospectCountry(y)));  // country toggles
   if (f.pos !== "ALL") ys = ys.filter(y => y.pos === f.pos);
-  if (f.st === "OPEN") ys = ys.filter(y => y.commit == null); else if (f.st === "MINE") ys = ys.filter(y => y.offers.includes(c.id) || y.rel[c.id] || y.commit === c.id); else if (f.st === "DONE") ys = ys.filter(y => y.commit != null);
+  /* Clubs interested (5.77.1): AI clubs courting him (each has a relationship with him, and offers once it's
+     strong enough), your own interest left out. The slider keeps prospects with at most that many (f.int indexes YINT_STEPS). */
+  if (f.int != null && f.int < YINT_MAX) ys = ys.filter(y => rivalsFor(y, c) <= YINT_STEPS[f.int]);
+  if (f.st === "UNOFF") ys = ys.filter(y => y.commit == null && !y.offers.includes(c.id));
+  else if (f.st === "NOOFF") ys = ys.filter(y => y.commit == null && !y.offers.length);
+  else if (f.st === "OPEN") ys = ys.filter(y => y.commit == null); else if (f.st === "MINE") ys = ys.filter(y => y.offers.includes(c.id) || y.rel[c.id] || y.commit === c.id); else if (f.st === "DONE") ys = ys.filter(y => y.commit != null);
   const commits = S.prospects.filter(y => y.commit === c.id);
   // Everyone your scouts have watched this year, whatever the filters below say.
   // Two working lists above the full class: prospects you've offered a place (and not yet signed), and those
@@ -957,6 +974,7 @@ function viewYouth() {
     { k: "from", l: "From", v: y => km(y, c), f: y => `${esc(y.region)} <span class="tiny muted">${Math.round(km(y, c))} km</span>` },
     { k: "st", l: "Potential", v: y => viewMid(prospectPot(y)), f: y => rangeHtml(prospectPot(y)) },
     { k: "you", l: "Your pitch", v: y => clubScore(y, c), f: y => { const s = clubScore(y, c); return `<span class="bar" title="${Math.round(s * 100)}"><i style="width:${clamp(s, 0, 1) * 100}%"></i></span>`; } },
+    { k: "int", l: "Clubs interested", v: y => rivalsFor(y, c) * 10 + rivalOffers(y, c), f: y => interestHtml(y, c) },
     { k: "rank", l: "Standing", v: y => yourRank(y), f: y => y.commit != null ? (y.commit === c.id ? '<b class="good">Committed to you</b>' : `<span class="muted">Committed to</span> ${clubA(y.commit, { short: true })}`) : rankLabel(y) },
     { k: "act", l: "Actions", f: y => y.commit === c.id ? "" : `<span class="row" style="gap:4px;flex-wrap:nowrap"><button class="btn sm" data-a="rec" data-v="${y.id}|scout" ${y.sc >= 3 ? "disabled" : ""} title="${scoutHours(3, prospectCountry(y))} hours">Scout ${scoutHours(3, prospectCountry(y))}h</button><button class="btn sm" data-a="rec" data-v="${y.id}|call" title="1 hour">Call</button><button class="btn sm" data-a="rec" data-v="${y.id}|visit" ${y.visit ? "disabled" : ""} title="Host him at your training ground: ${scoutHours(5, prospectCountry(y))} hours${travelCost(prospectCountry(y)) ? ", " + money(travelCost(prospectCountry(y))) + " travel" : ""}">Visit</button><button class="btn sm" data-a="rec" data-v="${y.id}|coach" ${y.coach ? "disabled" : ""} title="Speak to his youth coaches by phone: ${scoutHours(2, prospectCountry(y))} hours, no travel">Coaches</button><button class="btn sm" data-a="rec" data-v="${y.id}|home" ${y.home || y.sc < 1 ? "disabled" : ""} title="${y.sc < 1 ? "Scout him first" : `Visit him and his family at home: ${scoutHours(4, prospectCountry(y))} hours${travelCost(prospectCountry(y)) ? ", " + money(travelCost(prospectCountry(y))) + " travel" : ""}`}">Home</button><button class="btn sm ${y.offers.includes(c.id) ? "danger" : ""}" data-a="rec" data-v="${y.id}|offer">${y.offers.includes(c.id) ? "Withdraw" : "Offer"}</button></span>` },
   ];
@@ -964,7 +982,7 @@ function viewYouth() {
   const scoutCols = [cols[0], cols[1], cols[2], cols[3],
     { k: "ir", l: "Injury risk", v: y => viewMid(prospectInj(y)), f: y => prospectInj(y) ? rangeHtml(prospectInj(y), true) : '<span class="tiny muted">scout again</span>' },
     { k: "rep", l: "Report", v: y => y.sc, f: y => `<span class="${y.sc >= 3 ? "good" : y.sc <= 1 ? "warn" : ""}">${REPORT[y.sc]}</span>${y.sc && y.coach ? ' <span class="tiny muted">+ coaches</span>' : ""}${y.scT || y.coachT ? `<br><span class="tiny muted">${y.scT || y.coachT}</span>` : ""}` },
-    cols[4], cols[5], cols[6],
+    cols[4], cols[5], cols[6], cols[7],
     { k: "rm", l: "", f: y => UI.yShowRemoved ? `<button class="btn sm" data-a="yunhide" data-v="${y.id}">Restore</button>` : `<button class="btn sm" data-a="yunscout" data-v="${y.id}" title="Not good enough: take him off your scouted list (his report is kept)" aria-label="Remove ${esc(y.name)} from the scouted list">✕</button>` }];
   const scoutedCard = `<section class="card"><div class="card-h"><h2>Scouted prospects</h2><span class="small">${scouted.length} watched, not offered · ${scouted.filter(y => y.commit == null).length} still undecided · Hours this week <b class="num">${S.rec.hours}/${recHours()}</b></span></div>
     ${scoutAssistHtml()}
@@ -972,7 +990,7 @@ function viewYouth() {
     ${yRemovedN ? `<p class="small muted" style="margin-top:8px">${UI.yShowRemoved ? `Showing the ${yRemovedN} you removed. Restore puts a prospect back on your list.` : `${yRemovedN} removed from this list.`} <button class="lnk" data-a="yshowremoved">${UI.yShowRemoved ? "Back to your list" : "Show removed"}</button></p>` : ""}</section>`;
   const offerCols = [cols[0], cols[1], cols[2], cols[3], scoutCols[5], cols[4],
     { k: "ost", l: "Offer", v: y => y.commit != null ? 2 : yourRank(y), f: y => y.commit != null ? `<span class="bad">Chose</span> ${clubA(y.commit, { short: true })}` : `${rankLabel(y)}<br><span class="tiny muted">${y.offers[0] === c.id ? '<b class="good">you offered first</b> · ' : `${C(y.offers[0]).short} offered first · `}${y.offers.length - 1 ? `${y.offers.length - 1} other offer${y.offers.length > 2 ? "s" : ""}` : "only offer so far"}</span>` },
-    cols[6]];
+    cols[7]];
   const pending = offered.filter(y => y.commit == null).length;
   const offeredCard = `<section class="card"><div class="card-h"><h2>Offered places</h2><span class="small">${pending} waiting on a decision${offered.length > pending ? ` · ${offered.length - pending} chose elsewhere` : ""} · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b></span></div>
     ${table("youth-of", offerCols, offered, { sort: { k: "ost", d: 1 }, empty: "You haven't offered anyone a place yet. Offer from a prospect's Actions: an offer lifts his interest, being the first club to offer gives you an edge over later ones, and he decides during the season. Those who accept move to Committed to you." })}</section>`;
@@ -980,7 +998,8 @@ function viewYouth() {
     <span class="small">Hours this week <b class="num">${S.rec.hours}/${recHours()}</b> · Places offered <b class="num">${S.rec.offers}/${offerCap()}</b> · Youth development <b class="num">${c.academy}/20</b></span></div>
     <div class="prose small" style="margin-bottom:12px"><p>Fifteen-year-olds from England and abroad choose an academy this season and join next summer. Each weighs six things differently, with two that matter most to him: distance from home, a route to first-team minutes, whether your formation uses his position, squad dynamics, prestige and your youth development rating. Scouting narrows his rating and reveals what he cares about; speaking to his youth coaches (a sharper estimate of his potential, his injury history and a small word in his ear), calls, hosting him at your ground and visiting his family at home build the relationship (a home visit counts most with lads who want to stay near home or care about squad dynamics). Commitments start from week 9 and aren't binding until signing day, so a better offer can still flip a prospect, yours included.</p></div>
     <div class="filters"><label class="f">Position<select id="yf-pos" data-c="yf-pos"><option value="ALL">Any</option>${ROLES.map(r => `<option value="${r}" ${f.pos === r ? "selected" : ""}>${ROLE_NAME[r]}</option>`).join("")}</select></label>
-      <label class="f">Show<select id="yf-st" data-c="yf-st">${[["OPEN", "Undecided"], ["MINE", "Your targets"], ["DONE", "Committed"], ["ALL", "Everyone"]].map(([k, l]) => `<option value="${k}" ${f.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
+      <label class="f">Clubs interested <span class="tiny muted" id="yf-int-l">${yIntLabel(f.int ?? YINT_MAX)}</span><input type="range" id="yf-int" min="0" max="${YINT_MAX}" step="1" value="${f.int ?? YINT_MAX}" data-c="yf-int" data-live="yf-int-l" data-fmt="yint" aria-label="Most other clubs interested"></label>
+      <label class="f">Show<select id="yf-st" data-c="yf-st">${[["OPEN", "Undecided"], ["UNOFF", "Unoffered by you"], ["NOOFF", "No offers from anyone"], ["MINE", "Your targets"], ["DONE", "Committed"], ["ALL", "Everyone"]].map(([k, l]) => `<option value="${k}" ${f.st === k ? "selected" : ""}>${l}</option>`).join("")}</select></label></div>
     ${ctyTogHtml(S.set.yCtyOff, "ycty")}
     ${table("youth", cols, ys, { sort: { k: "st", d: -1 }, empty: (S.set.yCtyOff || []).length >= KNOW_KEYS.length ? "No countries selected." : "No prospects match." })}</section>`;
   const commitCard = `<section class="card"><div class="card-h"><h2>Committed to you</h2></div>${commits.length ? commits.map(y => `<div class="row between" style="padding:6px 0;border-top:1px solid var(--line)"><span><button class="lnk" data-a="prospect" data-v="${y.id}">${esc(y.name)}</button> <span class="pos">${y.pos}</span> <span class="muted small">${esc(y.region)}</span></span>${rangeHtml(prospectPot(y))}</div>`).join("") : '<p class="muted">No commitments yet.</p>'}</section>`;

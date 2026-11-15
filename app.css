@@ -157,6 +157,7 @@ tr.z-po td:first-child{box-shadow:inset 3px 0 var(--zone-po)} tr.z-down td:first
 .decision{border:1px solid var(--accent);border-radius:var(--r);padding:14px;background:color-mix(in srgb,var(--accent) 7%,var(--surface));display:grid;gap:8px}
 .decision h3{font-size:18px}
 .summary{border-top:4px solid var(--accent)}
+.bar.hot i{background:var(--loss)}
 .sv{display:grid;gap:8px;margin:10px 0}.sv-row{display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;align-items:baseline}.sv-row .eyebrow{font-size:11px}
 @media (max-width:420px){.sv-row{grid-template-columns:minmax(0,1fr);gap:2px}}
 .big{font-family:var(--f-display);font-weight:800;font-size:44px;line-height:1;text-transform:uppercase}
