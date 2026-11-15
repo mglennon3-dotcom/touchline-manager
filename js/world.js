@@ -399,8 +399,25 @@ function optimisePick(pool, sl, out, score) {
   }
   return out;
 }
+/* Ties go to potential (5.78.2): two players of the same position who show the same rating in a slot (out of 20,
+   rounded, as Tactics shows it) and are about as fit (within TIE_FIT points), the one with more potential starts or
+   sits on the bench. Before, the hair's-breadth difference underneath decided, and it was as likely to be the
+   veteran. Places you fixed yourself are never changed. */
+const TIE_FIT = 10;
+const shownAt = (p, slot) => Math.round(slotRating(p, slot));
+const tieWith = (a, b, slot) => a.pos === b.pos && shownAt(a, slot) === shownAt(b, slot) && Math.abs(a.fit - b.fit) <= TIE_FIT;
+function potentialTies(pool, sl, out, fixed, ok = () => true) {
+  const inXI = new Set(out.filter(x => x != null));
+  out.forEach((id, i) => {
+    if (id == null || (fixed && fixed[i] != null)) return;
+    const s = P(id), alt = pool.filter(q => !inXI.has(q.id) && q.pot > s.pot && ok(q, s) && tieWith(q, s, sl[i])).sort((a, b) => b.pot - a.pot)[0];
+    if (alt) { inXI.delete(id); inXI.add(alt.id); out[i] = alt.id; }
+  });
+  return out;
+}
 function autoPick(ids, f, fixed) {
-  return optimisePick(ids.map(P).filter(avail), slotsOf(f), fixed ? fixed.slice() : Array(11).fill(null), eff);
+  const pool = ids.map(P).filter(avail), sl = slotsOf(f);
+  return potentialTies(pool, sl, optimisePick(pool, sl, fixed ? fixed.slice() : Array(11).fill(null), eff), fixed);
 }
 /* A high-potential side: the strongest XI once players 23 and under get credit for their room to grow, up to
    about 4 points on the 20 scale for a teenager far below his ceiling (so a promising 19-year-old beats a
@@ -428,7 +445,9 @@ function potentialPick(c) {
    keeps 84% of his strength, so tired regulars kept being picked. */
 const FRESH_FIT = 85;  // was 80; at 80 a side could start at "amber" fitness, which isn't fresh
 function freshPick(ids, f) {
-  return optimisePick(ids.map(P).filter(avail), slotsOf(f), Array(11).fill(null), (p, role) => eff(p, role) - (p.fit < FRESH_FIT ? 500 : 0));
+  const pool = ids.map(P).filter(avail), sl = slotsOf(f);
+  // A tie only goes to the younger prospect if it doesn't put a tired player in a fresh side.
+  return potentialTies(pool, sl, optimisePick(pool, sl, Array(11).fill(null), (p, role) => eff(p, role) - (p.fit < FRESH_FIT ? 500 : 0)), null, (q, s) => q.fit >= FRESH_FIT || s.fit < FRESH_FIT);
 }
 /* The nine substitutes. Yours are the ones you picked on the Tactics page (S.bench), still eligible,
    available and not in the XI; any spots left are filled as for AI clubs: a keeper, then the best and
@@ -446,6 +465,11 @@ function benchFor(c, xi, friendly) {
   // altogether, though you can still pick one yourself.
   const noGK = isUser(c) && S.set && S.set.benchGK === false;
   const rest = [...elig].map(P).filter(p => avail(p) && !used.has(p.id) && !no.has(p.id) && !(noGK && p.pos === "GK")).sort((a, b) => b.ovr * b.fit - a.ovr * a.fit);
+  /* Same position, same rating shown and about as fit: the higher potential goes first (5.78.2). Done as a pass after
+     the sort, not inside the comparator: mixing the two there made the order inconsistent and a few ties slipped. */
+  const benchTie = (a, b) => a.pos === b.pos && Math.round(r20(a.ovr)) === Math.round(r20(b.ovr)) && Math.abs(a.fit - b.fit) <= TIE_FIT;
+  for (let pass = 0, moved = true; moved && pass < 20; pass++) { moved = false;
+    for (let i = 0; i < rest.length; i++) for (let j = i + 1; j < rest.length; j++) if (rest[j].pot > rest[i].pot && benchTie(rest[i], rest[j])) { [rest[i], rest[j]] = [rest[j], rest[i]]; moved = true; } }
   const out = [], gk = noGK || mine.some(id => P(id).pos === "GK") ? null : rest.find(p => p.pos === "GK");
   if (gk && mine.length < RULES.benchSize) out.push(gk);
   // One keeper on the bench is enough: the fill adds no more once there is one (you can still pick a second).

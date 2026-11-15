@@ -131,7 +131,10 @@ are cleared, and the nine places go to a keeper, then at least two defenders, tw
 then the best and fittest left (the high-potential pick keeps up to five youngsters but leaves room for that
 cover). Your automatic bench always keeps that cover, and AI clubs' benches follow the same rule with a single keeper
 (5.78.1); before, filled on rating alone, a quarter of benches had no striker and 37% of AI benches carried two
-keepers. Across 591 AI clubs now: no second keeper, every line covered wherever the squad allows. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
+keepers. Across 591 AI clubs now: no second keeper, every line covered wherever the squad allows. **Ties go to potential** (5.78.2): when two players of the same position show the same rating (out of 20, in that
+slot) and are within 10 points of fitness, the one with more potential starts, or takes the bench place. It applies to
+Pick best XI, Pick fresh XI (only if he's fresh too), your automatic bench and every AI club; places you fixed
+yourself are never changed. Across 584 clubs it changed the XI at 96, at a cost of 0.05% of team strength. Tick "Assistant picks a fresh XI before every match" to rotate automatically: it picks once, on
 the morning of each match day, so any change you make after that stands.
 
 **Archetypes** (5.74): every player has a type at his position, read from the attributes he leans on compared
