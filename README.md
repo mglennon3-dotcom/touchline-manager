@@ -206,9 +206,14 @@ interceptions, blocks, a keeper's saves, clean sheets and goals conceded, the re
 through what it lets him do, so a modest striker who wins the golden boot out-rates a star who plays badly. All but
 his own actions scale with his minutes, so a late substitute sits near 6; a red card costs 2. Chances missed cost
 points: xG well above his goals is taken off. A 10 is a performance on the level of a hat-trick or two goals and
-an assist (one goal is about 7.4, two 8.8): about 40% of 10s go to defenders and keepers, for displays like 13
+an assist (one goal is about 7.4, two 8.8): about 19% of 10s go to defenders and keepers, for displays like 13
 clearances and a clean sheet, or 7 saves and a clean sheet. Chances a player creates count (key passes, and xA
-beyond his assists), so a playmaker whose team-mates miss can still reach 9+. Measured over a season of starts: under 5 in 11%, 5-6 31%, 6-7 31%, 7-8 18%, 8+ 8%, 10 0.4%. Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
+beyond his assists), so a playmaker whose team-mates miss can still reach 9+. Measured over a season of starts: under 5 in 14%, 5-6 30%, 6-7 29%, 7-8 18%, 8+ 9%, 10 0.7%.
+**Creating counts more than clearing** (5.78.5): defensive actions come several times a game (a centre-back averaged
+3.2 clearances, 1.4 tackles and 1.2 interceptions), so they now count a little less each (clearances .05, tackles .15,
+interceptions .13) and key passes, shots on target and assists more (.5, .12, .85). Of the top 100 season averages,
+centre-backs held 45 and central midfielders 2; now wingers 27, strikers 20, defensive midfielders 18, central and
+attacking midfielders 11 each, centre-backs 9 and full-backs 4, with the overall average unchanged (6.2). Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
 air; about 4 a game for a centre-back), blocks, and the defender beaten for each goal conceded (more often a weak
 one). The ratings line shows each player's shots, xG, key passes, xA, tackles, interceptions, clearances, blocks,
 goals he was beaten for, or saves; the Squad page's Advanced stats adds season Tackles, Interceptions, Clearances,

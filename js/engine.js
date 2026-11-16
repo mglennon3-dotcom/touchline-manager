@@ -453,7 +453,12 @@ const matchWinner = M => M.pens ? (M.pens[0] > M.pens[1] ? M.h.club : M.a.club) 
 // 7 saves and a clean sheet), and a playmaker's chances created can carry him to 9+ without an assist (xA beyond his
 // assists 0.9, key passes 0.3). Late substitutes 6.0, a
 // red card about 3.9. (5.41 sat too many games between 5 and 7: under 5 in only 4%.)
-const RTW = { base: 6, off: .6, res: .4, q: 9, qcap: 0, g: 1.15, a: .75, xg: .25, miss: .4, kp: .3, xa: .9, sot: .08, tk: .2, int: .18, clr: .08, bk: .25, bt: .45, sv: .3, cs: .8, ga: .25, noise: .45 };
+/* Match rating weights. 5.78.5 rebalanced defending against creating: defensive actions come several times a game
+   (a centre-back made 3.2 clearances, 1.4 tackles and 1.2 interceptions a match) while chances made and shots on
+   target are fewer, so centre-backs held 45 of the top 100 season averages and defensive midfielders 29, central
+   midfielders 2. Clearances .08 to .05, tackles .2 to .15, interceptions .18 to .13; key passes .3 to .5, shots on
+   target .08 to .12, assists .75 to .85; off .6 to .64 keeps the average where it was. */
+const RTW = { base: 6, off: .64, res: .4, q: 9, qcap: 0, g: 1.15, a: .85, xg: .25, miss: .4, kp: .5, xa: .9, sot: .12, tk: .15, int: .13, clr: .05, bk: .25, bt: .45, sv: .3, cs: .8, ga: .25, noise: .45 };
 function matchRating(M, i, id, W = RTW) {
   const s = i ? M.a : M.h, o2 = i ? M.h : M.a, p = P(id), on = s.on.find(o => o.p.id === id);
   const mins = on ? M.min - on.from : (s.mins[id] ?? 0), m = clamp(mins / Math.max(30, M.done ? M.end : M.min), 0, 1);
