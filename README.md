@@ -119,6 +119,10 @@ The next-match card shades each instruction dropdown the same way, by the fit of
 The Tactics page has four tabs: Line-up (formation, pitch, pick buttons; tap a shirt to list who could play
 there, best first, and tap one to put him in; the nine substitutes sit under the pitch: tap one to list
 everyone outside the matchday squad and swap him in), Selection (the squad list with bench picks), Instructions and Training.
+**Loan players** (5.78.4) are marked wherever you pick a team: a blue **L** on their shirt on the Tactics pitch and the
+live match pitch (with a line under the pitch naming them and their parent club), and a LOAN tag in the substitutes,
+the "who plays here" list and the live bench. The Selection list already had one.
+
 Picking a side: "Pick best XI" (Tactics page) asks your assistant for the strongest side, and it will move a
 player out of his usual position when his attributes make him better there than the specialist, say a
 tough-tackling midfielder at centre-back. AI clubs pick the same way. "Pick fresh XI" (Tactics page and the
