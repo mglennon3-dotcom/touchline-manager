@@ -648,6 +648,18 @@ function upgradeSave() {  // bring an older save up to date; runs on load and on
     if (n) news(`Academy players now sign youth deals: ${n} of yours under ${YOUTH_PRO_AGE} move onto ${perWeek(YOUTH_WAGE)}. At ${YOUTH_PRO_AGE} each can be offered a professional contract; the youth deal runs to the end of that season.`, true, "youth"); }
   // 5.75.7: free agents of 16 and 17, and graduates still waiting in your intake, made before the 10 cap (5.75.6) come
   // down to it, keeping their profile and potential.
+  // 5.78.6: the season in progress is re-rated with 5.78.5's weights. Each match rating is a sum of weighted actions,
+  // and the season's actions are kept (p.s), so the change in weights applied to them moves each player's season
+  // total by what the new weights would have given; the offset (-.04 a full match) by his minutes. Approximate only
+  // where a match hit the 3 or 10 limits. Past seasons' records are left as they were.
+  if (!S.rtw5785 && S.clubs) { S.rtw5785 = 1;
+    if (S.phase === "season") { const d = RTW_5785_DELTA; let n = 0;
+      for (const p of Object.values(S.players)) { const x = p.s; if (!x || !x.app) continue;
+        // Foreign league games are quick-simmed with their own flat ratings, untouched by the weights: only the offset
+        // for games played in full (England, and the European cups) applies, so it's left off for players abroad.
+        const quick = p.club >= 0 && LG[C(p.club).lg] && LG[C(p.club).lg].foreign;
+        x.rt = Math.round((x.rt + d.clr * (x.clr || 0) + d.tk * (x.tk || 0) + d.int * (x.int || 0) + d.kp * (x.kp || 0) + d.sot * (x.sot || 0) + d.a * (x.a || 0) - (quick ? 0 : d.off * Math.min(x.app, (x.min || 0) / 90))) * 100) / 100; n++; }
+      if (n && S.club != null) news(`Match ratings now count chances created more and routine defending a little less. This season's ratings so far have been recalculated the same way (${n} players).`, true); } }
   // 5.78: rest of the world is fifteen countries; this year's class gets its extra 30 from them (players already in the
   // game keep their nationalities, and new ones are drawn from the wider list).
   if (!S.row15 && S.clubs) { S.row15 = 1; const n = S.prospects && S.prospects.length && S.phase === "season" ? topUpProspects() : 0;

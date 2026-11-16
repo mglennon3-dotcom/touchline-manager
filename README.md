@@ -213,7 +213,10 @@ beyond his assists), so a playmaker whose team-mates miss can still reach 9+. Me
 3.2 clearances, 1.4 tackles and 1.2 interceptions), so they now count a little less each (clearances .05, tackles .15,
 interceptions .13) and key passes, shots on target and assists more (.5, .12, .85). Of the top 100 season averages,
 centre-backs held 45 and central midfielders 2; now wingers 27, strikers 20, defensive midfielders 18, central and
-attacking midfielders 11 each, centre-backs 9 and full-backs 4, with the overall average unchanged (6.2). Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
+attacking midfielders 11 each, centre-backs 9 and full-backs 4, with the overall average unchanged (6.2).
+A save loaded mid-season has that season's ratings so far recalculated the same way (5.78.6), from each player's
+season totals of the actions involved: checked against every match re-rated in full, 90% of players came out within
+0.002 a game and 99% within 0.04. Earlier seasons' records keep their old ratings. Defending is recorded: tackles (good tacklers win more), interceptions (good markers), clearances (good in the
 air; about 4 a game for a centre-back), blocks, and the defender beaten for each goal conceded (more often a weak
 one). The ratings line shows each player's shots, xG, key passes, xA, tackles, interceptions, clearances, blocks,
 goals he was beaten for, or saves; the Squad page's Advanced stats adds season Tackles, Interceptions, Clearances,
