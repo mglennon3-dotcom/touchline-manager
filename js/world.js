@@ -224,7 +224,11 @@ function convertAttrs(p) {
   fitAttrs(at, p.pos, rr, ["dri", "hea", "cmp", "vis", "tec", "sta", "mar"]);
   p.at = at; const peak = p.peak; setOvr(p); p.peak = Math.max(peak || 0, p.ovr);
 }
-const growAttrs = (p, pts) => shiftAttrs(p, pts, k => (AW[p.pos][k] || 0) + R() * .3);
+/* Growth keeps a player's shape (5.78.7): every attribute rises, by roughly the same amount give or take half, so
+   a developing player stays the kind of player he was. It went almost all into the handful of attributes that make up
+   his rating (weighted by AW): three points of growth left everything else three points behind, and with it every
+   style and instruction that needed those attributes. */
+const growAttrs = (p, pts) => shiftAttrs(p, pts, () => .75 + R() * .5);
 const declineAttrs = (p, pts) => shiftAttrs(p, -pts, k => DECLINE[k] * (.6 + R() * .8));
 
 /* ---------- what you know about a player ---------- */
@@ -232,7 +236,7 @@ const declineAttrs = (p, pts) => shiftAttrs(p, -pts, k => DECLINE[k] * (.6 + R()
 // His archetype at his natural position: [name, keys, description]. DOFF and AOFF are the engine's style-fit baselines.
 function archetypeOf(p) {
   const list = ARCHETYPES[p.pos]; if (!list || !p.at) return null;
-  const base = r20(p.ovr) + (DOFF[p.pos] || 0), off = AOFF[p.pos] || {};
+  const base = p.pos === "GK" ? r20(p.ovr) + (DOFF[p.pos] || 0) : fitBase(p), off = AOFF[p.pos] || {};  // as the style fits (5.78.7)
   let best = null, bs = -1e9;
   for (const a of list) { const s = sum(a[1], k => (p.at[k] ?? 0) - base - (off[k] || 0)) / a[1].length; if (s > bs) { bs = s; best = a; } }
   return best;

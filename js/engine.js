@@ -4,10 +4,17 @@
    style's key attributes beat what's typical for each player's position and rating. 0 is an ordinary XI;
    a side of quick forwards scores well for counter-attacking, an ageing one badly. */
 const DOFF = Object.fromEntries(Object.entries(AW).map(([pos, w]) => [pos, -Object.entries(w).reduce((s, [k, x]) => s + x * (AOFF[pos][k] || 0), 0)]));
+/* What's usual for this player (5.78.7): his own attribute average, with each key judged against the typical shape
+   of his position (AOFF). It was his rating plus an offset (DOFF), but development puts most of each rating point into
+   the few attributes that make up his rating, so a squad that had grown read below that baseline everywhere: three
+   points of growth took typical fits from about +0.1 to -0.7 and every style and instruction showed red for the
+   strongest, most developed sides. Against his own average a player's profile is judged by its shape alone. */
+const AOFF_MEAN = Object.fromEntries(Object.keys(AOFF).map(pos => [pos, OUT_KEYS.reduce((s, k) => s + (AOFF[pos][k] || 0), 0) / OUT_KEYS.length]));
+const fitBase = p => OUT_KEYS.reduce((s, k) => s + p.at[k], 0) / OUT_KEYS.length - (AOFF_MEAN[p.pos] || 0);
 function styleFit(on, ment) {
   const keys = STYLE_KEYS[ment]; if (!keys || !keys.length) return 0;
   let t = 0, n = 0;
-  for (const o of on) { const p = o.p; if (p.pos === "GK") continue; const base = r20(p.ovr) + DOFF[p.pos];
+  for (const o of on) { const p = o.p; if (p.pos === "GK") continue; const base = fitBase(p);
     for (const k of keys) { t += p.at[k] - base - (AOFF[p.pos][k] || 0); n++; } }
   return n ? t / n : 0;
 }
@@ -23,7 +30,7 @@ function instrFit(on, ins) {
   if (!ins || !ins.keys) return 0;
   let t = 0, n = 0;
   for (const o of on) { const p = o.p; if (p.pos === "GK") continue; const keys = ins.keys[o.slot] || ins.keys["*"]; if (!keys) continue;
-    const base = r20(p.ovr) + DOFF[p.pos]; for (const k of keys) { t += p.at[k] - base - (AOFF[p.pos][k] || 0); n++; } }
+    const base = fitBase(p); for (const k of keys) { t += p.at[k] - base - (AOFF[p.pos][k] || 0); n++; } }
   let f = n ? t / n : 0;
   if (ins.noW && !on.some(o => o.slot === "W")) f -= ins.noW;
   return f;

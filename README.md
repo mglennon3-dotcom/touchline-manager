@@ -93,6 +93,13 @@ instructions, each with three settings and a fit judged on the players who carry
 - *Passing*: on the ground (Passing, Technique, Vision, Composure) or long (Pace, Heading, Strength).
 - *Width*: through the middle (creative central midfielders) or down the wings (quick wide players, strikers
   good in the air, and wingers in the formation).
+**Fit is judged on shape** (5.78.7): each player's key attributes are compared with his own attribute average (and
+what's usual for his position), not with his rating. Development used to put almost all of each rating point into the
+attributes that make up the rating, so a side that had grown read below its rating everywhere: three points of growth
+took typical fits from +0.1 to -0.7, and a well-developed squad showed every style and instruction as a poor fit
+(in one test, nine of ten "very poor"). Growth now raises every attribute by about the same amount, so a player keeps
+his shape as he improves (three points of growth now moves typical fits by under 0.1), and the new baseline sorts out
+squads that grew before the change. Across a new world, 45-63% of clubs suit each setting.
 Teams differ less in these than in a style's keys, so fit counts three times as much, and every effect is scaled
 to 0.45 of its solo strength because they stack. Over 300 matches per club against its own division, each
 option was within 0.03 points a game of Neutral for an average side; good fits gained up to 0.07 and poor ones
